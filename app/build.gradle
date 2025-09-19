@@ -4,16 +4,18 @@ plugins {
     id 'kotlin-kapt'
     id 'kotlin-parcelize'
     id 'androidx.navigation.safeargs.kotlin'
+    //id 'org.jetbrains.kotlin.jvm' version('1.9.22')
+    id 'org.jetbrains.kotlin.plugin.serialization' version("1.9.22")
 }
 
 android {
-    namespace 'com.example.kotlinroomdatabase' // Добавьте эту строку
-    compileSdk 34 // Обновите до 33
+    namespace 'com.example.kotlinroomdatabase'
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.example.kotlinroomdatabase"
         minSdk 26
-        targetSdk 34 // Обновите до 33
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -71,4 +73,7 @@ dependencies {
     // Kotlin components
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+
+    // Serialization
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0"
 }

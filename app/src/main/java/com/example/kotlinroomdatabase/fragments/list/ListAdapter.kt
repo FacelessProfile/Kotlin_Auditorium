@@ -5,49 +5,47 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.model.User
+import kotlinx.serialization.InternalSerializationApi
 
-class ListAdapter: RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
+class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
-    private var userList = emptyList<User>()
+    @OptIn(InternalSerializationApi::class)
+    private var studentList: List<Student>? = emptyList()
 
-    class MyViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
-
-    }
+    class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         return MyViewHolder(
-                LayoutInflater.from(parent.context).inflate(
-                        R.layout.custom_row,
-                        parent,
-                        false)
+            LayoutInflater.from(parent.context).inflate(
+                R.layout.custom_row,
+                parent,
+                false
+            )
         )
     }
 
-    override fun getItemCount(): Int {
-        return userList.size
-    }
+    @OptIn(InternalSerializationApi::class)
+    override fun getItemCount(): Int = studentList!!.size
 
+    @OptIn(InternalSerializationApi::class)
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        val currentItem = userList[position]
-
-        holder.itemView.findViewById<TextView>(R.id.id_txt).text = currentItem.id.toString()
-        holder.itemView.findViewById<TextView>(R.id.firstName_txt).text = currentItem.firstName
-        holder.itemView.findViewById<TextView>(R.id.lastName_txt).text = currentItem.lastName
-        holder.itemView.findViewById<TextView>(R.id.age_txt).text = currentItem.age.toString()
-
+        val student = studentList!!.get(position)
+        holder.itemView.findViewById<TextView>(R.id.id_txt).text = student.studentNumber
+        holder.itemView.findViewById<TextView>(R.id.FIO_txt).text = student.studentName
+        holder.itemView.findViewById<TextView>(R.id.attendance_txt).text = if (student.attendance) "+" else "-"
         holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout).setOnClickListener {
-            // warning : Sometime, you need to 'rebuild project' (on the toolbar, click Build > Rebuild Project) to be able to see the 'actionListFragmentToUpdateFragment()' suggestion.
-            val action = ListFragmentDirections.actionListFragmentToUpdateFragment(currentItem) // <- Pass object to Update Fragment
-            holder.itemView.findNavController().navigate(action)
+            // val action = ListFragmentDirections.actionListFragmentToUpdateFragment(student)
+            // holder.itemView.findNavController().navigate(action) ATTENTION DO IT NEXT TIME
         }
     }
 
-    fun setData(user: List<User>) {
-        this.userList = user
+    @OptIn(InternalSerializationApi::class)
+    fun setData(students: List<Student>?) {
+        studentList = students
         notifyDataSetChanged()
     }
 }

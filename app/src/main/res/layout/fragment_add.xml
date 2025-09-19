@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".fragments.add.AddFragment"
     android:padding="24dp">
-
     <EditText
         android:id="@+id/addFirstName_et"
         android:layout_width="match_parent"
@@ -33,18 +32,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/addFirstName_et" />
 
-    <EditText
-        android:id="@+id/addAge_et"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:ems="10"
-        android:hint="Посещение"
-        android:inputType="number"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/addLastName_et" />
 
     <Button
         android:id="@+id/add_btn"
@@ -55,13 +42,28 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/addAge_et" />
+        app:layout_constraintTop_toBottomOf="@+id/addFirstName_et" />
 
     <CheckBox
-        android:id="@+id/attendance"
+        android:id="@+id/attendanceCb"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Посещаемость"
-        tools:layout_editor_absoluteX="-1dp"
-        tools:layout_editor_absoluteY="291dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/addLastName_et"
+        tools:ignore="MissingConstraints" />
+
+    <EditText
+        android:id="@+id/addJournalNumber"
+        android:layout_width="75dp"
+        android:layout_height="40dp"
+        android:ems="10"
+        android:hint="№"
+        android:inputType="number"
+        app:layout_constraintBottom_toTopOf="@+id/addFirstName_et"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.4"
+        tools:layout_editor_absoluteX="144dp" />
 </androidx.constraintlayout.widget.ConstraintLayout>
