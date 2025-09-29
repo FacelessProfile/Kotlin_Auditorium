@@ -55,15 +55,4 @@
         app:layout_constraintTop_toBottomOf="@+id/addLastName_et"
         tools:ignore="MissingConstraints" />
 
-    <EditText
-        android:id="@+id/addJournalNumber"
-        android:layout_width="75dp"
-        android:layout_height="40dp"
-        android:ems="10"
-        android:hint="№"
-        android:inputType="number"
-        app:layout_constraintBottom_toTopOf="@+id/addFirstName_et"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.4"
-        tools:layout_editor_absoluteX="144dp" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -52,7 +52,7 @@ class AddFragment : Fragment() {
     // Student add to json method
     @OptIn(InternalSerializationApi::class)
     private fun insertStudentToJson() {
-        val number = binding.addJournalNumber.text.toString().trim()
+        //val number = binding.addJournalNumber.text.toString().trim()
         val name = binding.addFirstNameEt.text.toString().trim()
         val group = binding.addLastNameEt.text.toString().trim()
         val attendance = binding.attendanceCb.isChecked
@@ -64,7 +64,7 @@ class AddFragment : Fragment() {
 
         val student = Student(
             id = newId,
-            studentNumber = number,
+//            studentNumber = number,
             studentName = name,
             studentGroup = group,
             attendance = attendance

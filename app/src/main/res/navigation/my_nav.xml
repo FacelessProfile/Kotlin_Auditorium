@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/listFragment"
         android:name="com.example.kotlinroomdatabase.fragments.list.ListFragment"
-        android:label="List"
+        android:label="Students"
         tools:layout="@layout/fragment_list" >
         <action
             android:id="@+id/action_listFragment_to_addFragment"
@@ -37,5 +37,14 @@
         <argument
             android:name="currentUser"
             app:argType="com.example.kotlinroomdatabase.model.User" />
+    </fragment>
+    <fragment
+        android:id="@+id/groupFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.list.GroupFragment"
+        android:label="StudentGroups"
+        tools:layout="@layout/fragment_group" >
+        <action
+            android:id="@+id/action_groupFragment_to_listFragment"
+            app:destination="@id/listFragment" />
     </fragment>
 </navigation>

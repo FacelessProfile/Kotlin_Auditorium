@@ -11,7 +11,7 @@ import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.model.User
 import kotlinx.serialization.InternalSerializationApi
 
-class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
+class  ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
     @OptIn(InternalSerializationApi::class)
     private var studentList: List<Student>? = emptyList()
@@ -34,8 +34,11 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
     @OptIn(InternalSerializationApi::class)
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val student = studentList!!.get(position)
-        holder.itemView.findViewById<TextView>(R.id.id_txt).text = student.studentNumber
-        holder.itemView.findViewById<TextView>(R.id.FIO_txt).text = student.studentName
+        val fullName = student.studentName.split(" ")
+        val fio = "${fullName[0]} ${fullName[1]} ${fullName[2][0]}."
+        holder.itemView.findViewById<TextView>(R.id.id_txt).text = (position + 1).toString() //student.studentNumber
+        holder.itemView.findViewById<TextView>(R.id.FIO_txt).text = fio
+
         holder.itemView.findViewById<TextView>(R.id.attendance_txt).text = if (student.attendance) "+" else "-"
         holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout).setOnClickListener {
             // val action = ListFragmentDirections.actionListFragmentToUpdateFragment(student)
@@ -46,6 +49,8 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
     @OptIn(InternalSerializationApi::class)
     fun setData(students: List<Student>?) {
         studentList = students
+            ?.sortedWith(compareBy<Student> { it.studentName })
+            ?: emptyList() // сортируем по журнальному номеру(БЫЛО) -> сортируем по ФИО (СТАЛО)
         notifyDataSetChanged()
     }
 }
