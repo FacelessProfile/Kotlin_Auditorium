@@ -8,13 +8,14 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.model.Student
-import com.example.kotlinroomdatabase.model.User
 import kotlinx.serialization.InternalSerializationApi
 
-class  ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
+class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
     @OptIn(InternalSerializationApi::class)
     private var studentList: List<Student>? = emptyList()
+    @OptIn(InternalSerializationApi::class)
+    private var onItemClick: ((Student) -> Unit)? = null
 
     class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
@@ -33,16 +34,14 @@ class  ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
     @OptIn(InternalSerializationApi::class)
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        val student = studentList!!.get(position)
+        val student = studentList!![position]
         val fullName = student.studentName.split(" ")
         val fio = "${fullName[0]} ${fullName[1]} ${fullName[2][0]}."
-        holder.itemView.findViewById<TextView>(R.id.id_txt).text = (position + 1).toString() //student.studentNumber
+        holder.itemView.findViewById<TextView>(R.id.id_txt).text = (position + 1).toString()
         holder.itemView.findViewById<TextView>(R.id.FIO_txt).text = fio
-
         holder.itemView.findViewById<TextView>(R.id.attendance_txt).text = if (student.attendance) "+" else "-"
         holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout).setOnClickListener {
-            // val action = ListFragmentDirections.actionListFragmentToUpdateFragment(student)
-            // holder.itemView.findNavController().navigate(action) ATTENTION DO IT NEXT TIME
+            onItemClick?.invoke(student)
         }
     }
 
@@ -50,7 +49,12 @@ class  ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
     fun setData(students: List<Student>?) {
         studentList = students
             ?.sortedWith(compareBy<Student> { it.studentName })
-            ?: emptyList() // сортируем по журнальному номеру(БЫЛО) -> сортируем по ФИО (СТАЛО)
+            ?: emptyList()
         notifyDataSetChanged()
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    fun setOnItemClickListener(listener: (Student) -> Unit) {
+        onItemClick = listener
     }
 }

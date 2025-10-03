@@ -39,6 +39,12 @@ class ListFragment : Fragment() {
 
         loadStudents()
 
+        adapter.setOnItemClickListener { student ->
+            val bundle = Bundle()
+            bundle.putInt("studentId", student.id)
+            findNavController().navigate(R.id.action_listFragment_to_addFragment, bundle)
+        }
+
         binding.floatingActionButton.setOnClickListener {
             findNavController().navigate(R.id.action_listFragment_to_addFragment)
         }

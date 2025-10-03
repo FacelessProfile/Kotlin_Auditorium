@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".fragments.add.AddFragment"
     android:padding="24dp">
+
     <EditText
         android:id="@+id/addFirstName_et"
         android:layout_width="match_parent"
@@ -32,27 +33,35 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/addFirstName_et" />
 
+    <CheckBox
+        android:id="@+id/attendanceCb"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Посещаемость"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/addLastName_et" />
+
+    <Button
+        android:id="@+id/btnReadNfc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:backgroundTint="@color/design_default_color_primary"
+        android:text="Read NFC"
+        app:layout_constraintBottom_toBottomOf="@+id/attendanceCb"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/attendanceCb"
+        app:layout_constraintTop_toTopOf="@+id/attendanceCb" />
 
     <Button
         android:id="@+id/add_btn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="100dp"
-        android:text="Add"
+        android:layout_marginTop="32dp"
+        android:text="Add Student"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/addFirstName_et" />
-
-    <CheckBox
-        android:id="@+id/attendanceCb"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Посещаемость"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/addLastName_et"
-        tools:ignore="MissingConstraints" />
+        app:layout_constraintTop_toBottomOf="@+id/attendanceCb" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
