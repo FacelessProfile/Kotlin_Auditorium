@@ -36,9 +36,12 @@
 Свайп срабатывает при 60% хода, что в совокупности со свайпом влево уменьшает вероятность случайного перехода к диалогу удаления.\
 Но не было сделано подтверждение удаления по кнопке вместо диалога.Нужно согласовать)
 
+<img width="562" height="1280" alt="image" src="https://github.com/user-attachments/assets/dbc76358-539a-4e2b-9be5-d7e813022ec4" />
+<img width="494" height="690" alt="image" src="https://github.com/user-attachments/assets/60352bbd-0d05-47be-9008-2e9eef700199" />
+
+
 <img width="798" height="821" alt="image" src="https://github.com/user-attachments/assets/c6f9f231-7083-467c-8e7a-a97dc1d98d5a" />
 <img width="705" height="411" alt="image" src="https://github.com/user-attachments/assets/f98c91cc-161f-4c00-8ecc-e90ecf9170c0" />
-
 
 ## TODO/Issues
 - [ ] Согласовать дальнейшие изменения в UI
