@@ -2,12 +2,18 @@ package com.example.kotlinroomdatabase.fragments.list
 
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.*
-import android.widget.Toast
+import android.widget.*
+import androidx.appcompat.app.ActionBar
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.databinding.FragmentListBinding
 import com.example.kotlinroomdatabase.model.Student
@@ -24,8 +30,18 @@ class ListFragment : Fragment() {
 
     private val adapter = ListAdapter()
     private val jsonFileName = "students.json"
+    private val prefsName = "StudentPrefs"
+    private val selectedGroupKey = "selected_group"
+
     @OptIn(InternalSerializationApi::class)
     private var studentList: MutableList<Student> = mutableListOf()
+
+    private var toolbarSpinner: Spinner? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
 
     @OptIn(InternalSerializationApi::class)
     override fun onCreateView(
@@ -36,9 +52,8 @@ class ListFragment : Fragment() {
 
         binding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerview.adapter = adapter
-
         loadStudents()
-
+        setupSwipeToDelete()
         adapter.setOnItemClickListener { student ->
             val bundle = Bundle()
             bundle.putInt("studentId", student.id)
@@ -49,8 +64,91 @@ class ListFragment : Fragment() {
             findNavController().navigate(R.id.action_listFragment_to_addFragment)
         }
 
-        setHasOptionsMenu(true)
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupToolbarSpinner()
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun setupToolbarSpinner() {
+        val actionBar = (requireActivity() as AppCompatActivity).supportActionBar
+        actionBar?.setDisplayShowTitleEnabled(false)
+
+        // Спинер в тулбаре
+        toolbarSpinner = Spinner(requireContext()).apply {
+            layoutParams = ActionBar.LayoutParams(
+                ActionBar.LayoutParams.WRAP_CONTENT,
+                ActionBar.LayoutParams.WRAP_CONTENT
+            )
+        }
+        setupSpinnerData(toolbarSpinner!!)
+        actionBar?.setDisplayShowCustomEnabled(true)
+        actionBar?.setCustomView(toolbarSpinner)
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun setupSpinnerData(spinner: Spinner) {
+        val groups = studentList.map { it.studentGroup }.toSet().toMutableList()
+        groups.add(0, "Все группы")
+
+        val spinnerAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            groups
+        )
+        spinner.adapter = spinnerAdapter
+
+        val prefs = requireContext().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val savedGroup = prefs.getString(selectedGroupKey, "Все группы")
+
+        val savedPosition = groups.indexOf(savedGroup).takeIf { it >= 0 } ?: 0
+        spinner.setSelection(savedPosition)
+
+        applyFilter(savedGroup ?: "Все группы")
+
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                val selected = groups[position]
+                prefs.edit().putString(selectedGroupKey, selected).apply()
+                applyFilter(selected)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override fun onDestroyView() {
+        super.onDestroyView()
+        (requireActivity() as AppCompatActivity).supportActionBar?.apply {
+            setDisplayShowCustomEnabled(false)
+            setDisplayShowTitleEnabled(true)
+        }
+        toolbarSpinner = null
+        _binding = null
+    }
+
+    // Остальной код без изменений...
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.delete_menu, menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_delete -> {
+                deleteAllStudents()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -66,10 +164,40 @@ class ListFragment : Fragment() {
             val list = Json.decodeFromString<List<Student>>(jsonString)
             studentList = list.toMutableList()
             adapter.setData(studentList)
+
+            // Обновляет спинер в тулбаре после загрузки данных
+            toolbarSpinner?.let { setupSpinnerData(it) }
         } catch (e: Exception) {
             studentList = mutableListOf()
             adapter.setData(studentList)
         }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun applyFilter(selected: String) {
+        if (selected == "Все группы") {
+            adapter.setData(studentList)
+        } else {
+            val filtered = studentList.filter { it.studentGroup == selected }
+            adapter.setData(filtered)
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun deleteAllStudents() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setPositiveButton("Yes") { _, _ ->
+            studentList.clear()
+            saveStudents()
+            adapter.setData(studentList)
+            // Обновляем Spinner после удаления
+            toolbarSpinner?.let { setupSpinnerData(it) }
+            Toast.makeText(requireContext(), "Successfully removed everything", Toast.LENGTH_SHORT).show()
+        }
+        builder.setNegativeButton("No") { _, _ -> }
+        builder.setTitle("Delete everything ?")
+        builder.setMessage("Are you sure to remove everything ?")
+        builder.create().show()
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -80,34 +208,99 @@ class ListFragment : Fragment() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.delete_menu, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.menu_delete) {
-            deleteAllStudents()
-        }
-        return super.onOptionsItemSelected(item)
+    @OptIn(InternalSerializationApi::class)
+    private fun showDeleteConfirmationDialog(student: Student, position: Int) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Удалить студента")
+            .setMessage("Вы уверены, что хотите удалить ${student.studentName}?")
+            .setPositiveButton("Удалить") { dialog, which ->
+                // Удаляем студента из списка
+                studentList.removeAll { it.id == student.id }
+                saveStudents()
+                adapter.setData(studentList) // Обновляем весь список
+                toolbarSpinner?.let { setupSpinnerData(it) }
+                Toast.makeText(requireContext(), "Студент удален", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Отмена", null) //закрываем диалог
+            .setOnDismissListener {
+                // Обновляем список
+                adapter.notifyDataSetChanged()
+            }
+            .show()
     }
 
     @OptIn(InternalSerializationApi::class)
-    private fun deleteAllStudents() {
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setPositiveButton("Yes") { _, _ ->
-            studentList.clear()
-            saveStudents()
-            adapter.setData(studentList)
-            Toast.makeText(requireContext(), "Successfully removed everything", Toast.LENGTH_SHORT).show()
-        }
-        builder.setNegativeButton("No") { _, _ -> }
-        builder.setTitle("Delete everything ?")
-        builder.setMessage("Are you sure to remove everything ?")
-        builder.create().show()
-    }
+    private fun setupSwipeToDelete() {
+        val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
+            0,
+            ItemTouchHelper.LEFT // Свайп влево(меньше случайных свайпов для правшей)
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                return false
+            }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                adapter.notifyItemChanged(viewHolder.adapterPosition)
+
+                val position = viewHolder.adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    val studentToDelete = adapter.getStudentAtPosition(position)
+                    showDeleteConfirmationDialog(studentToDelete, position)
+                }
+            }
+
+            override fun onChildDraw(
+                canvas: android.graphics.Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                val itemView = viewHolder.itemView
+                val background = ColorDrawable()
+                background.color = ContextCompat.getColor(requireContext(), R.color.purple_200)
+
+                // Проверка что свайпнули именно влево
+                if (dX < 0) {
+                    background.setBounds(
+                        itemView.right + dX.toInt(),
+                        itemView.top,
+                        itemView.right,
+                        itemView.bottom
+                    )
+                    background.draw(canvas)
+
+                    // НУЖНО СДЕЛАТЬ КНОПКУ ПОДТВЕРЖДЕНИЯ А НЕ ПРОСТО ИКОНКУ
+                    val deleteIcon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_baseline_delete_24)
+                    val iconMargin = (itemView.height-deleteIcon!!.intrinsicHeight) / 2
+                    val iconTop = itemView.top + (itemView.height-deleteIcon.intrinsicHeight) / 2
+                    val iconBottom = iconTop + deleteIcon.intrinsicHeight
+                    val iconLeft = itemView.right-iconMargin-deleteIcon.intrinsicWidth
+                    val iconRight = itemView.right-iconMargin
+                    deleteIcon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    deleteIcon.draw(canvas)
+                }
+
+                super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+            }
+
+            // Увеличиваем чувствительность свайпа
+            override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+                return 0.6f // Срабатывает переход при 60% свайпа
+            }
+
+            override fun getSwipeEscapeVelocity(defaultValue: Float): Float {
+                return defaultValue * 0.5f
+            }
+        }
+
+        val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
+        itemTouchHelper.attachToRecyclerView(binding.recyclerview)
     }
 }
