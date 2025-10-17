@@ -9,7 +9,7 @@ import android.widget.*
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
+import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,16 +18,13 @@ import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.databinding.FragmentListBinding
 import com.example.kotlinroomdatabase.model.Student
 import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
-class ListFragment : Fragment() {
-
+class ListFragment : NFC_Tools() {
     private var _binding: FragmentListBinding? = null
     private val binding get() = _binding!!
-
     private val adapter = ListAdapter()
     private val jsonFileName = "students.json"
     private val prefsName = "StudentPrefs"
@@ -67,17 +64,11 @@ class ListFragment : Fragment() {
         return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setupToolbarSpinner()
-    }
-
     @OptIn(InternalSerializationApi::class)
-    private fun setupToolbarSpinner() {
+    private fun setupToolbarSpinner() {     // Спинер в тулбаре
         val actionBar = (requireActivity() as AppCompatActivity).supportActionBar
         actionBar?.setDisplayShowTitleEnabled(false)
 
-        // Спинер в тулбаре
         toolbarSpinner = Spinner(requireContext()).apply {
             layoutParams = ActionBar.LayoutParams(
                 ActionBar.LayoutParams.WRAP_CONTENT,
@@ -89,10 +80,18 @@ class ListFragment : Fragment() {
         actionBar?.setCustomView(toolbarSpinner)
     }
 
+
     @OptIn(InternalSerializationApi::class)
-    private fun setupSpinnerData(spinner: Spinner) {
+    private fun navigateToNfcAttendance() {                 //Переход в режим чтения метки при нажатии на пункт в dropdown
+        setupNfcReading()
+        startNfcReadingMode()
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun setupSpinnerData(spinner: Spinner) {                        // работа с dropdown menu (2 стандартных пункта + группы)
         val groups = studentList.map { it.studentGroup }.toSet().toMutableList()
         groups.add(0, "Все группы")
+        groups.add("Отметка посещения")
 
         val spinnerAdapter = ArrayAdapter(
             requireContext(),
@@ -101,13 +100,13 @@ class ListFragment : Fragment() {
         )
         spinner.adapter = spinnerAdapter
 
-        val prefs = requireContext().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(prefsName, Context.MODE_PRIVATE)  // логика сохранения состояния
         val savedGroup = prefs.getString(selectedGroupKey, "Все группы")
-
-        val savedPosition = groups.indexOf(savedGroup).takeIf { it >= 0 } ?: 0
+        val actualSavedGroup = if (savedGroup == "Отметка посещения") "Все группы" else savedGroup
+        val savedPosition = groups.indexOf(actualSavedGroup).takeIf { it >= 0 } ?: 0
         spinner.setSelection(savedPosition)
 
-        applyFilter(savedGroup ?: "Все группы")
+        applyFilter(actualSavedGroup ?: "Все группы")
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
@@ -117,12 +116,62 @@ class ListFragment : Fragment() {
                 id: Long
             ) {
                 val selected = groups[position]
-                prefs.edit().putString(selectedGroupKey, selected).apply()
-                applyFilter(selected)
+                if (selected == "Отметка посещения") {
+                    navigateToNfcAttendance()
+                    val previousGroup = prefs.getString(selectedGroupKey, "Все группы") ?: "Все группы"
+                    spinner.setSelection(groups.indexOf(previousGroup).takeIf { it >= 0 } ?: 0)
+                } else {
+                    prefs.edit().putString(selectedGroupKey, selected).apply()
+                    applyFilter(selected)
+                }
             }
-
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+    }
+
+
+
+    @OptIn(InternalSerializationApi::class)
+    override fun processNfcTag(nfcId: String) {
+        if (nfcId.isNotBlank()) {
+            val existingStudent = studentList.find { it.studentNFC == nfcId }
+            if (existingStudent != null) {
+                markStudentAttendance(existingStudent, nfcId)
+            } else {
+                Toast.makeText(requireContext(), "Студент с таким NFC не найден", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            Toast.makeText(requireContext(), "Ошибка чтения NFC метки", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun showNfcNotSupportedMessage() {
+        Toast.makeText(requireContext(), "NFC is not supported", Toast.LENGTH_LONG).show()
+    }
+
+    override fun showNfcReadingStartedMessage() {
+        Toast.makeText(requireContext(), "Режим чтения NFC активирован", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun showNfcReadingStoppedMessage() {
+        Toast.makeText(requireContext(), "Режим чтения завершен", Toast.LENGTH_SHORT).show()
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun markStudentAttendance(student: Student, nfcId: String) { // Функция отметки студента в журнале по индексу
+        val studentIndex = studentList.indexOfFirst { it.id == student.id }
+        if (studentIndex != -1) {
+            studentList[studentIndex] = student.copy(attendance = true)
+            saveStudents()
+            adapter.setData(studentList)
+            Toast.makeText(requireContext(), "${student.studentName} отмечен", Toast.LENGTH_SHORT).show()
+        }
+        stopNfcReadingModeAfterScan()
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupToolbarSpinner()
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -136,7 +185,6 @@ class ListFragment : Fragment() {
         _binding = null
     }
 
-    // Остальной код без изменений...
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.delete_menu, menu)
     }
@@ -150,7 +198,6 @@ class ListFragment : Fragment() {
             else -> super.onOptionsItemSelected(item)
         }
     }
-
     @OptIn(InternalSerializationApi::class)
     private fun loadStudents() {
         try {
@@ -164,16 +211,14 @@ class ListFragment : Fragment() {
             val list = Json.decodeFromString<List<Student>>(jsonString)
             studentList = list.toMutableList()
             adapter.setData(studentList)
-
-            // Обновляет спинер в тулбаре после загрузки данных
-            toolbarSpinner?.let { setupSpinnerData(it) }
+            toolbarSpinner?.let { setupSpinnerData(it) } // Обновляет спинер в тулбаре после загрузки данных
         } catch (e: Exception) {
             studentList = mutableListOf()
             adapter.setData(studentList)
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
+    @OptIn(InternalSerializationApi::class) // Фильтрация по группе после выбора в dropdown
     private fun applyFilter(selected: String) {
         if (selected == "Все группы") {
             adapter.setData(studentList)
@@ -190,8 +235,7 @@ class ListFragment : Fragment() {
             studentList.clear()
             saveStudents()
             adapter.setData(studentList)
-            // Обновляем Spinner после удаления
-            toolbarSpinner?.let { setupSpinnerData(it) }
+            toolbarSpinner?.let { setupSpinnerData(it) } // Обновляем Spinner после удаления
             Toast.makeText(requireContext(), "Successfully removed everything", Toast.LENGTH_SHORT).show()
         }
         builder.setNegativeButton("No") { _, _ -> }
@@ -208,32 +252,29 @@ class ListFragment : Fragment() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
+    @OptIn(InternalSerializationApi::class)                     //Диалог удаления студента из списка
     private fun showDeleteConfirmationDialog(student: Student, position: Int) {
         AlertDialog.Builder(requireContext())
             .setTitle("Удалить студента")
             .setMessage("Вы уверены, что хотите удалить ${student.studentName}?")
             .setPositiveButton("Удалить") { dialog, which ->
-                // Удаляем студента из списка
                 studentList.removeAll { it.id == student.id }
                 saveStudents()
-                adapter.setData(studentList) // Обновляем весь список
-                toolbarSpinner?.let { setupSpinnerData(it) }
+                adapter.setData(studentList)
+                toolbarSpinner?.let { setupSpinnerData(it) } // Обновляем Spinner после удаления
                 Toast.makeText(requireContext(), "Студент удален", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null) //закрываем диалог
+            .setNegativeButton("Отмена", null)
             .setOnDismissListener {
-                // Обновляем список
                 adapter.notifyDataSetChanged()
             }
             .show()
     }
-
-    @OptIn(InternalSerializationApi::class)
+    @OptIn(InternalSerializationApi::class)                         //Работа со свайпом удаления
     private fun setupSwipeToDelete() {
         val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
             0,
-            ItemTouchHelper.LEFT // Свайп влево(меньше случайных свайпов для правшей)
+            ItemTouchHelper.LEFT                                       // Свайп влево(меньше случайных свайпов для правшей)
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -266,7 +307,6 @@ class ListFragment : Fragment() {
                 val background = ColorDrawable()
                 background.color = ContextCompat.getColor(requireContext(), R.color.purple_200)
 
-                // Проверка что свайпнули именно влево
                 if (dX < 0) {
                     background.setBounds(
                         itemView.right + dX.toInt(),
@@ -276,7 +316,6 @@ class ListFragment : Fragment() {
                     )
                     background.draw(canvas)
 
-                    // НУЖНО СДЕЛАТЬ КНОПКУ ПОДТВЕРЖДЕНИЯ А НЕ ПРОСТО ИКОНКУ
                     val deleteIcon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_baseline_delete_24)
                     val iconMargin = (itemView.height-deleteIcon!!.intrinsicHeight) / 2
                     val iconTop = itemView.top + (itemView.height-deleteIcon.intrinsicHeight) / 2
@@ -290,13 +329,12 @@ class ListFragment : Fragment() {
                 super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
             }
 
-            // Увеличиваем чувствительность свайпа
             override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
-                return 0.6f // Срабатывает переход при 60% свайпа
+                return 0.6f             //срабатывание на 60% и более
             }
 
             override fun getSwipeEscapeVelocity(defaultValue: Float): Float {
-                return defaultValue * 0.5f
+                return defaultValue * 0.5f          // скорость свайпа
             }
         }
 

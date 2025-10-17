@@ -3,32 +3,66 @@ package com.example.kotlinroomdatabase.fragments.add
 import android.content.Context
 import android.nfc.NfcAdapter
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.databinding.FragmentAddBinding
+import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class AddFragment : Fragment() {
-
+class AddFragment :  NFC_Tools() {
     private var _binding: FragmentAddBinding? = null
     private val binding get() = _binding!!
     private val jsonFileName = "students.json"
-    private var nfcAdapter: NfcAdapter? = null
-    private var isReadingMode = false
-    private val nfcTimeoutHandler = Handler(Looper.getMainLooper())
-    private val NFC_READ_TIMEOUT = 15000L // 15 sec timer for reading mode
     private var currentNfcId: String = ""
     private var editingStudentId: Int = 0
+
+
+    private fun setupNfcButton() {              //настройка nfc button
+        setupNfcButton(binding.btnReadNfc)
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override fun processNfcTag(nfcId: String) {
+        if (nfcId.isNotBlank()) {
+            val students = loadStudentList()
+            val existingStudent = students.find { it.studentNFC == nfcId && it.id != editingStudentId }
+            if (existingStudent != null) {
+                Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
+                stopNfcReadingModeAfterScan()
+            } else {
+                binding.attendanceCb.isChecked = true // если сканировали nfc, то студент был на паре (мини автоматизация)
+                Toast.makeText(requireContext(), "NFC READED: $nfcId", Toast.LENGTH_LONG).show()
+                stopNfcReadingModeAfterScan()
+                currentNfcId = nfcId
+            }
+        } else {
+            Toast.makeText(requireContext(), "NFC TAG reading err", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun showNfcNotSupportedMessage() {
+        Toast.makeText(requireContext(), "NFC is not supported, use QR", Toast.LENGTH_LONG).show()
+        binding.btnReadNfc.isEnabled = false
+    }
+
+    override fun showNfcReadingStartedMessage() {
+        binding.btnReadNfc.isEnabled = false
+        binding.btnReadNfc.text = "Reading..."
+        Toast.makeText(requireContext(), "Read is active for 15 sec.", Toast.LENGTH_SHORT).show() //15 sec in NFC TOOLS
+    }
+
+    override fun showNfcReadingStoppedMessage() {
+        binding.btnReadNfc.isEnabled = true
+        binding.btnReadNfc.text = "Read NFC"
+        Toast.makeText(requireContext(), "Reader mode expired", Toast.LENGTH_SHORT).show()
+    }
 
     @OptIn(InternalSerializationApi::class)
     override fun onCreateView(
@@ -44,7 +78,7 @@ class AddFragment : Fragment() {
         if (editingStudentId > 0) {
             val students = loadStudentList()
             val student = students.find { it.id == editingStudentId }
-            if (student != null) {
+            if (student != null) {                                      //если уже есть данные о студенте
                 binding.addFirstNameEt.setText(student.studentName)
                 binding.addLastNameEt.setText(student.studentGroup)
                 binding.attendanceCb.isChecked = student.attendance
@@ -65,78 +99,6 @@ class AddFragment : Fragment() {
         }
     }
 
-    private fun setupNfcReading() {
-        if (nfcAdapter == null) {
-            Toast.makeText(requireContext(), "NFC is not supported, use QR", Toast.LENGTH_LONG).show()
-            binding.btnReadNfc.isEnabled = false
-        }
-    }
-
-    private fun startNfcReadingMode() {
-        if (nfcAdapter == null || isReadingMode) return
-        isReadingMode = true
-        binding.btnReadNfc.isEnabled = false
-        binding.btnReadNfc.text = "Reading..."
-        val flags = NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B
-        nfcAdapter?.enableReaderMode(
-            requireActivity(),
-            nfcReaderCallback,
-            flags,
-            null
-        )
-        // auto stop reading after NFC_READ_TIMEOUT in milliseconds
-        nfcTimeoutHandler.postDelayed({ stopNfcReadingModeByTimeout() }, NFC_READ_TIMEOUT)
-        Toast.makeText(requireContext(), "Read is active for 15 sec.", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stopNfcReadingModeByTimeout() {
-        if (!isReadingMode) return
-        isReadingMode = false
-        nfcAdapter?.disableReaderMode(requireActivity())
-        nfcTimeoutHandler.removeCallbacksAndMessages(null)
-        binding.btnReadNfc.isEnabled = true
-        binding.btnReadNfc.text = "Read NFC"
-        Toast.makeText(requireContext(), "Reader mode expired", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stopNfcReadingModeAfterScan() {
-        if (!isReadingMode) return
-        isReadingMode = false
-        nfcAdapter?.disableReaderMode(requireActivity())
-        nfcTimeoutHandler.removeCallbacksAndMessages(null)
-        binding.btnReadNfc.isEnabled = true
-        binding.btnReadNfc.text = "Read NFC"
-    }
-
-    private val nfcReaderCallback = NfcAdapter.ReaderCallback { tag ->
-        val nfcId = tag.id?.joinToString("") { String.format("%02X", it) } ?: ""
-        requireActivity().runOnUiThread {
-            processNfcTag(nfcId)
-        }
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun processNfcTag(nfcId: String) {
-        if (nfcId.isNotBlank()) {
-            val students = loadStudentList()
-            val existingStudent = students.find { it.studentNFC == nfcId && it.id != editingStudentId }
-            if (existingStudent != null) {
-                Toast.makeText(
-                    requireContext(),
-                    "TAG IS ALREADY USED!",
-                    Toast.LENGTH_LONG
-                ).show()
-                stopNfcReadingModeAfterScan()
-            } else {
-                binding.attendanceCb.isChecked = true // если сканировали nfc, то студент был на паре (мини автоматизация)
-                Toast.makeText(requireContext(), "NFC READED: $nfcId", Toast.LENGTH_LONG).show()
-                stopNfcReadingModeAfterScan()
-                currentNfcId = nfcId
-            }
-        } else {
-            Toast.makeText(requireContext(), "NFC TAG reading err", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     @OptIn(InternalSerializationApi::class)
     private fun saveStudent() {
@@ -144,7 +106,7 @@ class AddFragment : Fragment() {
         val group = binding.addLastNameEt.text.toString()
         val attendance = binding.attendanceCb.isChecked
 
-        // Formalize first
+        // Формализация ФИО и группы
         val formalizedName = Student.formalizeName(name)
         val formalizedGroup = Student.formalizeGroup(group)
 
@@ -235,7 +197,6 @@ class AddFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        // stop reading if user left add section
         if (isReadingMode) {
             stopNfcReadingModeAfterScan()
         }
