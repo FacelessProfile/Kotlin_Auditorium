@@ -23,9 +23,11 @@ class AddFragment :  NFC_Tools() {
     private var currentNfcId: String = ""
     private var editingStudentId: Int = 0
 
-
     private fun setupNfcButton() {              //настройка nfc button
-        setupNfcButton(binding.btnReadNfc)
+        binding.btnReadNfc.setOnClickListener {
+            setupNfcReading()
+            startNfcReadingMode()
+        }
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -35,11 +37,11 @@ class AddFragment :  NFC_Tools() {
             val existingStudent = students.find { it.studentNFC == nfcId && it.id != editingStudentId }
             if (existingStudent != null) {
                 Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
-                stopNfcReadingModeAfterScan()
+                stopNfcReadingMode()
             } else {
                 binding.attendanceCb.isChecked = true // если сканировали nfc, то студент был на паре (мини автоматизация)
                 Toast.makeText(requireContext(), "NFC READED: $nfcId", Toast.LENGTH_LONG).show()
-                stopNfcReadingModeAfterScan()
+                stopNfcReadingMode()
                 currentNfcId = nfcId
             }
         } else {
@@ -94,11 +96,8 @@ class AddFragment :  NFC_Tools() {
         binding.addBtn.setOnClickListener {
             saveStudent()
         }
-        binding.btnReadNfc.setOnClickListener {
-            startNfcReadingMode()
-        }
+        setupNfcButton()
     }
-
 
     @OptIn(InternalSerializationApi::class)
     private fun saveStudent() {
@@ -198,7 +197,7 @@ class AddFragment :  NFC_Tools() {
     override fun onPause() {
         super.onPause()
         if (isReadingMode) {
-            stopNfcReadingModeAfterScan()
+            stopNfcReadingMode()
         }
     }
 

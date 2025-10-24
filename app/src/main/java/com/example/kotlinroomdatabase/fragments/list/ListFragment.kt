@@ -83,8 +83,7 @@ class ListFragment : NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     private fun navigateToNfcAttendance() {                 //Переход в режим чтения метки при нажатии на пункт в dropdown
-        setupNfcReading()
-        startNfcReadingMode()
+        findNavController().navigate(R.id.action_listFragment_to_nfcAttendanceFragment)
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -166,7 +165,7 @@ class ListFragment : NFC_Tools() {
             adapter.setData(studentList)
             Toast.makeText(requireContext(), "${student.studentName} отмечен", Toast.LENGTH_SHORT).show()
         }
-        stopNfcReadingModeAfterScan()
+        stopNfcReadingMode()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -16,7 +16,11 @@
         <action
             android:id="@+id/action_listFragment_to_updateFragment"
             app:destination="@id/updateFragment" />
+        <action
+            android:id="@+id/action_listFragment_to_nfcAttendanceFragment"
+            app:destination="@id/nfcAttendanceFragment" />
     </fragment>
+
     <fragment
         android:id="@+id/addFragment"
         android:name="com.example.kotlinroomdatabase.fragments.add.AddFragment"
@@ -26,6 +30,7 @@
             android:id="@+id/action_addFragment_to_listFragment"
             app:destination="@id/listFragment" />
     </fragment>
+
     <fragment
         android:id="@+id/updateFragment"
         android:name="com.example.kotlinroomdatabase.fragments.update.UpdateFragment"
@@ -38,13 +43,14 @@
             android:name="currentUser"
             app:argType="com.example.kotlinroomdatabase.model.User" />
     </fragment>
+
     <fragment
-        android:id="@+id/groupFragment"
-        android:name="com.example.kotlinroomdatabase.fragments.list.GroupFragment"
-        android:label="StudentGroups"
-        tools:layout="@layout/fragment_group" >
+        android:id="@+id/nfcAttendanceFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.nfc.NFC_AttendanceFragment"
+        android:label="NFC Attendance"
+        tools:layout="@layout/fragment_nfc_checker" >
         <action
-            android:id="@+id/action_groupFragment_to_listFragment"
+            android:id="@+id/action_nfcAttendanceFragment_to_listFragment"
             app:destination="@id/listFragment" />
     </fragment>
 </navigation>
