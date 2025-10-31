@@ -1,11 +1,15 @@
 package com.example.kotlinroomdatabase.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
 
 @InternalSerializationApi
 @Serializable
+@Entity(tableName = "student")
 data class Student(
+    @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val studentNFC: String = "", // NFC (Device/tag) ID
     val studentName: String,
