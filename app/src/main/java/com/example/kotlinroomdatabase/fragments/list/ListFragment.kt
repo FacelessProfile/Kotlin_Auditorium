@@ -4,21 +4,27 @@ import android.app.AlertDialog
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.databinding.FragmentListBinding
+import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.repository.StudentRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -34,6 +40,13 @@ class ListFragment : NFC_Tools() {
     private var studentList: MutableList<Student> = mutableListOf()
 
     private var toolbarSpinner: Spinner? = null
+    private lateinit var studentRepository: StudentRepository
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        val database = StudentDatabase.getInstance(requireContext())
+        studentRepository = StudentRepository(database.studentDao())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,8 +93,6 @@ class ListFragment : NFC_Tools() {
         actionBar?.setCustomView(toolbarSpinner)
     }
 
-
-    @OptIn(InternalSerializationApi::class)
     private fun navigateToNfcAttendance() {                 //Переход в режим чтения метки при нажатии на пункт в dropdown
         findNavController().navigate(R.id.action_listFragment_to_nfcAttendanceFragment)
     }
@@ -128,19 +139,17 @@ class ListFragment : NFC_Tools() {
         }
     }
 
-
-
     @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
-        if (nfcId.isNotBlank()) {
-            val existingStudent = studentList.find { it.studentNFC == nfcId }
-            if (existingStudent != null) {
-                markStudentAttendance(existingStudent, nfcId)
-            } else {
-                Toast.makeText(requireContext(), "Студент с таким NFC не найден", Toast.LENGTH_LONG).show()
+        lifecycleScope.launch {
+            val existingStudent = studentRepository.getStudentByNfc(nfcId)
+            requireActivity().runOnUiThread {
+                if (existingStudent != null) {
+                    markStudentAttendance(existingStudent)
+                } else {
+                    Toast.makeText(requireContext(), "Студент с таким NFC не найден", Toast.LENGTH_LONG).show()
+                }
             }
-        } else {
-            Toast.makeText(requireContext(), "Ошибка чтения NFC метки", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -157,15 +166,11 @@ class ListFragment : NFC_Tools() {
     }
 
     @OptIn(InternalSerializationApi::class)
-    private fun markStudentAttendance(student: Student, nfcId: String) { // Функция отметки студента в журнале по индексу
-        val studentIndex = studentList.indexOfFirst { it.id == student.id }
-        if (studentIndex != -1) {
-            studentList[studentIndex] = student.copy(attendance = true)
-            saveStudents()
-            adapter.setData(studentList)
+    private fun markStudentAttendance(student: Student) { // Функция отметки студента в журнале по индексу
+        lifecycleScope.launch {
+            studentRepository.updateAttendance(student.id, true)
             Toast.makeText(requireContext(), "${student.studentName} отмечен", Toast.LENGTH_SHORT).show()
         }
-        stopNfcReadingMode()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -197,23 +202,42 @@ class ListFragment : NFC_Tools() {
             else -> super.onOptionsItemSelected(item)
         }
     }
+
     @OptIn(InternalSerializationApi::class)
     private fun loadStudents() {
-        try {
-            val file = File(requireContext().filesDir, jsonFileName)
-            if (!file.exists()) {
+        lifecycleScope.launch {
+            try {
+                migrateFromJsonIfNeeded()
+
+                studentRepository.getAllStudents().collect { students ->
+                    studentList = students.toMutableList()
+                    adapter.setData(studentList)
+                    toolbarSpinner?.let { setupSpinnerData(it) }
+                }
+            } catch (e: Exception) {
                 studentList = mutableListOf()
                 adapter.setData(studentList)
-                return
             }
-            val jsonString = file.readText()
-            val list = Json.decodeFromString<List<Student>>(jsonString)
-            studentList = list.toMutableList()
-            adapter.setData(studentList)
-            toolbarSpinner?.let { setupSpinnerData(it) } // Обновляет спинер в тулбаре после загрузки данных
-        } catch (e: Exception) {
-            studentList = mutableListOf()
-            adapter.setData(studentList)
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private suspend fun migrateFromJsonIfNeeded() {
+        val file = File(requireContext().filesDir, jsonFileName)
+        if (file.exists()) {
+            try {
+                val jsonString = file.readText()
+                val jsonStudents = Json.decodeFromString<List<Student>>(jsonString)
+
+                val dbStudents = studentRepository.getAllStudents().first()
+                if (dbStudents.isEmpty()) {
+                    studentRepository.migrateFromJson(jsonStudents)
+                    file.delete()
+                    Toast.makeText(requireContext(), "Данные мигрированы в базу", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("ListFragment", "Migration error: ${e.message}")
+            }
         }
     }
 
@@ -227,28 +251,18 @@ class ListFragment : NFC_Tools() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     private fun deleteAllStudents() {
         val builder = AlertDialog.Builder(requireContext())
-        builder.setPositiveButton("Yes") { _, _ ->
-            studentList.clear()
-            saveStudents()
-            adapter.setData(studentList)
-            toolbarSpinner?.let { setupSpinnerData(it) } // Обновляем Spinner после удаления
-            Toast.makeText(requireContext(), "Successfully removed everything", Toast.LENGTH_SHORT).show()
+        builder.setPositiveButton("Да") { _, _ ->
+            lifecycleScope.launch {
+                studentRepository.deleteAllStudents()
+                Toast.makeText(requireContext(), "Success!", Toast.LENGTH_SHORT).show()
+            }
         }
-        builder.setNegativeButton("No") { _, _ -> }
-        builder.setTitle("Delete everything ?")
-        builder.setMessage("Are you sure to remove everything ?")
+        builder.setNegativeButton("Отмена") { _, _ -> }
+        builder.setTitle("Удалить всех студентов?")
+        builder.setMessage("Вы точно хотите удалить всех?")
         builder.create().show()
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun saveStudents() {
-        val jsonString = Json.encodeToString(studentList)
-        requireContext().openFileOutput(jsonFileName, Context.MODE_PRIVATE).use {
-            it.write(jsonString.toByteArray())
-        }
     }
 
     @OptIn(InternalSerializationApi::class)                     //Диалог удаления студента из списка
@@ -257,18 +271,16 @@ class ListFragment : NFC_Tools() {
             .setTitle("Удалить студента")
             .setMessage("Вы уверены, что хотите удалить ${student.studentName}?")
             .setPositiveButton("Удалить") { dialog, which ->
-                studentList.removeAll { it.id == student.id }
-                saveStudents()
-                adapter.setData(studentList)
-                toolbarSpinner?.let { setupSpinnerData(it) } // Обновляем Spinner после удаления
-                Toast.makeText(requireContext(), "Студент удален", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    studentRepository.deleteStudent(student)
+                }
             }
-            .setNegativeButton("Отмена", null)
-            .setOnDismissListener {
-                adapter.notifyDataSetChanged()
+            .setNegativeButton("Отмена") { dialog, which ->
+                adapter.notifyItemChanged(position)
             }
             .show()
     }
+
     @OptIn(InternalSerializationApi::class)                         //Работа со свайпом удаления
     private fun setupSwipeToDelete() {
         val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
@@ -284,8 +296,6 @@ class ListFragment : NFC_Tools() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                adapter.notifyItemChanged(viewHolder.adapterPosition)
-
                 val position = viewHolder.adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     val studentToDelete = adapter.getStudentAtPosition(position)

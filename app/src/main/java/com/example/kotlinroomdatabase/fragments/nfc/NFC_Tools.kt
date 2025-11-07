@@ -7,7 +7,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import kotlinx.serialization.InternalSerializationApi
 
-abstract class NFC_Tools : Fragment() {
+abstract class  NFC_Tools : Fragment() {
     protected var nfcAdapter: NfcAdapter? = null
     protected var isReadingMode = false
     protected var isInfiniteMode = false
@@ -20,7 +20,11 @@ abstract class NFC_Tools : Fragment() {
         isReadingMode = true
         isInfiniteMode = infiniteMode
 
-        val flags = NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B
+        val flags = NfcAdapter.FLAG_READER_NFC_A or
+                NfcAdapter.FLAG_READER_NFC_B or
+                NfcAdapter.FLAG_READER_NFC_F or
+                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+
         nfcAdapter?.enableReaderMode(
             requireActivity(),
             nfcReaderCallback,

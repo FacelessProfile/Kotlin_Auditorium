@@ -11,22 +11,22 @@ import kotlinx.serialization.InternalSerializationApi
 @OptIn(InternalSerializationApi::class)
 @Database(entities = [Student::class], version = 1, exportSchema = false)
 abstract class StudentDatabase : RoomDatabase() {
-    abstract fun studentDao(): StudentDao
+            abstract fun studentDao(): StudentDao
 
-    companion object {
-        @Volatile
-        private var INSTANCE: StudentDatabase? = null
+            companion object {
+                @Volatile
+                private var INSTANCE: StudentDatabase? = null
 
-        fun getInstance(context: Context): StudentDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    StudentDatabase::class.java,
-                    "student_database"
-                ).build()
-                INSTANCE = instance
-                instance
-            }
-        }
+                fun getInstance(context: Context): StudentDatabase {
+                    return INSTANCE ?: synchronized(this) {
+                        val instance = Room.databaseBuilder(
+                            context.applicationContext,
+                            StudentDatabase::class.java,
+                            "student_database"
+                        ).build()
+                        INSTANCE = instance
+                        instance
+                    }
+                }
     }
 }

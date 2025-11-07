@@ -1,27 +1,33 @@
 package com.example.kotlinroomdatabase.fragments.add
 
-import android.content.Context
 import android.nfc.NfcAdapter
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.databinding.FragmentAddBinding
+import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.repository.StudentRepository
+import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class AddFragment :  NFC_Tools() {
     private var _binding: FragmentAddBinding? = null
     private val binding get() = _binding!!
-    private val jsonFileName = "students.json"
     private var currentNfcId: String = ""
     private var editingStudentId: Int = 0
+    private lateinit var studentRepository: StudentRepository
+
+    override fun onAttach(context: android.content.Context) {
+        super.onAttach(context)
+        val database = StudentDatabase.getInstance(requireContext())
+        studentRepository = StudentRepository(database.studentDao())
+    }
 
     private fun setupNfcButton() {              //настройка nfc button
         binding.btnReadNfc.setOnClickListener {
@@ -32,20 +38,25 @@ class AddFragment :  NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
-        if (nfcId.isNotBlank()) {
-            val students = loadStudentList()
-            val existingStudent = students.find { it.studentNFC == nfcId && it.id != editingStudentId }
-            if (existingStudent != null) {
-                Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
-                stopNfcReadingMode()
+        lifecycleScope.launch {
+            if (nfcId.isNotBlank()) {
+                val existingStudent = studentRepository.getStudentByNfc(nfcId)
+                requireActivity().runOnUiThread {
+                    if (existingStudent != null && existingStudent.id != editingStudentId) {
+                        Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
+                        stopNfcReadingMode()
+                    } else {
+                        binding.attendanceCb.isChecked = true // если сканировали nfc, то студент был на паре (мини автоматизация)
+                        Toast.makeText(requireContext(), "NFC READED: $nfcId", Toast.LENGTH_LONG).show()
+                        stopNfcReadingMode()
+                        currentNfcId = nfcId
+                    }
+                }
             } else {
-                binding.attendanceCb.isChecked = true // если сканировали nfc, то студент был на паре (мини автоматизация)
-                Toast.makeText(requireContext(), "NFC READED: $nfcId", Toast.LENGTH_LONG).show()
-                stopNfcReadingMode()
-                currentNfcId = nfcId
+                requireActivity().runOnUiThread {
+                    Toast.makeText(requireContext(), "NFC TAG reading err", Toast.LENGTH_SHORT).show()
+                }
             }
-        } else {
-            Toast.makeText(requireContext(), "NFC TAG reading err", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -78,14 +89,17 @@ class AddFragment :  NFC_Tools() {
 
         editingStudentId = arguments?.getInt("studentId", 0) ?: 0
         if (editingStudentId > 0) {
-            val students = loadStudentList()
-            val student = students.find { it.id == editingStudentId }
-            if (student != null) {                                      //если уже есть данные о студенте
-                binding.addFirstNameEt.setText(student.studentName)
-                binding.addLastNameEt.setText(student.studentGroup)
-                binding.attendanceCb.isChecked = student.attendance
-                currentNfcId = student.studentNFC
-                binding.addBtn.text = "Update"
+            lifecycleScope.launch {
+                val student = studentRepository.getStudentById(editingStudentId)
+                student?.let {
+                    requireActivity().runOnUiThread {
+                        binding.addFirstNameEt.setText(it.studentName)
+                        binding.addLastNameEt.setText(it.studentGroup)
+                        binding.attendanceCb.isChecked = it.attendance
+                        currentNfcId = it.studentNFC
+                        binding.addBtn.text = "Update"
+                    }
+                }
             }
         }
 
@@ -101,55 +115,44 @@ class AddFragment :  NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     private fun saveStudent() {
-        val name = binding.addFirstNameEt.text.toString()
-        val group = binding.addLastNameEt.text.toString()
-        val attendance = binding.attendanceCb.isChecked
+        lifecycleScope.launch {
+            val name = binding.addFirstNameEt.text.toString()
+            val group = binding.addLastNameEt.text.toString()
+            val attendance = binding.attendanceCb.isChecked
 
-        // Формализация ФИО и группы
-        val formalizedName = Student.formalizeName(name)
-        val formalizedGroup = Student.formalizeGroup(group)
+            val formalizedName = Student.formalizeName(name)
+            val formalizedGroup = Student.formalizeGroup(group)
 
-        val studentList = loadStudentList()
-
-        if (currentNfcId != "") {
-            val existingStudent = studentList.find { it.studentNFC == currentNfcId && it.id != editingStudentId }
-            if (existingStudent != null) {
-                Toast.makeText(
-                    requireContext(),
-                    "TAG IS ALREADY USED!",
-                    Toast.LENGTH_LONG
-                ).show()
-                return
-            }
-        }
-
-        val student = Student(
-            id = editingStudentId,
-            studentNFC = currentNfcId,
-            studentName = formalizedName,
-            studentGroup = formalizedGroup,
-            attendance = attendance
-        )
-
-        if (student.isValid()) {
-            if (editingStudentId > 0) {
-                val index = studentList.indexOfFirst { it.id == editingStudentId }
-                if (index != -1) {
-                    studentList[index] = student.copy(id = editingStudentId)
-                    Toast.makeText(requireContext(), "Student updated: ${student.studentName}", Toast.LENGTH_LONG).show()
+            if (currentNfcId.isNotBlank()) {
+                val existingStudent = studentRepository.getStudentByNfc(currentNfcId)
+                if (existingStudent != null && existingStudent.id != editingStudentId) {
+                    Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
+                    return@launch
                 }
-            } else {
-                val newId = if (studentList.isEmpty()) 1 else (studentList.maxOf { it.id } + 1)
-                studentList.add(student.copy(id = newId))
-                Toast.makeText(requireContext(), "Student updated: ${student.studentName}", Toast.LENGTH_LONG).show()
             }
 
-            saveStudentList(studentList)
-            clearForm()
-            currentNfcId = ""
-            findNavController().popBackStack()
-        } else {
-            showValidationErrors(student)
+            val student = Student(
+                id = editingStudentId,
+                studentNFC = currentNfcId,
+                studentName = formalizedName,
+                studentGroup = formalizedGroup,
+                attendance = attendance
+            )
+
+            if (student.isValid()) {
+                if (editingStudentId > 0) {
+                    studentRepository.updateStudent(student)
+                    Toast.makeText(requireContext(), "Student updated: ${student.studentName}", Toast.LENGTH_LONG).show()
+                } else {
+                    studentRepository.insertStudent(student)
+                    Toast.makeText(requireContext(), "Student added: ${student.studentName}", Toast.LENGTH_LONG).show()
+                }
+                clearForm()
+                currentNfcId = ""
+                findNavController().popBackStack()
+            } else {
+                showValidationErrors(student)
+            }
         }
     }
 
@@ -170,28 +173,6 @@ class AddFragment :  NFC_Tools() {
         binding.addFirstNameEt.text.clear()
         binding.addLastNameEt.text.clear()
         binding.attendanceCb.isChecked = false
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun loadStudentList(): MutableList<Student> {
-        return try {
-            val jsonString = requireContext()
-                .openFileInput(jsonFileName)
-                .bufferedReader()
-                .use { it.readText() }
-            Json.decodeFromString<MutableList<Student>>(jsonString)
-        } catch (e: Exception) {
-            mutableListOf()
-        }
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun saveStudentList(studentList: List<Student>) {
-        val jsonString = Json.encodeToString(studentList)
-        requireContext().openFileOutput(jsonFileName, Context.MODE_PRIVATE).use {
-            it.write(jsonString.toByteArray())
-        }
-        Log.d("AddFragment", "students saved.. ${studentList.size} records")
     }
 
     override fun onPause() {

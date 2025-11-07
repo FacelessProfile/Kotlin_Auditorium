@@ -1,6 +1,5 @@
 package com.example.kotlinroomdatabase.fragments.nfc
 
-import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -11,13 +10,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.repository.StudentRepository
+import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.io.File
 
 class NFC_AttendanceFragment : NFC_Tools() {
 
@@ -25,10 +25,13 @@ class NFC_AttendanceFragment : NFC_Tools() {
     private lateinit var statusIcon: ImageView
     private lateinit var statusText: TextView
     private lateinit var btnClose: Button
+    private lateinit var studentRepository: StudentRepository
 
-    @OptIn(InternalSerializationApi::class)
-    private lateinit var studentList: MutableList<Student>
-    private val jsonFileName = "students.json"
+    override fun onAttach(context: android.content.Context) {
+        super.onAttach(context)
+        val database = StudentDatabase.getInstance(requireContext())
+        studentRepository = StudentRepository(database.studentDao())
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -47,29 +50,9 @@ class NFC_AttendanceFragment : NFC_Tools() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        loadStudents()
         setupUI()
         setupNfcReading()
         startNfcReadingMode(true)
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun loadStudents() {
-        try {
-            val file = File(requireContext().filesDir, jsonFileName)
-            if (!file.exists()) {
-                studentList = mutableListOf()
-                Toast.makeText(requireContext(), "База студентов пуста", Toast.LENGTH_SHORT).show()
-                return
-            }
-            val jsonString = file.readText()
-            val list = Json.decodeFromString<List<Student>>(jsonString)
-            studentList = list.toMutableList()
-            Toast.makeText(requireContext(), "Загружено ${studentList.size} студентов", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            studentList = mutableListOf()
-            Toast.makeText(requireContext(), "Ошибка загрузки студентов: ${e.message}", Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun setupUI() {
@@ -109,66 +92,54 @@ class NFC_AttendanceFragment : NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
-        requireActivity().runOnUiThread {
-            Toast.makeText(requireContext(), "NFC TAG СЧИТАН: $nfcId", Toast.LENGTH_LONG).show()
+        lifecycleScope.launch {
+            try {
+                val existingStudent = studentRepository.getStudentByNfc(nfcId)
 
-            if (nfcId.isNotBlank()) {
-                val existingStudent = studentList.find { it.studentNFC == nfcId }
+                requireActivity().runOnUiThread {
+                    Toast.makeText(requireContext(), "NFC TAG СЧИТАН: $nfcId", Toast.LENGTH_LONG).show()
 
-                if (existingStudent != null) {
-                    if (existingStudent.attendance) {
-                        // Студент уже отмечен
-                        setWarningState()
-                        statusText.text = "${existingStudent.studentName}\nуже отмечен"
+                    if (existingStudent != null) {
+                        if (existingStudent.attendance) {
+                            setWarningState()
+                            statusText.text = "${existingStudent.studentName}\nуже отмечен"
+                        } else {
+                            markStudentAttendance(existingStudent)
+                            setSuccessState()
+                            statusText.text = "${existingStudent.studentName}\nотмечен присутствующим"
+                        }
                     } else {
-                        // Студент найден и не отмечен
-                        markStudentAttendance(existingStudent)
-                        setSuccessState()
-                        statusText.text = "${existingStudent.studentName}\nотмечен присутствующим"
+                        setErrorState()
+                        statusText.text = "Студент не найден"
                     }
-                } else {
-                    setErrorState()
-                    statusText.text = "Студент не найден"
-                }
 
-                rootLayout.postDelayed({
-                    setNeutralState()
-                    statusText.text = "Поднесите следующую метку"
-                }, 3000)
-            } else {
-                setErrorState()
-                statusText.text = "Ошибка чтения метки"
-                rootLayout.postDelayed({
-                    setNeutralState()
-                    statusText.text = "Поднесите следующую метку"
-                }, 3000)
+                    rootLayout.postDelayed({
+                        setNeutralState()
+                        statusText.text = "Поднесите следующую метку"
+                    }, 3000)
+                }
+            } catch (e: Exception) {
+                requireActivity().runOnUiThread {
+                    setErrorState()
+                    statusText.text = "Ошибка базы данных"
+                    rootLayout.postDelayed({
+                        setNeutralState()
+                        statusText.text = "Поднесите следующую метку"
+                    }, 3000)
+                }
             }
         }
     }
 
     @OptIn(InternalSerializationApi::class)
     private fun markStudentAttendance(student: Student) {
-        val studentIndex = studentList.indexOfFirst { it.id == student.id }
-        if (studentIndex != -1) {
-            studentList[studentIndex] = student.copy(attendance = true)
-            saveStudents()
-            Toast.makeText(requireContext(), "${student.studentName} отмечен!", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private fun saveStudents() {
-        try {
-            val jsonString = Json.encodeToString(studentList)
-            requireContext().openFileOutput(jsonFileName, Context.MODE_PRIVATE).use {
-                it.write(jsonString.toByteArray())
-            }
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Ошибка сохранения: ${e.message}", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            studentRepository.updateAttendance(student.id, true)
         }
     }
 
     private fun setNeutralState() {
+        if (!isAdded || isDetached) return
         rootLayout.setBackgroundColor(Color.WHITE)
         statusIcon.setImageResource(R.drawable.ic_nfc)
         statusIcon.setColorFilter(resources.getColor(R.color.purple_500, null))
@@ -176,6 +147,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
     }
 
     private fun setSuccessState() {
+        if (!isAdded || isDetached) return
         rootLayout.setBackgroundColor(Color.GREEN)
         statusIcon.setImageResource(R.drawable.ic_check)
         statusIcon.setColorFilter(Color.WHITE)
@@ -183,6 +155,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
     }
 
     private fun setErrorState() {
+        if (!isAdded || isDetached) return
         rootLayout.setBackgroundColor(Color.RED)
         statusIcon.setImageResource(R.drawable.ic_cross)
         statusIcon.setColorFilter(Color.WHITE)
@@ -190,6 +163,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
     }
 
     private fun setWarningState() {
+        if (!isAdded || isDetached) return
         rootLayout.setBackgroundColor(Color.HSVToColor(floatArrayOf(35.0f,97.0f,78.0f)))
         statusIcon.setImageResource(R.drawable.ic_question)
         statusIcon.setColorFilter(Color.WHITE)
@@ -198,9 +172,9 @@ class NFC_AttendanceFragment : NFC_Tools() {
 
     override fun onPause() {
         super.onPause()
+        rootLayout.removeCallbacks(null)
         if (isReadingMode && !isInfiniteMode) {
             stopNfcReadingMode()
         }
     }
-
 }
