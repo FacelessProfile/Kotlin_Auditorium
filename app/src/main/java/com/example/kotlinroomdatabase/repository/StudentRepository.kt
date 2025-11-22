@@ -40,4 +40,11 @@ class StudentRepository(private val studentDao: StudentDao) {
             insertStudent(student)
         }
     }
+
+    @OptIn(InternalSerializationApi::class)
+    suspend fun getStudentByNameAndGroup(name: String, group: String): Student? =
+        studentDao.getStudentByNameAndGroup(name, group)
+
+    companion object
+
 }

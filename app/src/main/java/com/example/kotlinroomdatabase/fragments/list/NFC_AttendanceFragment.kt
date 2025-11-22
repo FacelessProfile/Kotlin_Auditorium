@@ -177,4 +177,38 @@ class NFC_AttendanceFragment : NFC_Tools() {
             stopNfcReadingMode()
         }
     }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun readHceData() {
+        lifecycleScope.launch {
+            val prefs = requireContext().getSharedPreferences("student_prefs", android.content.Context.MODE_PRIVATE)
+            val studentId = prefs.getInt("current_student_id", -1)
+
+            if (studentId != -1) {
+                val student = studentRepository.getStudentById(studentId)
+                student?.let {
+                    requireActivity().runOnUiThread {
+                        handleStudentFound(it)
+                    }
+                }
+            }
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun handleStudentFound(student: Student) {
+        if (student.attendance) {
+            setWarningState()
+            statusText.text = "${student.studentName}\nуже отмечен"
+        } else {
+            markStudentAttendance(student)
+            setSuccessState()
+            statusText.text = "${student.studentName}\nотмечен присутствующим"
+        }
+
+        rootLayout.postDelayed({
+            setNeutralState()
+            statusText.text = "Поднесите следующую метку"
+        }, 3000)
+    }
 }

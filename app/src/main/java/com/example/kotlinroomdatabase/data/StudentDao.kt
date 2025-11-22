@@ -43,4 +43,8 @@ interface StudentDao {
 
     @Query("UPDATE student SET attendance = :attendance WHERE id = :id")
     suspend fun updateAttendance(id: Int, attendance: Boolean)
+
+    @OptIn(InternalSerializationApi::class)
+    @Query("SELECT * FROM student WHERE studentName = :name AND studentGroup = :group")
+    suspend fun getStudentByNameAndGroup(name: String, group: String): Student?
 }
