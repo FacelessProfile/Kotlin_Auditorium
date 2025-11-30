@@ -2,6 +2,7 @@ package com.example.kotlinroomdatabase.fragments.add
 
 import android.nfc.NfcAdapter
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.databinding.FragmentAddBinding
 import com.example.kotlinroomdatabase.data.StudentDatabase
+import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
@@ -22,11 +24,14 @@ class AddFragment :  NFC_Tools() {
     private var currentNfcId: String = ""
     private var editingStudentId: Int = 0
     private lateinit var studentRepository: StudentRepository
+    private val TAG_ZMQ = "ZeroMQ_AddFragment"
 
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
         val database = StudentDatabase.getInstance(requireContext())
-        studentRepository = StudentRepository(database.studentDao())
+        val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555")
+        studentRepository = StudentRepository(database.studentDao(), zeroMQSender)
+        Log.d(TAG_ZMQ, "ZeroMQ sender initialized in AddFragment")
     }
 
     private fun setupNfcButton() {              //настройка nfc button
@@ -115,6 +120,8 @@ class AddFragment :  NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     private fun saveStudent() {
+        if (!isAdded) return
+
         lifecycleScope.launch {
             val name = binding.addFirstNameEt.text.toString()
             val group = binding.addLastNameEt.text.toString()
@@ -126,7 +133,9 @@ class AddFragment :  NFC_Tools() {
             if (currentNfcId.isNotBlank()) {
                 val existingStudent = studentRepository.getStudentByNfc(currentNfcId)
                 if (existingStudent != null && existingStudent.id != editingStudentId) {
-                    Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(requireContext(), "TAG IS ALREADY USED!", Toast.LENGTH_LONG).show()
+                    }
                     return@launch
                 }
             }
@@ -140,18 +149,42 @@ class AddFragment :  NFC_Tools() {
             )
 
             if (student.isValid()) {
-                if (editingStudentId > 0) {
-                    studentRepository.updateStudent(student)
-                    Toast.makeText(requireContext(), "Student updated: ${student.studentName}", Toast.LENGTH_LONG).show()
-                } else {
-                    studentRepository.insertStudent(student)
-                    Toast.makeText(requireContext(), "Student added: ${student.studentName}", Toast.LENGTH_LONG).show()
+                try {
+                    if (editingStudentId > 0) {
+                        studentRepository.updateStudent(student)
+                        Log.d(TAG_ZMQ, "Student updated: ${student.studentName}")
+                    } else {
+                        studentRepository.insertStudent(student)
+                        Log.d(TAG_ZMQ, "Student added: ${student.studentName}")
+                    }
+
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(requireContext(), "Student saved: ${student.studentName}", Toast.LENGTH_LONG).show()
+                        clearForm()
+                        currentNfcId = ""
+                        findNavController().popBackStack()
+                    }
+
+                    val syncResult = studentRepository.syncAllStudents()
+                    when (syncResult) {
+                        is StudentRepository.SyncResult.Success -> {
+                            Log.d(TAG_ZMQ, "Sync successful: ${syncResult.message}")
+                        }
+                        is StudentRepository.SyncResult.Error -> {
+                            Log.e(TAG_ZMQ, "Sync failed: ${syncResult.message}")
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    Log.e(TAG_ZMQ, "Error saving student: ${e.message}")
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(requireContext(), "Error saving student", Toast.LENGTH_LONG).show()
+                    }
                 }
-                clearForm()
-                currentNfcId = ""
-                findNavController().popBackStack()
             } else {
-                showValidationErrors(student)
+                requireActivity().runOnUiThread {
+                    showValidationErrors(student)
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.kotlinroomdatabase.fragments.nfc
 
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.data.StudentDatabase
+import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
 import kotlinx.coroutines.launch
@@ -26,11 +28,15 @@ class NFC_AttendanceFragment : NFC_Tools() {
     private lateinit var statusText: TextView
     private lateinit var btnClose: Button
     private lateinit var studentRepository: StudentRepository
+    private var TAG = "ZMQ_UPD_FRAG"
 
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
         val database = StudentDatabase.getInstance(requireContext())
         studentRepository = StudentRepository(database.studentDao())
+        val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555")
+        studentRepository = StudentRepository(database.studentDao(), zeroMQSender)
+        Log.d(TAG, "ZeroMQ sender initialized in AttendanceFragment")
     }
 
     override fun onCreateView(
@@ -53,6 +59,26 @@ class NFC_AttendanceFragment : NFC_Tools() {
         setupUI()
         setupNfcReading()
         startNfcReadingMode(true)
+        syncDataOnStart()
+    }
+
+    private fun syncDataOnStart() {
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG, "Starting data sync on fragment start...")
+                val result = studentRepository.syncAllStudents()
+                when (result) {
+                    is StudentRepository.SyncResult.Success -> {
+                        Log.d(TAG, "Sync successful: ${result.message}")
+                    }
+                    is StudentRepository.SyncResult.Error -> {
+                        Log.e(TAG, "Sync failed: ${result.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Sync error: ${e.message}")
+            }
+        }
     }
 
     private fun setupUI() {
@@ -134,7 +160,21 @@ class NFC_AttendanceFragment : NFC_Tools() {
     @OptIn(InternalSerializationApi::class)
     private fun markStudentAttendance(student: Student) {
         lifecycleScope.launch {
-            studentRepository.updateAttendance(student.id, true)
+            try {
+                Log.d(TAG, "Marking attendance for student: ${student.studentName}")
+                studentRepository.updateAttendance(student.id, true)
+                val syncResult = studentRepository.syncAllStudents()
+                when (syncResult) {
+                    is StudentRepository.SyncResult.Success -> {
+                        Log.d(TAG, "Attendance sync successful")
+                    }
+                    is StudentRepository.SyncResult.Error -> {
+                        Log.e(TAG, "Attendance sync failed: ${syncResult.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marking attendance: ${e.message}")
+            }
         }
     }
 

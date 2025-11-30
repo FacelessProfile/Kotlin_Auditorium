@@ -91,7 +91,8 @@ class UpdateFragment : Fragment() {
         builder.setPositiveButton("Yes") { _, _ ->     // Make a "Yes" option and set action if the user selects "Yes"
             mUserViewModel.deleteUser(args.currentUser)    // Execute : delete user
             Toast.makeText(                                // Notification if a user is deleted successfully
-                    requireContext(),
+
+                requireContext(),
                     "Successfully removed ${args.currentUser.firstName}",
                     Toast.LENGTH_SHORT)
                     .show()

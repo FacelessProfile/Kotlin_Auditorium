@@ -21,10 +21,10 @@ import com.example.kotlinroomdatabase.databinding.FragmentListBinding
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.data.ZmqSockets
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -45,7 +45,8 @@ class ListFragment : NFC_Tools() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         val database = StudentDatabase.getInstance(requireContext())
-        studentRepository = StudentRepository(database.studentDao())
+        val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555")
+        studentRepository = StudentRepository(database.studentDao(), zeroMQSender)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
