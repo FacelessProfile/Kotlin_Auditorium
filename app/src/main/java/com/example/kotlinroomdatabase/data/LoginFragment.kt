@@ -15,6 +15,7 @@ import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.nfc.HCEservice
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 
@@ -27,8 +28,7 @@ class LoginFragment : Fragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        val database = StudentDatabase.getInstance(requireContext())
-        studentRepository = StudentRepository(database.studentDao())
+        studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
     }
 
     override fun onCreateView(

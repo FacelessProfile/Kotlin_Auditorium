@@ -18,6 +18,7 @@ import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 
@@ -32,11 +33,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
 
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
-        val database = StudentDatabase.getInstance(requireContext())
-        studentRepository = StudentRepository(database.studentDao())
-        val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555")
-        studentRepository = StudentRepository(database.studentDao(), zeroMQSender)
-        Log.d(TAG, "ZeroMQ sender initialized in AttendanceFragment")
+        studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
     }
 
     override fun onCreateView(

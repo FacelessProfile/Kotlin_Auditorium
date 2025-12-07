@@ -164,6 +164,14 @@ class StudentRepository(
         }
     }
 
+    suspend fun testConnection(): String {
+        return try {
+            zeroMQSender?.testConnection() ?: "ZeroMQ sender is not available"
+        } catch (e: Exception) {
+            "Connection test error: ${e.message}"
+        }
+    }
+
     @OptIn(InternalSerializationApi::class)
     suspend fun syncStudentsByGroup(group: String): SyncResult {
         return try {

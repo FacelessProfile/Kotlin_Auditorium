@@ -10,11 +10,10 @@ import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.databinding.FragmentAddBinding
-import com.example.kotlinroomdatabase.data.StudentDatabase
-import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 
@@ -28,10 +27,7 @@ class AddFragment :  NFC_Tools() {
 
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
-        val database = StudentDatabase.getInstance(requireContext())
-        val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555")
-        studentRepository = StudentRepository(database.studentDao(), zeroMQSender)
-        Log.d(TAG_ZMQ, "ZeroMQ sender initialized in AddFragment")
+        studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
     }
 
     private fun setupNfcButton() {              //настройка nfc button

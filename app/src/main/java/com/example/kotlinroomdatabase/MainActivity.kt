@@ -12,6 +12,7 @@ import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.databinding.ActivityMainBinding
 import com.example.kotlinroomdatabase.nfc.HCEservice
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 
@@ -24,19 +25,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        val database = StudentDatabase.getInstance(this)
-        studentRepository = StudentRepository(database.studentDao())
+        studentRepository = RepositoryZMQ.getStudentRepository(this)
         restoreStudentSession()
 
-        val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val prefs = RepositoryZMQ.getSharedPreferences(this)
         val studentId = prefs.getInt("current_student_id", -1)
 
-        val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555") // YOUR SERVER IP HERE
-        StudentRepository(database.studentDao(), zeroMQSender)
-
         lifecycleScope.launch {
-            val result = zeroMQSender.testConnection()
+            val result = studentRepository.testConnection()
             Log.d("ZMQ_TEST", "Connection test: $result")
         }
 
@@ -46,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(findNavController(R.id.fragment))
     }
 
-    // Enable back arrow button functionality in Add Fragment to return to List Fragment (main page of the app)
+    // Enable back arrow button functionality  in Add Fragment to return to List Fragment (main page of the app)
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.fragment)
         return navController.navigateUp() || super.onSupportNavigateUp()
