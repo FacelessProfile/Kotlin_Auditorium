@@ -2,6 +2,7 @@ package com.example.kotlinroomdatabase.data
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -60,12 +61,29 @@ class LoginFragment : Fragment() {
             }
 
             lifecycleScope.launch {
-                val student = studentRepository.getStudentByNameAndGroup(name, group)
+                Log.d("LoginFragment", "Ищем студента: $name, группа: $group")
+
+                // ищем локально
+                var student = studentRepository.getStudentByNameAndGroup(name, group)
+
+                //если не нашли локально - ищем на сервере
+                if (student == null) {
+                    Log.d("LoginFragment", "Не найден локально, ищем на сервере...")
+                    student = studentRepository.searchStudentOnServer(name, group)
+
+                    //Если нашли на сервере - сохраняем локально
+                    student?.let { serverStudent ->
+                        Log.d("LoginFragment", "Найден на сервере, сохраняем локально")
+                        studentRepository.insertStudent(serverStudent)
+                    }
+                }
+
                 if (student != null) {
-                    HCEservice.currentStudent = student
+                    Log.d("LoginFragment", "Студент найден: ${student.studentName}")
                     enableHceForStudent(student)
                     findNavController().navigate(R.id.action_login_to_main)
                 } else {
+                    Log.d("LoginFragment", "Студент не найден ни локально, ни на сервере")
                     Toast.makeText(requireContext(), "Студент не найден", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -73,12 +91,22 @@ class LoginFragment : Fragment() {
     }
     @OptIn(InternalSerializationApi::class)
     private fun enableHceForStudent(student: Student) {
-        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putInt("current_student_id", student.id).apply()
+        val prefs = requireContext()
+            .getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
 
-        Toast.makeText(requireContext(),
+        val payload = "${student.id}:${student.studentName}"
+
+        prefs.edit()
+            .putString("nfc_payload", payload)
+            .apply()
+
+        Toast.makeText(
+            requireContext(),
             "HCE активирован для: ${student.studentName}",
-            Toast.LENGTH_SHORT).show()
+            Toast.LENGTH_SHORT
+        ).show()
     }
+
+
 
 }

@@ -1,49 +1,57 @@
 package com.example.kotlinroomdatabase.nfc
 
-import android.app.Service
-import android.content.Intent
 import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import android.util.Log
-import com.example.kotlinroomdatabase.model.Student
-import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import android.content.Context
+import java.nio.charset.Charset
+import java.util.Arrays
 
 class HCEservice : HostApduService() {
 
     companion object {
         const val TAG = "HceService"
         const val STUDENT_AID = "F14954574F58"
-        @OptIn(InternalSerializationApi::class)
-        var currentStudent: Student? = null
+
+        // Ключи для SharedPrefs
+        const val PREFS_NAME = "student_nfc_prefs"
+        const val KEY_NFC_PAYLOAD = "nfc_payload"
+        val STATUS_SUCCESS = byteArrayOf(0x90.toByte(), 0x00)
+        val STATUS_FAILED = byteArrayOf(0x6F, 0x00)
+        val STATUS_CLA_NOT_SUPPORTED = byteArrayOf(0x6E, 0x00)
+        val STATUS_INS_NOT_SUPPORTED = byteArrayOf(0x6D, 0x00)
+        val SELECT_INS = 0xA4.toByte()
+        val DEFAULT_CLA = 0x00.toByte()
     }
 
-    @OptIn(InternalSerializationApi::class)
-    override fun processCommandApdu(apdu: ByteArray, extras: Bundle?): ByteArray {
-        val command = apdu.toHexString()
+    override fun processCommandApdu(commandApdu: ByteArray?, extras: Bundle?): ByteArray {
+        if (commandApdu == null) return STATUS_FAILED
 
-        return when {
-            command.contains(STUDENT_AID) -> {
-                currentStudent?.let { student ->
-                    val studentData = "${student.id}:${student.studentName}"
-                    buildSuccessfulResponse(studentData.toByteArray())
-                } ?: buildErrorResponse("there is no such student")
+        val hexCommand = commandApdu.toHexString()
+        Log.d(TAG, "Received APDU: $hexCommand")
+        if (hexCommand.startsWith("00A40400") && hexCommand.contains(STUDENT_AID)) {
+
+            val payload = getStoredNfcPayload()
+
+            return if (!payload.isNullOrBlank()) {
+                Log.d(TAG, "Sending Payload to Reader: $payload")
+                val payloadBytes = payload.toByteArray(Charset.forName("UTF-8"))
+                payloadBytes + STATUS_SUCCESS
+            } else {
+                Log.e(TAG, "Payload is empty in SharedPreferences!")
+                byteArrayOf(0x6A, 0x82.toByte())
             }
-            else -> buildErrorResponse("Unknown command")
         }
+        return STATUS_INS_NOT_SUPPORTED
     }
 
     override fun onDeactivated(reason: Int) {
         Log.d(TAG, "HCE deactivated: $reason")
     }
 
-    private fun buildSuccessfulResponse(data: ByteArray): ByteArray {
-        return byteArrayOf(0x90.toByte(), 0x00) + data
-    }
-
-    private fun buildErrorResponse(message: String): ByteArray {
-        return byteArrayOf(0x6A, 0x82.toByte())
+    private fun getStoredNfcPayload(): String? {
+        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_NFC_PAYLOAD, null)
     }
 
     private fun ByteArray.toHexString(): String {

@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.kotlinroomdatabase.data.StudentDao
 import com.example.kotlinroomdatabase.model.Student
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.InternalSerializationApi
 import org.json.JSONArray
 import org.json.JSONObject
@@ -29,11 +30,14 @@ class StudentRepository(
     suspend fun getStudentById(id: Int): Student? = studentDao.getStudentById(id)
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun insertStudent(student: Student) {
-        studentDao.insertStudent(student)
+    suspend fun insertStudent(student: Student): Long {
+        val newId = studentDao.insertStudent(student) // Получаем ID от Dao
+
         if (zeroMQSender != null) {
-            syncStudentToServer(student, "insert")
+            syncStudentToServer(student.copy(id = newId.toInt()), "insert")
         }
+
+        return newId
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -92,46 +96,41 @@ class StudentRepository(
     @OptIn(InternalSerializationApi::class)
     suspend fun syncAllStudents(): SyncResult {
         return try {
-            Log.d("ZMQ_DEBUG", "Starting syncAllStudents...")
-
-            val students = studentDao.getAllStudents()
-            var studentList: List<Student> = emptyList()
-
-            students.collect { list ->
-                studentList = list
+            val localStudents = studentDao.getAllStudents().first()
+            val jsonRequest = JSONObject().apply {
+                put("operation", "sync_all")
+                put("data", JSONObject())
             }
 
-            Log.d("ZMQ_DEBUG", "Found ${studentList.size} students to sync")
+            val response = zeroMQSender?.sendData(jsonRequest.toString())
+                ?: return SyncResult.Error("ZeroMQ not initialized")
 
-            val jsonArray = JSONArray()
-            studentList.forEach { student ->
-                val jsonObject = JSONObject().apply {
-                    put("operation", "sync_all")
-                    put("data", JSONObject().apply {
-                        put("id", student.id)
-                        put("studentName", student.studentName)
-                        put("studentGroup", student.studentGroup)
-                        put("studentNFC", student.studentNFC)
-                        put("attendance", student.attendance)
-                    })
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val remoteStudentsArray = jsonResponse.optJSONArray("students")
+
+                if (remoteStudentsArray != null) {
+                    for (i in 0 until remoteStudentsArray.length()) {
+                        val s = remoteStudentsArray.getJSONObject(i)
+
+                        val remoteStudent = Student(
+                            id = s.getInt("id"),
+                            studentName = s.getString("studentName"),
+                            studentGroup = s.getString("studentGroup"),
+                            studentNFC = s.optString("studentNFC", ""),
+                            attendance = s.optBoolean("attendance", false)
+                        )
+                        studentDao.insertStudent(remoteStudent)
+                    }
                 }
-                jsonArray.put(jsonObject)
-            }
-
-            Log.d("ZMQ_DEBUG", "Sending JSON: ${jsonArray.toString()}")
-            val response = zeroMQSender?.sendData(jsonArray.toString()) ?: return SyncResult.Error("ZeroMQ not initialized")
-
-            Log.d("ZMQ_DEBUG", "Server response: $response")
-
-            if (response.contains("\"status\":\"success\"")) {
-                SyncResult.Success(studentList.size, "Synced ${studentList.size} students")
+                SyncResult.Success(remoteStudentsArray?.length() ?: 0, "Данные обновлены")
             } else {
-                SyncResult.Error("Sync failed: $response")
+                SyncResult.Error("Сервер вернул ошибку")
             }
-
         } catch (e: Exception) {
-            Log.e("ZMQ_DEBUG", "Sync error: ${e.message}", e)
-            SyncResult.Error("Sync error: ${e.message}")
+            Log.e("ZMQ_DEBUG", "Sync error: ${e.message}")
+            SyncResult.Error(e.message ?: "Unknown error")
         }
     }
 
@@ -213,6 +212,56 @@ class StudentRepository(
 
         } catch (e: Exception) {
             SyncResult.Error("Sync error for group $group: ${e.message}")
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    suspend fun searchStudentOnServer(name: String, group: String): Student? {
+        return try {
+            if (zeroMQSender == null) {
+                Log.e("StudentRepository", "ZeroMQ sender is null")
+                return null
+            }
+
+            val searchData = JSONObject().apply {
+                put("operation", "search")
+                put("data", JSONObject().apply {
+                    put("studentName", name)
+                    put("studentGroup", group)
+                })
+            }
+
+            Log.d("StudentRepository", "Searching on server: $name, $group")
+            val response = zeroMQSender.sendData(searchData.toString())
+            Log.d("StudentRepository", "Server response: $response")
+
+            val json = JSONObject(response)
+            if (json.optString("status") != "success") {
+                Log.e("StudentRepository", "Server returned error status")
+                return null
+            }
+            val data = json.optJSONObject("data")
+            if (data == null) {
+                Log.e("StudentRepository", "No data field in response")
+                return null
+            }
+
+            Log.d("StudentRepository", "Parsed data: $data")
+
+            val student = Student(
+                id = 0,
+                studentName = data.getString("studentName"),
+                studentGroup = data.getString("studentGroup"),
+                studentNFC = data.optString("studentNFC", ""),
+                attendance = data.optBoolean("attendance", false)
+            )
+
+            Log.d("StudentRepository", "Created student: ${student.studentName}")
+            return student
+
+        } catch (e: Exception) {
+            Log.e("StudentRepository", "Search on server failed", e)
+            null
         }
     }
 

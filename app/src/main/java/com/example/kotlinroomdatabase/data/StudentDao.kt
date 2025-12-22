@@ -28,7 +28,7 @@ interface StudentDao {
 
     @OptIn(InternalSerializationApi::class)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertStudent(student: Student)
+    suspend fun insertStudent(student: Student): Long
 
     @OptIn(InternalSerializationApi::class)
     @Update

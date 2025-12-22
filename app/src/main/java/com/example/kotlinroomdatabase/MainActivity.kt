@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         if (studentId != -1) {
             lifecycleScope.launch {
                 val student = studentRepository.getStudentById(studentId)
-                HCEservice.currentStudent = student
+                //HCEservice.currentStudent = student
             }
         }
     }

@@ -31,9 +31,11 @@ class NFC_AttendanceFragment : NFC_Tools() {
     private lateinit var studentRepository: StudentRepository
     private var TAG = "ZMQ_UPD_FRAG"
 
+    @OptIn(InternalSerializationApi::class)
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
         studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
+        studentRepository.getAllStudents()
     }
 
     override fun onCreateView(
@@ -59,11 +61,13 @@ class NFC_AttendanceFragment : NFC_Tools() {
         syncDataOnStart()
     }
 
+    @OptIn(InternalSerializationApi::class)
     private fun syncDataOnStart() {
         lifecycleScope.launch {
             try {
                 Log.d(TAG, "Starting data sync on fragment start...")
                 val result = studentRepository.syncAllStudents()
+                studentRepository.getAllStudents()
                 when (result) {
                     is StudentRepository.SyncResult.Success -> {
                         Log.d(TAG, "Sync successful: ${result.message}")
