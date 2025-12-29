@@ -3,26 +3,66 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="10dp"
-    android:layout_marginVertical="200dp">
+    android:padding="24dp"
+    android:gravity="center">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Auth"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
     <EditText
         android:id="@+id/etName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="ФИО"
-        android:layout_marginBottom="16dp"/>
+        android:hint="Логин (ФИО)"
+        android:inputType="textPersonName"
+        android:layout_marginBottom="12dp"/>
 
     <EditText
         android:id="@+id/etGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Группа"
+        android:hint="Группа (ИКС-123)"
+        android:inputType="textCapCharacters"
+        android:visibility="gone"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Пароль"
+        android:inputType="textPassword"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/etPasswordConfirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Подтвердите пароль"
+        android:inputType="textPassword"
+        android:visibility="gone"
         android:layout_marginBottom="24dp"/>
 
     <Button
-        android:id="@+id/btnLogin"
+        android:id="@+id/btnAction"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Войти"/>
+        android:text="Войти"
+        android:padding="12dp"/>
+
+    <TextView
+        android:id="@+id/tvToggleMode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Нет аккаунта? Зарегистрироваться"
+        android:textColor="@color/design_default_color_primary"
+        android:layout_marginTop="16dp"
+        android:padding="8dp"/>
 
 </LinearLayout>

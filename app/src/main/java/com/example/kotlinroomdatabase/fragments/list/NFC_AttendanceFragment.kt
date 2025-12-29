@@ -123,38 +123,30 @@ class NFC_AttendanceFragment : NFC_Tools() {
             try {
                 val existingStudent = studentRepository.getStudentByNfc(nfcId)
 
-                requireActivity().runOnUiThread {
-                    Toast.makeText(requireContext(), "NFC TAG СЧИТАН: $nfcId", Toast.LENGTH_LONG).show()
-
-                    if (existingStudent != null) {
-                        if (existingStudent.attendance) {
-                            setWarningState()
-                            statusText.text = "${existingStudent.studentName}\nуже отмечен"
-                        } else {
-                            markStudentAttendance(existingStudent)
-                            setSuccessState()
-                            statusText.text = "${existingStudent.studentName}\nотмечен присутствующим"
-                        }
+                if (existingStudent != null) {
+                    if (existingStudent.attendance) {
+                        updateUI(Color.YELLOW, "${existingStudent.studentName}\nуже отмечен")
                     } else {
-                        setErrorState()
-                        statusText.text = "Студент не найден"
+                        markStudentAttendance(existingStudent)
+                        updateUI(Color.GREEN, "${existingStudent.studentName}\nотмечен")
                     }
-
-                    rootLayout.postDelayed({
-                        setNeutralState()
-                        statusText.text = "Поднесите следующую метку"
-                    }, 3000)
+                } else {
+                    updateUI(Color.RED, "Студент не найден\n$nfcId")
                 }
             } catch (e: Exception) {
-                requireActivity().runOnUiThread {
-                    setErrorState()
-                    statusText.text = "Ошибка базы данных"
-                    rootLayout.postDelayed({
-                        setNeutralState()
-                        statusText.text = "Поднесите следующую метку"
-                    }, 3000)
-                }
+                updateUI(Color.RED, "Ошибка синхронизации")
             }
+        }
+    }
+    private fun updateUI(color: Int, text: String) {
+        requireActivity().runOnUiThread {
+            statusText.text = text
+            when(color) {
+                Color.GREEN -> setSuccessState()
+                Color.RED -> setErrorState()
+                Color.YELLOW -> setWarningState()
+            }
+            rootLayout.postDelayed({ setNeutralState(); statusText.text = "Поднесите метку" }, 3000)
         }
     }
 

@@ -207,8 +207,6 @@ class ListFragment : NFC_Tools() {
     private fun loadStudents() {
         lifecycleScope.launch {
             try {
-                migrateFromJsonIfNeeded()
-
                 studentRepository.getAllStudents().collect { students ->
                     studentList = students.toMutableList()
                     adapter.setData(studentList)
@@ -217,26 +215,6 @@ class ListFragment : NFC_Tools() {
             } catch (e: Exception) {
                 studentList = mutableListOf()
                 adapter.setData(studentList)
-            }
-        }
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    private suspend fun migrateFromJsonIfNeeded() {
-        val file = File(requireContext().filesDir, jsonFileName)
-        if (file.exists()) {
-            try {
-                val jsonString = file.readText()
-                val jsonStudents = Json.decodeFromString<List<Student>>(jsonString)
-
-                val dbStudents = studentRepository.getAllStudents().first()
-                if (dbStudents.isEmpty()) {
-                    studentRepository.migrateFromJson(jsonStudents)
-                    file.delete()
-                    Toast.makeText(requireContext(), "Данные мигрированы в базу", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Log.e("ListFragment", "Migration error: ${e.message}")
             }
         }
     }

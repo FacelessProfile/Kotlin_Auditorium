@@ -15,6 +15,7 @@ data class Student(
     val studentName: String,
     val studentGroup: String,
     val attendance: Boolean,
+    val role: String = "student"
 ) {
     companion object {
         // validation patterns for formalized data
@@ -79,7 +80,8 @@ data class Student(
     fun formalized(): Student {
         return this.copy(
             studentName = formalizeName(studentName),
-            studentGroup = formalizeGroup(studentGroup)
+            studentGroup = formalizeGroup(studentGroup),
+            role = this.role
         )
     }
 }

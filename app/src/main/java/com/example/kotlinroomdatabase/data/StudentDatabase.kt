@@ -9,7 +9,7 @@ import com.example.kotlinroomdatabase.model.Student
 import kotlinx.serialization.InternalSerializationApi
 
 @OptIn(InternalSerializationApi::class)
-@Database(entities = [Student::class], version = 1, exportSchema = false)
+@Database(entities = [Student::class], version = 2, exportSchema = false)
 abstract class StudentDatabase : RoomDatabase() {
             abstract fun studentDao(): StudentDao
 

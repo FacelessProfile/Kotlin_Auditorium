@@ -14,7 +14,7 @@ class HCEservice : HostApduService() {
         const val STUDENT_AID = "F14954574F58"
 
         // Ключи для SharedPrefs
-        const val PREFS_NAME = "student_nfc_prefs"
+        const val PREFS_NAME = "student_prefs"
         const val KEY_NFC_PAYLOAD = "nfc_payload"
         val STATUS_SUCCESS = byteArrayOf(0x90.toByte(), 0x00)
         val STATUS_FAILED = byteArrayOf(0x6F, 0x00)
