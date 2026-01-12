@@ -4,6 +4,8 @@ import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import android.util.Log
 import android.content.Context
+import android.content.Intent
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import java.nio.charset.Charset
 import java.util.Arrays
 
@@ -29,16 +31,19 @@ class HCEservice : HostApduService() {
 
         val hexCommand = commandApdu.toHexString()
         Log.d(TAG, "Received APDU: $hexCommand")
-        if (hexCommand.startsWith("00A40400") && hexCommand.contains(STUDENT_AID)) {
 
+        if (hexCommand.startsWith("00A40400") && hexCommand.contains(STUDENT_AID)) {
             val payload = getStoredNfcPayload()
 
             return if (!payload.isNullOrBlank()) {
                 Log.d(TAG, "Sending Payload to Reader: $payload")
                 val payloadBytes = payload.toByteArray(Charset.forName("UTF-8"))
-                payloadBytes + STATUS_SUCCESS
+                val response = payloadBytes + STATUS_SUCCESS
+                val intent = Intent("NFC_MARK_SUCCESS")
+                LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+                response
             } else {
-                Log.e(TAG, "Payload is empty in SharedPreferences!")
+                Log.e(TAG, "Payload empty in prefs!")
                 byteArrayOf(0x6A, 0x82.toByte())
             }
         }

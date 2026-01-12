@@ -1,60 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center">
+    android:padding="32dp"
+    android:gravity="center"
+    android:background="?android:attr/windowBackground">
 
     <TextView
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Auth"
-        android:textSize="24sp"
+        android:text="Аутентификация"
+        android:textSize="28sp"
         android:textStyle="bold"
-        android:layout_marginBottom="32dp"/>
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="40dp"/>
 
-    <EditText
-        android:id="@+id/etName"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/nameLayout"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Логин (ФИО)"
-        android:inputType="textPersonName"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginBottom="16dp"
+        app:startIconDrawable="@android:drawable/ic_menu_edit">
 
-    <EditText
-        android:id="@+id/etGroup"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Логин (ФИО)"
+            android:inputType="textPersonName" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/groupLayout"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Группа (ИКС-123)"
-        android:inputType="textCapCharacters"
+        android:layout_marginBottom="16dp"
         android:visibility="gone"
-        android:layout_marginBottom="12dp"/>
+        app:startIconDrawable="@android:drawable/ic_menu_sort_by_size">
 
-    <EditText
-        android:id="@+id/etPassword"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Группа (ИКС-123)"
+            android:inputType="textCapCharacters" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/passwordLayout"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Пароль"
-        android:inputType="textPassword"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginBottom="16dp"
+        app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+        app:passwordToggleEnabled="false">
 
-    <EditText
-        android:id="@+id/etPasswordConfirm"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Пароль"
+            android:inputType="textPassword"
+            android:drawableEnd="@drawable/ic_eye"
+            android:paddingEnd="12dp"
+            android:typeface="sans" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/passwordConfirmLayout"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Подтвердите пароль"
-        android:inputType="textPassword"
+        android:layout_marginBottom="24dp"
         android:visibility="gone"
-        android:layout_marginBottom="24dp"/>
+        app:startIconDrawable="@android:drawable/ic_lock_lock"
+        app:passwordToggleEnabled="false">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPasswordConfirm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Подтвердите пароль"
+            android:inputType="textPassword"
+            android:drawableEnd="@drawable/ic_eye"
+            android:paddingEnd="12dp"
+            android:typeface="sans" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <Button
         android:id="@+id/btnAction"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="56dp"
         android:text="Войти"
-        android:padding="12dp"/>
+        android:textSize="16sp"
+        android:textAllCaps="false"
+        app:cornerRadius="8dp"/>
 
     <TextView
         android:id="@+id/tvToggleMode"
@@ -62,7 +107,9 @@
         android:layout_height="wrap_content"
         android:text="Нет аккаунта? Зарегистрироваться"
         android:textColor="@color/design_default_color_primary"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="20dp"
+        android:textSize="14sp"
+        android:textStyle="bold"
         android:padding="8dp"/>
 
 </LinearLayout>

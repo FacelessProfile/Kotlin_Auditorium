@@ -6,6 +6,12 @@
     app:startDestination="@id/loginFragment">
 
     <fragment
+        android:id="@+id/userHomeFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.list.User_Interface"
+        android:label="Меню"
+        tools:layout="@layout/user_ui" />
+
+    <fragment
         android:id="@+id/listFragment"
         android:name="com.example.kotlinroomdatabase.fragments.list.ListFragment"
         android:label="Students"
@@ -57,11 +63,15 @@
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.example.kotlinroomdatabase.data.LoginFragment"
-        android:label="Login">
+        android:label="Вход">
 
         <action
             android:id="@+id/action_login_to_main"
             app:destination="@id/listFragment" />
+
+        <action
+            android:id="@+id/action_login_to_userHome"
+            app:destination="@id/userHomeFragment" />
     </fragment>
 
 </navigation>
