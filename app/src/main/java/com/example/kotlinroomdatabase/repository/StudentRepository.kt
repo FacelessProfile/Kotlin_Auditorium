@@ -4,6 +4,7 @@ import com.example.kotlinroomdatabase.data.ZmqSockets
 import android.util.Log
 import com.example.kotlinroomdatabase.data.Crypto
 import com.example.kotlinroomdatabase.data.StudentDao
+import com.example.kotlinroomdatabase.model.Lesson
 import com.example.kotlinroomdatabase.model.Student
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -256,4 +257,86 @@ class StudentRepository(
         data class Success(val count: Int, val message: String) : SyncResult()
         data class Error(val message: String) : SyncResult()
     }
+
+    sealed class AttendanceResult {
+        @OptIn(InternalSerializationApi::class)
+        data class Success(val student: Student) : AttendanceResult()
+        data class Error(val message: String) : AttendanceResult()
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    suspend fun getAllUniqueGroups(): List<String> {
+        return try {
+            // Сначала берем из локальной БД
+            studentDao.getAllGroups().first()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int? {
+        return try {
+            val newLesson = Lesson(
+                subject = subject,
+                date = System.currentTimeMillis(),
+                groups = groups.joinToString(", ")
+            )
+            val localId = studentDao.insertLesson(newLesson).toInt()
+            val jsonRequest = JSONObject().apply {
+                put("operation", "create_lesson")
+                put("data", JSONObject().apply {
+                    put("subject", subject)
+                    put("teacher_id", teacherId)
+                    put("groups", JSONArray(groups))
+                    put("local_id", localId)
+                })
+            }
+
+            val response = zeroMQSender?.sendData(jsonRequest.toString())
+
+            if (response != null) {
+                val jsonResponse = JSONObject(response)
+                if (jsonResponse.optString("status") == "success") {
+                    return jsonResponse.optInt("lesson_id", localId)
+                }
+            }
+            localId
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "mark_attendance")
+                put("data", JSONObject().apply {
+                    put("lesson_id", lessonId)
+                    put("student_nfc", nfcTag)
+                })
+            }
+            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return AttendanceResult.Error("Сервер недоступен")
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val s = jsonResponse.getJSONObject("student")
+                val student = Student(
+                    id = s.getInt("id"),
+                    studentName = s.getString("studentName"),
+                    studentGroup = s.getString("studentGroup"),
+                    studentNFC = s.optString("studentNFC", ""),
+                    attendance = true,
+                    role = "student"
+                )
+                AttendanceResult.Success(student)
+            } else {
+                AttendanceResult.Error(jsonResponse.optString("message", "Ошибка отметки"))
+            }
+        } catch (e: Exception) {
+            AttendanceResult.Error("Ошибка связи")
+        }
+    }
+
 }

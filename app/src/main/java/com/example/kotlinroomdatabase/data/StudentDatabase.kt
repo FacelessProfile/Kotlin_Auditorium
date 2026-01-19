@@ -6,10 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.kotlinroomdatabase.data.StudentDao
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.model.Lesson
 import kotlinx.serialization.InternalSerializationApi
 
 @OptIn(InternalSerializationApi::class)
-@Database(entities = [Student::class], version = 2, exportSchema = false)
+@Database(entities = [Student::class, Lesson::class], version = 3, exportSchema = false)
 abstract class StudentDatabase : RoomDatabase() {
             abstract fun studentDao(): StudentDao
 

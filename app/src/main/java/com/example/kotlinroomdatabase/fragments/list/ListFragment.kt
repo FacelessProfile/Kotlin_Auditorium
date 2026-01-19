@@ -33,7 +33,6 @@ class ListFragment : NFC_Tools() {
     private var _binding: FragmentListBinding? = null
     private val binding get() = _binding!!
     private val adapter = ListAdapter()
-    private val jsonFileName = "students.json"
     private val prefsName = "StudentPrefs"
     private val selectedGroupKey = "selected_group"
 

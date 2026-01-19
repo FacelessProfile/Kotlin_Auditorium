@@ -143,7 +143,7 @@ class LoginFragment : Fragment() {
     private fun proceedToApp(student: Student) {
         enableHceForStudent(student)
         if (student.role == "admin") {
-            findNavController().navigate(R.id.action_login_to_main)
+            findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)
         } else {
             findNavController().navigate(R.id.userHomeFragment)
             Toast.makeText(context, "Режим пропуска активен", Toast.LENGTH_LONG).show()

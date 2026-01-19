@@ -1,6 +1,7 @@
 package com.example.kotlinroomdatabase.data
 
 import androidx.room.*
+import com.example.kotlinroomdatabase.model.Lesson
 import com.example.kotlinroomdatabase.model.Student
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.InternalSerializationApi
@@ -47,4 +48,11 @@ interface StudentDao {
     @OptIn(InternalSerializationApi::class)
     @Query("SELECT * FROM student WHERE studentName = :name AND studentGroup = :group")
     suspend fun getStudentByNameAndGroup(name: String, group: String): Student?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLesson(lesson: Lesson): Long
+
+    @Query("SELECT * FROM lessons_table ORDER BY date DESC")
+    fun getAllLessons(): Flow<List<Lesson>>
+
 }

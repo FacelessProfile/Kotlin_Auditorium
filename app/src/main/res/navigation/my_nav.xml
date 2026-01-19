@@ -66,12 +66,19 @@
         android:label="Вход">
 
         <action
-            android:id="@+id/action_login_to_main"
-            app:destination="@id/listFragment" />
-
-        <action
             android:id="@+id/action_login_to_userHome"
             app:destination="@id/userHomeFragment" />
+        <action
+            android:id="@+id/action_loginFragment_to_lessonFragment"
+            app:destination="@id/lessonFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/lessonFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.list.LessonFragment"
+        android:label="Занятие" >
+        <action
+            android:id="@+id/action_lessonFragment_to_listFragment"
+            app:destination="@id/listFragment" />
     </fragment>
 
 </navigation>

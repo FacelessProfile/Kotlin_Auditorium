@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (studentId != -1 && findNavController(R.id.fragment).currentDestination?.id == R.id.loginFragment) {
-            findNavController(R.id.fragment).navigate(R.id.action_login_to_main)
+            findNavController(R.id.fragment).navigate(R.id.action_loginFragment_to_lessonFragment)
         }
         setupActionBarWithNavController(findNavController(R.id.fragment))
     }
