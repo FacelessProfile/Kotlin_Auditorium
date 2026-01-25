@@ -141,12 +141,28 @@ class LoginFragment : Fragment() {
 
     @OptIn(InternalSerializationApi::class)
     private fun proceedToApp(student: Student) {
-        enableHceForStudent(student)
-        if (student.role == "admin") {
-            findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)
-        } else {
-            findNavController().navigate(R.id.userHomeFragment)
-            Toast.makeText(context, "Режим пропуска активен", Toast.LENGTH_LONG).show()
+        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+
+        lifecycleScope.launch {
+            prefs.edit().clear().apply()
+            studentRepository.clearLocalRoomData()
+            prefs.edit().apply {
+                putInt("current_student_id", student.id)
+                putString("user_role", student.role)
+                putString("student_name", student.studentName)
+                putString("nfc_payload", student.studentNFC)
+                apply()
+            }
+            android.util.Log.d("DEBUG_NFC", "HCE Tag Saved: ${student.studentNFC}")
+            enableHceForStudent(student)
+            android.util.Log.d("DEBUG_NFC", "HCE Tag AFTER ENABLE HCE: ${student.studentNFC}")
+            if (student.role == "admin") {
+                studentRepository.syncAllStudents()
+                findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)
+            } else {
+                findNavController().navigate(R.id.userHomeFragment)
+                Toast.makeText(context,"Режим пропуска активен!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

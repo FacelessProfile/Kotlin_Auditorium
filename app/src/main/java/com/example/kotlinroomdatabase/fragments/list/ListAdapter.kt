@@ -1,5 +1,6 @@
 package com.example.kotlinroomdatabase.fragments.list
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,12 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
     private var studentList: MutableList<Student> = mutableListOf()
     @OptIn(InternalSerializationApi::class)
     private var onItemClick: ((Student) -> Unit)? = null
+    private var isLessonActive = false
+
+    fun setLessonState(active: Boolean) {
+        this.isLessonActive = active
+        notifyDataSetChanged()
+    }
 
     class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
@@ -34,16 +41,26 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
     @OptIn(InternalSerializationApi::class)
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
+
         val student = studentList[position]
+        val tvId = holder.itemView.findViewById<TextView>(R.id.id_txt)
+        val tvFio = holder.itemView.findViewById<TextView>(R.id.FIO_txt)
+        val tvAttendance = holder.itemView.findViewById<TextView>(R.id.attendance_txt)
         val fullName = student.studentName.split(" ")
         val fio = if (fullName.size >= 3) {
+
             "${fullName[0]} ${fullName[1]} ${fullName[2][0]}."
         } else {
             student.studentName
         }
-        holder.itemView.findViewById<TextView>(R.id.id_txt).text = (position + 1).toString()
-        holder.itemView.findViewById<TextView>(R.id.FIO_txt).text = fio
-        holder.itemView.findViewById<TextView>(R.id.attendance_txt).text = if (student.attendance) "+" else "-"
+        tvId.text = (position + 1).toString()
+        tvFio.text = fio
+        tvAttendance.text = if (student.attendance) "+" else "-"
+        val textColor = if (isLessonActive) Color.BLACK else Color.LTGRAY
+        tvId.setTextColor(textColor)
+        tvFio.setTextColor(textColor)
+        tvAttendance.setTextColor(textColor)
+
         holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout).setOnClickListener {
             onItemClick?.invoke(student)
         }

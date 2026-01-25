@@ -26,19 +26,26 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         studentRepository = RepositoryZMQ.getStudentRepository(this)
-        restoreStudentSession()
 
-        val prefs = RepositoryZMQ.getSharedPreferences(this)
+        val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val studentId = prefs.getInt("current_student_id", -1)
+        val userRole = prefs.getString("user_role", "student")
 
         lifecycleScope.launch {
-            val result = studentRepository.testConnection()
-            Log.d("ZMQ_TEST", "Connection test: $result")
+            studentRepository.testConnection()
+        }
+        if (studentId != -1) {
+            val navController = findNavController(R.id.fragment)
+            val currentDest = navController.currentDestination?.id
+            if (currentDest == R.id.loginFragment) {
+                if (userRole == "admin") {
+                    navController.navigate(R.id.action_loginFragment_to_lessonFragment)
+                } else {
+                    navController.navigate(R.id.userHomeFragment)
+                }
+            }
         }
 
-        if (studentId != -1 && findNavController(R.id.fragment).currentDestination?.id == R.id.loginFragment) {
-            findNavController(R.id.fragment).navigate(R.id.action_loginFragment_to_lessonFragment)
-        }
         setupActionBarWithNavController(findNavController(R.id.fragment))
     }
 

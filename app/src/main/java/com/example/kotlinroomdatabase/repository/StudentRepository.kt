@@ -67,6 +67,10 @@ class StudentRepository(
         studentDao.deleteAllStudents()
     }
 
+    suspend fun clearLocalRoomData() {
+        studentDao.deleteAllStudents()
+    }
+
     @OptIn(InternalSerializationApi::class)
     suspend fun updateAttendance(id: Int, attendance: Boolean) {
         studentDao.updateAttendance(id, attendance)
@@ -96,6 +100,7 @@ class StudentRepository(
             if (jsonResponse.optString("status") == "success") {
                 val remoteStudentsArray = jsonResponse.optJSONArray("students")
                 if (remoteStudentsArray != null) {
+                    studentDao.deleteAllStudents()
                     for (i in 0 until remoteStudentsArray.length()) {
                         val s = remoteStudentsArray.getJSONObject(i)
                         val remoteStudent = Student(
@@ -267,7 +272,6 @@ class StudentRepository(
     @OptIn(InternalSerializationApi::class)
     suspend fun getAllUniqueGroups(): List<String> {
         return try {
-            // Сначала берем из локальной БД
             studentDao.getAllGroups().first()
         } catch (e: Exception) {
             emptyList()
@@ -308,7 +312,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult {
+    suspend fun markAttendanceInLesson(lessonId: Int?, nfcTag: String): AttendanceResult {
         return try {
             val jsonRequest = JSONObject().apply {
                 put("operation", "mark_attendance")
@@ -330,12 +334,57 @@ class StudentRepository(
                     attendance = true,
                     role = "student"
                 )
+
+                studentDao.insertStudent(student)
+
                 AttendanceResult.Success(student)
             } else {
                 AttendanceResult.Error(jsonResponse.optString("message", "Ошибка отметки"))
             }
         } catch (e: Exception) {
             AttendanceResult.Error("Ошибка связи")
+        }
+    }
+    sealed class FinishLessonResult {
+        data class Success(val reportName: String, val data: List<Map<String, Any>>) : FinishLessonResult()
+        data class Error(val message: String) : FinishLessonResult()
+    }
+
+    suspend fun finishLesson(lessonId: Int): FinishLessonResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "finish_lesson")
+                put("data", JSONObject().apply {
+                    put("lesson_id", lessonId)
+                })
+            }
+
+            val response = zeroMQSender?.sendData(jsonRequest.toString())
+                ?: return FinishLessonResult.Error("Сервер недоступен")
+
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val reportName = jsonResponse.optString("report_name")
+                val studentsData = jsonResponse.optJSONArray("data")
+                val resultList = mutableListOf<Map<String, Any>>()
+
+                if (studentsData != null) {
+                    for (i in 0 until studentsData.length()) {
+                        val item = studentsData.getJSONObject(i)
+                        resultList.add(mapOf(
+                            "group" to item.getString("group"),
+                            "name" to item.getString("name"),
+                            "present" to item.getBoolean("present")
+                        ))
+                    }
+                }
+                FinishLessonResult.Success(reportName, resultList)
+            } else {
+                FinishLessonResult.Error(jsonResponse.optString("message", "Ошибка завершения"))
+            }
+        } catch (e: Exception) {
+            FinishLessonResult.Error("Ошибка связи: ${e.message}")
         }
     }
 

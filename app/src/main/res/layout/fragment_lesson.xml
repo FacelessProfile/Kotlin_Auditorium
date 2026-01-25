@@ -103,6 +103,16 @@
             app:icon="@android:drawable/ic_input_add"
             app:iconTint="@android:color/white" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnFinishLesson"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:visibility="gone"
+            android:text="Завершить"
+            android:backgroundTint="#F44336"
+            app:cornerRadius="16dp" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
