@@ -1,0 +1,4 @@
+# Запуск в 06:00 и 18:00
+0 6 * * * /usr/local/bin/python /app/main.py >> /var/log/cron.log 2>&1
+0 18 * * * /usr/local/bin/python /app/main.py >> /var/log/cron.log 2>&1
+
