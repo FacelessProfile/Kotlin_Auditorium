@@ -15,21 +15,199 @@ import org.json.JSONObject
 class StudentRepository(
     private val studentDao: StudentDao,
     private val zeroMQSender: ZmqSockets? = null
-) {
+) : IStudentRepository {
+    @OptIn(InternalSerializationApi::class)
+    override fun getAllStudents(): Flow<List<Student>> {
+        return studentDao.getAllStudents()
+    }
 
     @OptIn(InternalSerializationApi::class)
-    fun getAllStudents(): Flow<List<Student>> = studentDao.getAllStudents()
+    override suspend fun getStudentByNfc(nfcId: String): Student? = studentDao.getStudentByNfc(nfcId)
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun getStudentById(id: Int): Student? = studentDao.getStudentById(id)
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun updateAttendance(id: Int, status: Boolean) {
+        studentDao.updateAttendance(id, status)
+        if (zeroMQSender != null) {
+            val student = studentDao.getStudentById(id)
+            student?.let { syncStudentToServer(it, "attendance") }
+        }
+    }
+
+    override suspend fun clearLocalRoomData() {
+        studentDao.deleteAllStudents()
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun syncAllStudents(): SyncResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "sync_all")
+                put("data", JSONObject())
+            }
+
+            val response = zeroMQSender?.sendData(jsonRequest.toString())
+                ?: return SyncResult.Error("ZeroMQ not initialized")
+
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val remoteStudentsArray = jsonResponse.optJSONArray("students")
+                if (remoteStudentsArray != null) {
+                    studentDao.deleteAllStudents()
+                    for (i in 0 until remoteStudentsArray.length()) {
+                        val s = remoteStudentsArray.getJSONObject(i)
+                        val remoteStudent = Student(
+                            id = s.getInt("id"),
+                            studentName = s.getString("studentName"),
+                            studentGroup = s.getString("studentGroup"),
+                            studentNFC = s.optString("studentNFC", ""),
+                            attendance = s.optBoolean("attendance", false),
+                            role = s.optString("role", "student")
+                        )
+                        studentDao.insertStudent(remoteStudent)
+                    }
+                }
+                SyncResult.Success(remoteStudentsArray?.length() ?: 0, "Данные обновлены")
+            } else {
+                SyncResult.Error("Сервер вернул ошибку")
+            }
+        } catch (e: Exception) {
+            SyncResult.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun login(loginName: String, passwordRaw: String): LoginResult {
+        return try {
+            val encryptedPassword = Crypto.encryptPassword(passwordRaw)
+            if (encryptedPassword.isEmpty()) return LoginResult.Error("Ошибка шифрования")
+
+            val jsonRequest = JSONObject().apply {
+                put("operation", "login")
+                put("data", JSONObject().apply {
+                    put("login", loginName)
+                    put("password", encryptedPassword)
+                })
+            }
+
+            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return LoginResult.Error("Сервер недоступен")
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                parseAndSaveStudent(jsonResponse)
+            } else {
+                LoginResult.Error(jsonResponse.optString("message", "Неверный логин или пароль"))
+            }
+        } catch (e: Exception) {
+            LoginResult.Error("Ошибка связи: ${e.message}")
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun register(name: String, group: String, passwordRaw: String): LoginResult {
+        return try {
+            val encryptedPassword = Crypto.encryptPassword(passwordRaw)
+            val jsonRequest = JSONObject().apply {
+                put("operation", "register")
+                put("data", JSONObject().apply {
+                    put("login", name)
+                    put("group", group)
+                    put("password", encryptedPassword)
+                })
+            }
+
+            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return LoginResult.Error("Сервер недоступен")
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                parseAndSaveStudent(jsonResponse)
+            } else {
+                LoginResult.Error(jsonResponse.optString("message", "Ошибка регистрации"))
+            }
+        } catch (e: Exception) {
+            LoginResult.Error("Ошибка связи: ${e.message}")
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "mark_attendance")
+                put("data", JSONObject().apply {
+                    put("lesson_id", lessonId)
+                    put("student_nfc", nfcTag)
+                })
+            }
+            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return AttendanceResult.Error("Сервер недоступен")
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val s = jsonResponse.getJSONObject("student")
+                val student = Student(
+                    id = s.getInt("id"),
+                    studentName = s.getString("studentName"),
+                    studentGroup = s.getString("studentGroup"),
+                    studentNFC = s.optString("studentNFC", ""),
+                    attendance = true,
+                    role = "student"
+                )
+
+                studentDao.insertStudent(student)
+                AttendanceResult.Success(student)
+            } else {
+                AttendanceResult.Error(jsonResponse.optString("message", "Ошибка отметки"))
+            }
+        } catch (e: Exception) {
+            AttendanceResult.Error("Ошибка связи")
+        }
+    }
+
+    override suspend fun finishLesson(lessonId: Int): FinishLessonResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "finish_lesson")
+                put("data", JSONObject().apply {
+                    put("lesson_id", lessonId)
+                })
+            }
+
+            val response = zeroMQSender?.sendData(jsonRequest.toString())
+                ?: return FinishLessonResult.Error("Сервер недоступен")
+
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val reportName = jsonResponse.optString("report_name")
+                val studentsData = jsonResponse.optJSONArray("data")
+                val resultList = mutableListOf<Map<String, Any>>()
+
+                if (studentsData != null) {
+                    for (i in 0 until studentsData.length()) {
+                        val item = studentsData.getJSONObject(i)
+                        resultList.add(mapOf(
+                            "group" to item.getString("group"),
+                            "name" to item.getString("name"),
+                            "present" to item.getBoolean("present")
+                        ))
+                    }
+                }
+                FinishLessonResult.Success(reportName, resultList)
+            } else {
+                FinishLessonResult.Error(jsonResponse.optString("message", "Ошибка завершения"))
+            }
+        } catch (e: Exception) {
+            FinishLessonResult.Error("Ошибка связи: ${e.message}")
+        }
+    }
 
     @OptIn(InternalSerializationApi::class)
     fun getStudentsByGroup(group: String): Flow<List<Student>> = studentDao.getStudentsByGroup(group)
 
     fun getAllGroups(): Flow<List<String>> = studentDao.getAllGroups()
-
-    @OptIn(InternalSerializationApi::class)
-    suspend fun getStudentByNfc(nfcId: String): Student? = studentDao.getStudentByNfc(nfcId)
-
-    @OptIn(InternalSerializationApi::class)
-    suspend fun getStudentById(id: Int): Student? = studentDao.getStudentById(id)
 
     @OptIn(InternalSerializationApi::class)
     suspend fun insertStudent(student: Student): Long {
@@ -67,61 +245,9 @@ class StudentRepository(
         studentDao.deleteAllStudents()
     }
 
-    suspend fun clearLocalRoomData() {
-        studentDao.deleteAllStudents()
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    suspend fun updateAttendance(id: Int, attendance: Boolean) {
-        studentDao.updateAttendance(id, attendance)
-        if (zeroMQSender != null) {
-            val student = studentDao.getStudentById(id)
-            student?.let { syncStudentToServer(it, "attendance") }
-        }
-    }
-
     @OptIn(InternalSerializationApi::class)
     suspend fun getStudentByNameAndGroup(name: String, group: String): Student? =
         studentDao.getStudentByNameAndGroup(name, group)
-
-    @OptIn(InternalSerializationApi::class)
-    suspend fun syncAllStudents(): SyncResult {
-        return try {
-            val jsonRequest = JSONObject().apply {
-                put("operation", "sync_all")
-                put("data", JSONObject())
-            }
-
-            val response = zeroMQSender?.sendData(jsonRequest.toString())
-                ?: return SyncResult.Error("ZeroMQ not initialized")
-
-            val jsonResponse = JSONObject(response)
-
-            if (jsonResponse.optString("status") == "success") {
-                val remoteStudentsArray = jsonResponse.optJSONArray("students")
-                if (remoteStudentsArray != null) {
-                    studentDao.deleteAllStudents()
-                    for (i in 0 until remoteStudentsArray.length()) {
-                        val s = remoteStudentsArray.getJSONObject(i)
-                        val remoteStudent = Student(
-                            id = s.getInt("id"),
-                            studentName = s.getString("studentName"),
-                            studentGroup = s.getString("studentGroup"),
-                            studentNFC = s.optString("studentNFC", ""),
-                            attendance = s.optBoolean("attendance", false),
-                            role = s.optString("role", "student")
-                        )
-                        studentDao.insertStudent(remoteStudent)
-                    }
-                }
-                SyncResult.Success(remoteStudentsArray?.length() ?: 0, "Данные обновлены")
-            } else {
-                SyncResult.Error("Сервер вернул ошибку")
-            }
-        } catch (e: Exception) {
-            SyncResult.Error(e.message ?: "Unknown error")
-        }
-    }
 
     @OptIn(InternalSerializationApi::class)
     private suspend fun syncStudentToServer(student: Student, operation: String) {
@@ -173,59 +299,6 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun login(loginName: String, passwordRaw: String): LoginResult {
-        return try {
-            val encryptedPassword = Crypto.encryptPassword(passwordRaw)
-            if (encryptedPassword.isEmpty()) return LoginResult.Error("Ошибка шифрования")
-
-            val jsonRequest = JSONObject().apply {
-                put("operation", "login")
-                put("data", JSONObject().apply {
-                    put("login", loginName)
-                    put("password", encryptedPassword)
-                })
-            }
-
-            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return LoginResult.Error("Сервер недоступен")
-            val jsonResponse = JSONObject(response)
-
-            if (jsonResponse.optString("status") == "success") {
-                parseAndSaveStudent(jsonResponse)
-            } else {
-                LoginResult.Error(jsonResponse.optString("message", "Неверный логин или пароль"))
-            }
-        } catch (e: Exception) {
-            LoginResult.Error("Ошибка связи: ${e.message}")
-        }
-    }
-
-    @OptIn(InternalSerializationApi::class)
-    suspend fun register(name: String, group: String, passwordRaw: String): LoginResult {
-        return try {
-            val encryptedPassword = Crypto.encryptPassword(passwordRaw)
-            val jsonRequest = JSONObject().apply {
-                put("operation", "register")
-                put("data", JSONObject().apply {
-                    put("login", name)
-                    put("group", group)
-                    put("password", encryptedPassword)
-                })
-            }
-
-            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return LoginResult.Error("Сервер недоступен")
-            val jsonResponse = JSONObject(response)
-
-            if (jsonResponse.optString("status") == "success") {
-                parseAndSaveStudent(jsonResponse)
-            } else {
-                LoginResult.Error(jsonResponse.optString("message", "Ошибка регистрации"))
-            }
-        } catch (e: Exception) {
-            LoginResult.Error("Ошибка связи: ${e.message}")
-        }
-    }
-
-    @OptIn(InternalSerializationApi::class)
     private suspend fun parseAndSaveStudent(jsonResponse: JSONObject): LoginResult {
         val role = jsonResponse.getString("role")
         val data = jsonResponse.getJSONObject("student")
@@ -242,31 +315,13 @@ class StudentRepository(
         studentDao.insertStudent(student)
         return LoginResult.Success(student)
     }
+
     suspend fun testConnection(): String {
         return try {
             zeroMQSender?.testConnection() ?: "ZeroMQ sender is not available"
         } catch (e: Exception) {
             "Connection test error: ${e.message}"
         }
-
-    }
-
-
-    sealed class LoginResult {
-        @OptIn(InternalSerializationApi::class)
-        data class Success(val student: Student) : LoginResult()
-        data class Error(val message: String) : LoginResult()
-    }
-
-    sealed class SyncResult {
-        data class Success(val count: Int, val message: String) : SyncResult()
-        data class Error(val message: String) : SyncResult()
-    }
-
-    sealed class AttendanceResult {
-        @OptIn(InternalSerializationApi::class)
-        data class Success(val student: Student) : AttendanceResult()
-        data class Error(val message: String) : AttendanceResult()
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -310,82 +365,4 @@ class StudentRepository(
             null
         }
     }
-
-    @OptIn(InternalSerializationApi::class)
-    suspend fun markAttendanceInLesson(lessonId: Int?, nfcTag: String): AttendanceResult {
-        return try {
-            val jsonRequest = JSONObject().apply {
-                put("operation", "mark_attendance")
-                put("data", JSONObject().apply {
-                    put("lesson_id", lessonId)
-                    put("student_nfc", nfcTag)
-                })
-            }
-            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return AttendanceResult.Error("Сервер недоступен")
-            val jsonResponse = JSONObject(response)
-
-            if (jsonResponse.optString("status") == "success") {
-                val s = jsonResponse.getJSONObject("student")
-                val student = Student(
-                    id = s.getInt("id"),
-                    studentName = s.getString("studentName"),
-                    studentGroup = s.getString("studentGroup"),
-                    studentNFC = s.optString("studentNFC", ""),
-                    attendance = true,
-                    role = "student"
-                )
-
-                studentDao.insertStudent(student)
-
-                AttendanceResult.Success(student)
-            } else {
-                AttendanceResult.Error(jsonResponse.optString("message", "Ошибка отметки"))
-            }
-        } catch (e: Exception) {
-            AttendanceResult.Error("Ошибка связи")
-        }
-    }
-    sealed class FinishLessonResult {
-        data class Success(val reportName: String, val data: List<Map<String, Any>>) : FinishLessonResult()
-        data class Error(val message: String) : FinishLessonResult()
-    }
-
-    suspend fun finishLesson(lessonId: Int): FinishLessonResult {
-        return try {
-            val jsonRequest = JSONObject().apply {
-                put("operation", "finish_lesson")
-                put("data", JSONObject().apply {
-                    put("lesson_id", lessonId)
-                })
-            }
-
-            val response = zeroMQSender?.sendData(jsonRequest.toString())
-                ?: return FinishLessonResult.Error("Сервер недоступен")
-
-            val jsonResponse = JSONObject(response)
-
-            if (jsonResponse.optString("status") == "success") {
-                val reportName = jsonResponse.optString("report_name")
-                val studentsData = jsonResponse.optJSONArray("data")
-                val resultList = mutableListOf<Map<String, Any>>()
-
-                if (studentsData != null) {
-                    for (i in 0 until studentsData.length()) {
-                        val item = studentsData.getJSONObject(i)
-                        resultList.add(mapOf(
-                            "group" to item.getString("group"),
-                            "name" to item.getString("name"),
-                            "present" to item.getBoolean("present")
-                        ))
-                    }
-                }
-                FinishLessonResult.Success(reportName, resultList)
-            } else {
-                FinishLessonResult.Error(jsonResponse.optString("message", "Ошибка завершения"))
-            }
-        } catch (e: Exception) {
-            FinishLessonResult.Error("Ошибка связи: ${e.message}")
-        }
-    }
-
 }

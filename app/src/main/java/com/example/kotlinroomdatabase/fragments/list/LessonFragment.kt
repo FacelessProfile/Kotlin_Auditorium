@@ -1,6 +1,10 @@
 package com.example.kotlinroomdatabase.fragments.list
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.nfc.NfcAdapter
 import android.os.Bundle
@@ -17,6 +21,8 @@ import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.settings.LessonsConfig
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.repository.AttendanceResult
+import com.example.kotlinroomdatabase.repository.FinishLessonResult
 import com.example.kotlinroomdatabase.repository.StudentRepository
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -35,10 +41,12 @@ class LessonFragment : NFC_Tools() {
     private val attendedStudents = mutableListOf<Student>()
     private val selectedGroups = mutableSetOf<String>()
 
-    
+
     private var currentLessonId: Int? = null
+    private var isLessonActive = false
 
     private lateinit var tvStatus: TextView
+    private lateinit var tvSubStatus: TextView
     private lateinit var statusIcon: ImageView
     private lateinit var recyclerView: RecyclerView
     private lateinit var fabCreateLesson: ExtendedFloatingActionButton
@@ -49,7 +57,7 @@ class LessonFragment : NFC_Tools() {
         super.onAttach(context)
         studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
 
-        
+
         nfcAdapter = NfcAdapter.getDefaultAdapter(context)
         Log.d("NFC_DEBUG", "NFC Adapter initialized: ${nfcAdapter != null}")
     }
@@ -61,6 +69,7 @@ class LessonFragment : NFC_Tools() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_lesson, container, false)
         tvStatus = view.findViewById(R.id.tvLessonStatus)
+        tvSubStatus = view.findViewById(R.id.tvLessonSubStatus)
         statusIcon = view.findViewById(R.id.statusIcon)
         recyclerView = view.findViewById(R.id.recyclerViewAttendance)
         fabCreateLesson = view.findViewById(R.id.fabCreateLesson)
@@ -81,18 +90,31 @@ class LessonFragment : NFC_Tools() {
         return view
     }
 
+    private val nfcStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action
+            if (action == NfcAdapter.ACTION_ADAPTER_STATE_CHANGED) {
+                val state = intent.getIntExtra(NfcAdapter.EXTRA_ADAPTER_STATE, NfcAdapter.STATE_OFF)
+                if (state == NfcAdapter.STATE_ON || state == NfcAdapter.STATE_OFF) {
+                    updateNfcStatusUI()
+                }
+            }
+        }
+    }
+
     @OptIn(InternalSerializationApi::class)
     private fun finishCurrentLesson() {
         val lessonId = currentLessonId ?: return
         lifecycleScope.launch {
             val result = studentRepository.finishLesson(lessonId)
+
             when (result) {
-                is StudentRepository.FinishLessonResult.Success -> {
+                is FinishLessonResult.Success -> {
                     Toast.makeText(context, "Занятие завершено!", Toast.LENGTH_LONG).show()
-                    stopNfcReadingMode() 
+                    stopNfcReadingMode()
                     resetUiAfterLesson()
                 }
-                is StudentRepository.FinishLessonResult.Error -> {
+                is FinishLessonResult.Error -> {
                     Toast.makeText(context, "Ошибка: ${result.message}", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -116,7 +138,7 @@ class LessonFragment : NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
-        
+
         Log.d("NFC_DEBUG", "найдена метка: $nfcId")
 
         val lessonId = currentLessonId
@@ -136,20 +158,23 @@ class LessonFragment : NFC_Tools() {
 
             requireActivity().runOnUiThread {
                 when (result) {
-                    is StudentRepository.AttendanceResult.Success -> {
+                    is AttendanceResult.Success -> {
                         val student = result.student
                         Log.d("NFC_DEBUG", "SUCCESS: ${student.studentName}!")
                         attendedStudents.add(0, student)
                         adapter.setData(attendedStudents)
 
-                        
+
                         statusIcon.setColorFilter(Color.GREEN)
                         statusIcon.postDelayed({ statusIcon.setColorFilter(null) }, 1000)
                     }
-                    is StudentRepository.AttendanceResult.Error -> {
+                    is AttendanceResult.Error -> {
                         Log.e("NFC_DEBUG", "ERR: ${result.message}")
                         Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
                     }
+
+                    is AttendanceResult.Error -> TODO()
+                    is AttendanceResult.Success -> TODO()
                 }
             }
         }
@@ -168,9 +193,17 @@ class LessonFragment : NFC_Tools() {
 
         acSubject.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, LessonsConfig.SUBJECTS_POOL))
 
+        val groupAdapter = ContainsArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line)
+        acGroupSearch.setAdapter(groupAdapter)
+        acGroupSearch.threshold = 1
         lifecycleScope.launch {
             val groups = studentRepository.getAllUniqueGroups()
-            acGroupSearch.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, groups))
+            Log.d("DEBUG", "Загружено групп: ${groups.size}")
+            if (groups.isNotEmpty()) {
+                groupAdapter.updateData(groups)
+            } else {
+                Toast.makeText(context, "Список групп пуст! Синхронизируйте данные.", Toast.LENGTH_SHORT).show()
+            }
         }
 
         acGroupSearch.setOnItemClickListener { parent, _, position, _ ->
@@ -187,26 +220,24 @@ class LessonFragment : NFC_Tools() {
                 chipGroup.addView(chip)
             }
             acGroupSearch.setText("")
+            acGroupSearch.post { groupAdapter.filter.filter(null) }
         }
 
         btnStart.setOnClickListener {
             val subject = acSubject.text.toString()
             if (subject.isEmpty() || selectedGroups.isEmpty()) {
-                Toast.makeText(context, "Заполните все поля!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Заполните предмет и выберите группу", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             lifecycleScope.launch {
                 try {
-                    Log.d("NFC_DEBUG", "Запрос на создание занятия: $subject")
                     val id = studentRepository.createLesson(subject, 1, selectedGroups.toList())
                     if (id != null) {
                         currentLessonId = id
-                        Log.d("NFC_DEBUG", "Занятие создано успешно ID: $currentLessonId")
                         updateUiOnLessonStart(subject, bottomSheet)
                     } else {
-                        Log.e("NFC_DEBUG", "Ошибка сервера")
-                        Toast.makeText(context, "Ошибка сервера", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Ошибка создания", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
                     Log.e("NFC_DEBUG", "Ошибка: ${e.message}")
@@ -225,7 +256,7 @@ class LessonFragment : NFC_Tools() {
         Log.d("NFC_DEBUG", "Включение NFC...")
         startNfcReadingMode(infiniteMode = true)
 
-        
+
         tvStatus.text = "Идет занятие: $subject"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
         btnFinishLesson.visibility = View.VISIBLE
@@ -237,11 +268,46 @@ class LessonFragment : NFC_Tools() {
 
     override fun onPause() {
         super.onPause()
-        
+
         stopNfcReadingMode()
     }
 
-    
+    private fun updateNfcStatusUI() {
+        val adapterNfc = NfcAdapter.getDefaultAdapter(requireContext())
+
+        if (adapterNfc == null || !adapterNfc.isEnabled) {
+            tvStatus.text = "Не готов!"
+            tvStatus.setTextColor(Color.parseColor("#8B0000")) // Темно-красный
+            tvSubStatus.text = "Включите NFC"
+        } else {
+            tvStatus.text = "Готов!"
+            tvStatus.setTextColor(Color.parseColor("#FFFFAA"))
+
+            if (!isLessonActive) {
+                tvSubStatus.text = "Начните занятие"
+            } else {
+                tvSubStatus.text = "Приложите метку"
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED)
+        requireActivity().registerReceiver(nfcStateReceiver, filter)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        requireActivity().unregisterReceiver(nfcStateReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateNfcStatusUI()
+    }
+
+
     override fun showNfcNotSupportedMessage() {
         Toast.makeText(requireContext(), "NFC не поддерживается", Toast.LENGTH_SHORT).show()
     }
@@ -252,5 +318,47 @@ class LessonFragment : NFC_Tools() {
 
     override fun showNfcReadingStoppedMessage() {
         Log.d("NFC_DEBUG", "NFC выключен")
+    }
+}
+
+class ContainsArrayAdapter(context: Context, resource: Int) :
+    ArrayAdapter<String>(context, resource, ArrayList()) {
+
+    private val allItems = ArrayList<String>()
+
+    fun updateData(items: List<String>) {
+        allItems.clear()
+        allItems.addAll(items)
+        clear()
+        addAll(items)
+        notifyDataSetChanged()
+    }
+
+    override fun getFilter(): Filter {
+        return object : Filter() {
+            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                val query = constraint?.toString()?.lowercase()?.trim() ?: ""
+                val results = FilterResults()
+
+                val filteredList = if (query.isEmpty()) {
+                    allItems
+                } else {
+                    allItems.filter { it.lowercase().contains(query) }
+                }
+
+                results.values = filteredList
+                results.count = filteredList.size
+                return results
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                clear()
+                if (results != null && results.count > 0) {
+                    addAll(results.values as List<String>)
+                }
+                notifyDataSetChanged()
+            }
+        }
     }
 }

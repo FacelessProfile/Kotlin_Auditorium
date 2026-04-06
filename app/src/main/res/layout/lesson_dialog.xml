@@ -71,7 +71,8 @@
                     android:layout_height="wrap_content"
                     android:textColor="#212121"
                     android:padding="16dp"
-                    android:inputType="textCapCharacters" />
+                    android:completionThreshold="1"
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.chip.ChipGroup

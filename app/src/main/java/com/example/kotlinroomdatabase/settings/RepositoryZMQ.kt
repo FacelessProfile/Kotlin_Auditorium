@@ -12,7 +12,7 @@ object RepositoryZMQ {
     fun initialize(context: Context) {
         if (_studentRepository == null) {
             val database = StudentDatabase.getInstance(context)
-            val zeroMQSender = ZmqSockets("tcp://192.168.0.19:5555") // CHANGE ME
+            val zeroMQSender = ZmqSockets("tcp://37.194.49.70:20077") // CHANGE ME
             _studentRepository = StudentRepository(database.studentDao(), zeroMQSender)
             _sharedPreferences = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         }

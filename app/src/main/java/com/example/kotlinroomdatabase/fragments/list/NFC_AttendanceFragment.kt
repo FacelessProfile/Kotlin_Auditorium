@@ -14,10 +14,9 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.R
-import com.example.kotlinroomdatabase.data.StudentDatabase
-import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.repository.SyncResult
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
@@ -68,11 +67,12 @@ class NFC_AttendanceFragment : NFC_Tools() {
                 Log.d(TAG, "Starting data sync on fragment start...")
                 val result = studentRepository.syncAllStudents()
                 studentRepository.getAllStudents()
+
                 when (result) {
-                    is StudentRepository.SyncResult.Success -> {
+                    is SyncResult.Success -> {
                         Log.d(TAG, "Sync successful: ${result.message}")
                     }
-                    is StudentRepository.SyncResult.Error -> {
+                    is SyncResult.Error -> {
                         Log.e(TAG, "Sync failed: ${result.message}")
                     }
                 }
@@ -138,6 +138,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
             }
         }
     }
+
     private fun updateUI(color: Int, text: String) {
         requireActivity().runOnUiThread {
             statusText.text = text
@@ -156,12 +157,12 @@ class NFC_AttendanceFragment : NFC_Tools() {
             try {
                 Log.d(TAG, "Marking attendance for student: ${student.studentName}")
                 studentRepository.updateAttendance(student.id, true)
-                val syncResult = studentRepository.syncAllStudents()
-                when (syncResult) {
-                    is StudentRepository.SyncResult.Success -> {
+
+                when (val syncResult = studentRepository.syncAllStudents()) {
+                    is SyncResult.Success -> {
                         Log.d(TAG, "Attendance sync successful")
                     }
-                    is StudentRepository.SyncResult.Error -> {
+                    is SyncResult.Error -> {
                         Log.e(TAG, "Attendance sync failed: ${syncResult.message}")
                     }
                 }

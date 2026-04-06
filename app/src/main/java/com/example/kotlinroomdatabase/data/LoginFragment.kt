@@ -1,3 +1,4 @@
+
 package com.example.kotlinroomdatabase.data
 
 import android.content.Context
@@ -14,15 +15,15 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.model.Student
-import com.example.kotlinroomdatabase.repository.StudentRepository
-import com.example.kotlinroomdatabase.repository.StudentRepository.LoginResult
+import com.example.kotlinroomdatabase.repository.*
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
 
 class LoginFragment : Fragment() {
-
-    private lateinit var studentRepository: StudentRepository
+    private lateinit var studentRepository: IStudentRepository
     private var isLoginMode = true
 
     private lateinit var etName: EditText
@@ -38,7 +39,16 @@ class LoginFragment : Fragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
+
+
+        val useHttp = true // MARK FALSE IF YOU USE ZMQ
+
+        if (useHttp) {
+            val db = StudentDatabase.getInstance(requireContext())
+            studentRepository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
+        } else {
+            studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -69,7 +79,7 @@ class LoginFragment : Fragment() {
             handleAction()
         }
 
-        PasswordVisibility(etPassword)
+        setupPasswordVisibility(etPassword)
     }
 
     override fun onResume() {
@@ -96,22 +106,27 @@ class LoginFragment : Fragment() {
 
     @OptIn(InternalSerializationApi::class)
     private fun handleAction() {
-        val name = etName.text.toString()
-        val pass = etPassword.text.toString()
+        val name = etName.text.toString().trim()
+        val pass = etPassword.text.toString().trim()
 
         if (isLoginMode) {
-            if (name.isBlank() || pass.isBlank()) return
+            if (name.isBlank() || pass.isBlank()) {
+                Toast.makeText(context, "Введите логин и пароль", Toast.LENGTH_SHORT).show()
+                return
+            }
 
-            lifecycleScope.launch {
-                when (val result = studentRepository.login(name, pass)) {
-                    is LoginResult.Success -> proceedToApp(result.student)
-                    is LoginResult.Error -> Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                val result = studentRepository.login(name, pass)
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is LoginResult.Success -> proceedToApp(result.student)
+                        is LoginResult.Error -> Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
-        }
-        else {
-            val group = etGroup.text.toString()
-            val confirm = etPasswordConfirm.text.toString()
+        } else {
+            val group = etGroup.text.toString().trim()
+            val confirm = etPasswordConfirm.text.toString().trim()
 
             if (name.isBlank() || group.isBlank() || pass.isBlank()) {
                 Toast.makeText(context, "Заполните все поля!", Toast.LENGTH_SHORT).show()
@@ -119,10 +134,8 @@ class LoginFragment : Fragment() {
             }
 
             val passwordPattern = "^(?=.*[0-9]).{6,}$".toRegex()
-
             if (!passwordPattern.matches(pass)) {
-                etPassword.error = "Пароль должен быть от 6 символов и содержать хотя бы одну цифру"
-                Toast.makeText(context, "Слишком простой пароль", Toast.LENGTH_SHORT).show()
+                etPassword.error = "Пароль от 6 символов и минимум одна цифра"
                 return
             }
             if (pass != confirm) {
@@ -130,10 +143,13 @@ class LoginFragment : Fragment() {
                 return
             }
 
-            lifecycleScope.launch {
-                when (val result = studentRepository.register(name, group, pass)) {
-                    is LoginResult.Success -> proceedToApp(result.student)
-                    is LoginResult.Error -> Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                val result = studentRepository.register(name, group, pass)
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is LoginResult.Success -> proceedToApp(result.student)
+                        is LoginResult.Error -> Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -143,37 +159,40 @@ class LoginFragment : Fragment() {
     private fun proceedToApp(student: Student) {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
 
-        lifecycleScope.launch {
-            prefs.edit().clear().apply()
+        lifecycleScope.launch(Dispatchers.IO) {
             studentRepository.clearLocalRoomData()
             prefs.edit().apply {
+                clear()
                 putInt("current_student_id", student.id)
                 putString("user_role", student.role)
                 putString("student_name", student.studentName)
                 putString("nfc_payload", student.studentNFC)
                 apply()
             }
-            android.util.Log.d("DEBUG_NFC", "HCE Tag Saved: ${student.studentNFC}")
+
             enableHceForStudent(student)
-            android.util.Log.d("DEBUG_NFC", "HCE Tag AFTER ENABLE HCE: ${student.studentNFC}")
+
             if (student.role == "admin") {
                 studentRepository.syncAllStudents()
-                findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)
+                withContext(Dispatchers.Main) {
+                    findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)
+                }
             } else {
-                findNavController().navigate(R.id.userHomeFragment)
-                Toast.makeText(context,"Режим пропуска активен!", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    findNavController().navigate(R.id.userHomeFragment)
+                    Toast.makeText(context, "Режим пропуска активен!", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
     @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun PasswordVisibility(editText: EditText) {
+    private fun setupPasswordVisibility(editText: EditText) {
         editText.setOnTouchListener { v, event ->
             val DRAWABLE_RIGHT = 2
             val drawable = editText.compoundDrawables[DRAWABLE_RIGHT]
             if (drawable != null) {
                 val eyeIconArea = editText.right - drawable.bounds.width() - editText.paddingEnd
-
                 if (event.rawX >= eyeIconArea) {
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
@@ -192,16 +211,15 @@ class LoginFragment : Fragment() {
             false
         }
     }
+
     @OptIn(InternalSerializationApi::class)
     private fun enableHceForStudent(student: Student) {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val tagForHce = student.studentNFC
 
-        val tagForHce = student.studentNFC // метка теперь от сервера
-        android.util.Log.d("DEBUG_NFC", "Server sent NFC tag: $tagForHce")
         if (!tagForHce.isNullOrBlank()) {
             prefs.edit().putString("nfc_payload", tagForHce).apply()
-            prefs.edit().putString("student_name", student.studentName).apply()
-            android.util.Log.d("DEBUG_NFC", "Saved to prefs successfully")
+            android.util.Log.d("DEBUG_NFC", "Saved tag: $tagForHce")
         } else {
             android.util.Log.e("DEBUG_NFC", "Server sent EMPTY tag!")
         }
