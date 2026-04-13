@@ -325,7 +325,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun getAllUniqueGroups(): List<String> {
+    override suspend fun getAllUniqueGroups(): List<String> {
         return try {
             studentDao.getAllGroups().first()
         } catch (e: Exception) {
@@ -334,7 +334,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int? {
+    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int? {
         return try {
             val newLesson = Lesson(
                 subject = subject,
@@ -365,4 +365,6 @@ class StudentRepository(
             null
         }
     }
+    override suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult = AttendanceLinkResult.Error("Not supported in ZMQ")
+
 }

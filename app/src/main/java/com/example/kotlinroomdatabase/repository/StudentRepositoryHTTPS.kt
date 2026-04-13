@@ -1,4 +1,3 @@
-
 package com.example.kotlinroomdatabase.repository
 
 import android.content.Context
@@ -7,6 +6,7 @@ import com.example.kotlinroomdatabase.data.StudentDao
 import com.example.kotlinroomdatabase.model.Student
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
 import okhttp3.MediaType.Companion.toMediaType
@@ -178,6 +178,69 @@ class StudentRepositoryHTTPS(
 
     @OptIn(InternalSerializationApi::class)
     override fun getAllStudents(): Flow<List<Student>> = studentDao.getAllStudents()
+
+    override suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext AttendanceLinkResult.Error("Отсутствует токен авторизации")
+
+            val jsonRequest = JSONObject().apply {
+                put("lesson_id", lessonId) // BACKend ждет lesson_id???? (логично вроде)
+            }
+
+            val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/attendance-link")
+                .post(body)
+                .addHeader("Authorization", token) // ну и токен
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) {
+                val errorMsg = JSONObject(responseStr).optString("error", "Ошибка сервера ${response.code}")
+                return@withContext AttendanceLinkResult.Error(errorMsg)
+            }
+
+            val jsonResponse = JSONObject(responseStr)
+            if (jsonResponse.optBoolean("ok")) {
+                val resultData = jsonResponse.optString("result", "")
+                AttendanceLinkResult.Success(resultData)
+            } else {
+                AttendanceLinkResult.Error(jsonResponse.optString("error", "Не удалось получить ссылку"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "Link Exception", e)
+            AttendanceLinkResult.Error("Ошибка сети: ${e.message}")
+        }
+    }
+    override suspend fun getAllUniqueGroups(): List<String> = withContext(Dispatchers.IO) {
+        studentDao.getAllGroups().firstOrNull() ?: emptyList()
+    }
+    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int? = withContext(Dispatchers.IO) {
+        try {
+            val json = JSONObject().apply {
+                put("subject", subject)
+                put("teacher_id", teacherId)
+                put("groups", org.json.JSONArray(groups))
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/lessons/create")
+                .post(json.toString().toRequestBody(JSON_TYPE))
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(responseStr)
+                if (jsonObj.has("id")) jsonObj.getInt("id") else null
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     override suspend fun finishLesson(lessonId: Int): FinishLessonResult =
         FinishLessonResult.Error("Not implemented via HTTP")

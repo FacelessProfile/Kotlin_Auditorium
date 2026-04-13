@@ -23,11 +23,18 @@ sealed class AttendanceResult {
     data class Error(val message: String) : AttendanceResult()
 }
 
+sealed class AttendanceLinkResult {
+    data class Success(val url: String) : AttendanceLinkResult()
+    data class Error(val message: String) : AttendanceLinkResult()
+}
+
 interface IStudentRepository {
     suspend fun login(loginName: String, passwordRaw: String): LoginResult
     suspend fun register(name: String, group: String, passwordRaw: String): LoginResult
     suspend fun clearLocalRoomData()
     suspend fun syncAllStudents(): SyncResult
+    suspend fun getAllUniqueGroups(): List<String>
+    suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int?
 
     @OptIn(InternalSerializationApi::class)
     suspend fun getStudentByNfc(nfcId: String): Student?
@@ -38,4 +45,5 @@ interface IStudentRepository {
     fun getAllStudents(): kotlinx.coroutines.flow.Flow<List<Student>>
     suspend fun finishLesson(lessonId: Int): FinishLessonResult
     suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult
+    suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult
 }

@@ -18,29 +18,30 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.settings.LessonsConfig
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
+import com.example.kotlinroomdatabase.fragments.QR.GenQR
 import com.example.kotlinroomdatabase.model.Student
-import com.example.kotlinroomdatabase.repository.AttendanceResult
-import com.example.kotlinroomdatabase.repository.FinishLessonResult
-import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.repository.*
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
 
 class LessonFragment : NFC_Tools() {
 
-    private lateinit var studentRepository: StudentRepository
+    private lateinit var studentRepository: IStudentRepository
     private lateinit var adapter: ListAdapter
 
     @OptIn(InternalSerializationApi::class)
     private val attendedStudents = mutableListOf<Student>()
     private val selectedGroups = mutableSetOf<String>()
-
 
     private var currentLessonId: Int? = null
     private var isLessonActive = false
@@ -48,6 +49,7 @@ class LessonFragment : NFC_Tools() {
     private lateinit var tvStatus: TextView
     private lateinit var tvSubStatus: TextView
     private lateinit var statusIcon: ImageView
+    private lateinit var ivQrCode: ImageView
     private lateinit var recyclerView: RecyclerView
     private lateinit var fabCreateLesson: ExtendedFloatingActionButton
     private lateinit var btnFinishLesson: Button
@@ -55,8 +57,15 @@ class LessonFragment : NFC_Tools() {
     @OptIn(InternalSerializationApi::class)
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
-        studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
 
+        val useHttp = true
+
+        if (useHttp) {
+            val db = StudentDatabase.getInstance(requireContext())
+            studentRepository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
+        } else {
+            studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
+        }
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(context)
         Log.d("NFC_DEBUG", "NFC Adapter initialized: ${nfcAdapter != null}")
@@ -71,6 +80,7 @@ class LessonFragment : NFC_Tools() {
         tvStatus = view.findViewById(R.id.tvLessonStatus)
         tvSubStatus = view.findViewById(R.id.tvLessonSubStatus)
         statusIcon = view.findViewById(R.id.statusIcon)
+        ivQrCode = view.findViewById(R.id.ivQrCode)
         recyclerView = view.findViewById(R.id.recyclerViewAttendance)
         fabCreateLesson = view.findViewById(R.id.fabCreateLesson)
         btnFinishLesson = view.findViewById(R.id.btnFinishLesson)
@@ -124,6 +134,7 @@ class LessonFragment : NFC_Tools() {
     @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n")
     private fun resetUiAfterLesson() {
+        isLessonActive = false
         currentLessonId = null
         attendedStudents.clear()
         adapter.setData(emptyList())
@@ -131,14 +142,18 @@ class LessonFragment : NFC_Tools() {
         tvStatus.setTextColor(Color.BLACK)
         btnFinishLesson.visibility = View.GONE
         fabCreateLesson.show()
+
+        ivQrCode.visibility = View.GONE
+        ivQrCode.setImageBitmap(null)
+        statusIcon.visibility = View.VISIBLE
         statusIcon.setImageResource(R.drawable.ic_nfc)
         statusIcon.setColorFilter(null)
+
         adapter.setLessonState(false)
     }
 
     @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
-
         Log.d("NFC_DEBUG", "найдена метка: $nfcId")
 
         val lessonId = currentLessonId
@@ -164,17 +179,15 @@ class LessonFragment : NFC_Tools() {
                         attendedStudents.add(0, student)
                         adapter.setData(attendedStudents)
 
-
-                        statusIcon.setColorFilter(Color.GREEN)
-                        statusIcon.postDelayed({ statusIcon.setColorFilter(null) }, 1000)
+                        if (statusIcon.visibility == View.VISIBLE) {
+                            statusIcon.setColorFilter(Color.GREEN)
+                            statusIcon.postDelayed({ statusIcon.setColorFilter(null) }, 1000)
+                        }
                     }
                     is AttendanceResult.Error -> {
                         Log.e("NFC_DEBUG", "ERR: ${result.message}")
                         Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
                     }
-
-                    is AttendanceResult.Error -> TODO()
-                    is AttendanceResult.Success -> TODO()
                 }
             }
         }
@@ -250,12 +263,12 @@ class LessonFragment : NFC_Tools() {
     @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n")
     private fun updateUiOnLessonStart(subject: String, dialog: BottomSheetDialog) {
+        isLessonActive = true
         attendedStudents.clear()
         adapter.setData(attendedStudents)
         adapter.setLessonState(true)
         Log.d("NFC_DEBUG", "Включение NFC...")
         startNfcReadingMode(infiniteMode = true)
-
 
         tvStatus.text = "Идет занятие: $subject"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
@@ -264,11 +277,40 @@ class LessonFragment : NFC_Tools() {
 
         dialog.dismiss()
         Toast.makeText(context, "Занятие начато!", Toast.LENGTH_SHORT).show()
+
+        loadAndDisplayQrCode(currentLessonId!!)
+    }
+
+    private fun loadAndDisplayQrCode(lessonId: Int) {
+        lifecycleScope.launch {
+            val result = studentRepository.getAttendanceLink(lessonId)
+            when (result) {
+                is AttendanceLinkResult.Success -> {
+                    val bitmap = withContext(Dispatchers.Default) {
+                        GenQR.generateQrCode(result.url)
+                    }
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            statusIcon.visibility = View.GONE
+                            ivQrCode.setImageBitmap(bitmap)
+                            ivQrCode.visibility = View.VISIBLE
+                            tvSubStatus.text = "Или отсканируйте QR-код"
+                        } else {
+                            Toast.makeText(context, "Ошибка генерации QR", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                is AttendanceLinkResult.Error -> {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "NFC режим (${result.message})", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
     }
 
     override fun onPause() {
         super.onPause()
-
         stopNfcReadingMode()
     }
 
@@ -277,13 +319,15 @@ class LessonFragment : NFC_Tools() {
 
         if (adapterNfc == null || !adapterNfc.isEnabled) {
             tvStatus.text = "Не готов!"
-            tvStatus.setTextColor(Color.parseColor("#8B0000")) // Темно-красный
+            tvStatus.setTextColor(Color.parseColor("#8B0000"))
             tvSubStatus.text = "Включите NFC"
         } else {
             tvStatus.text = "Готов!"
             tvStatus.setTextColor(Color.parseColor("#FFFFAA"))
 
-            if (!isLessonActive) {
+            if (ivQrCode.visibility == View.VISIBLE) {
+                tvSubStatus.text = "Или отсканируйте QR-код"
+            } else if (!isLessonActive) {
                 tvSubStatus.text = "Начните занятие"
             } else {
                 tvSubStatus.text = "Приложите метку"
@@ -306,7 +350,6 @@ class LessonFragment : NFC_Tools() {
         super.onResume()
         updateNfcStatusUI()
     }
-
 
     override fun showNfcNotSupportedMessage() {
         Toast.makeText(requireContext(), "NFC не поддерживается", Toast.LENGTH_SHORT).show()

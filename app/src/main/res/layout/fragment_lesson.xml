@@ -22,12 +22,25 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <ImageView
-                android:id="@+id/statusIcon"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:src="@drawable/ic_nfc"
-                app:tint="@color/purple_500" />
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/statusIcon"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/ic_nfc"
+                    android:layout_gravity="center"
+                    app:tint="@color/purple_500" />
+
+                <ImageView
+                    android:id="@+id/ivQrCode"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/tvLessonStatus"
