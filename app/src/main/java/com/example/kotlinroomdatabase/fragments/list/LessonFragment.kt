@@ -29,6 +29,11 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.android.gms.location.LocationServices
+import android.location.Location
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -243,17 +248,28 @@ class LessonFragment : NFC_Tools() {
                 return@setOnClickListener
             }
 
-            lifecycleScope.launch {
-                try {
-                    val id = studentRepository.createLesson(subject, 1, selectedGroups.toList())
-                    if (id != null) {
-                        currentLessonId = id
-                        updateUiOnLessonStart(subject, bottomSheet)
-                    } else {
-                        Toast.makeText(context, "Ошибка создания", Toast.LENGTH_SHORT).show()
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 101)
+                return@setOnClickListener
+            }
+
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                val lat = location?.latitude ?: 0.0
+                val lon = location?.longitude ?: 0.0
+
+                lifecycleScope.launch {
+                    try {
+                        val id = studentRepository.createLesson(subject, 1, selectedGroups.toList(), lat, lon)
+                        if (id != null) {
+                            currentLessonId = id
+                            updateUiOnLessonStart(subject, bottomSheet)
+                        } else {
+                            Toast.makeText(context, "Ошибка создания", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("NFC_DEBUG", "Ошибка: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e("NFC_DEBUG", "Ошибка: ${e.message}")
                 }
             }
         }

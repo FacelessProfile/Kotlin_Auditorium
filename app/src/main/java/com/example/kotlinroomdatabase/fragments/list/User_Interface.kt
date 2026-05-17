@@ -10,6 +10,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import android.provider.Settings
+import android.location.Location
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationServices
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -109,11 +115,60 @@ class User_Interface : Fragment() {
         } else {
             val scannedData = result.contents
             if (scannedData.startsWith("http://") || scannedData.startsWith("https://")) {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(scannedData))
-                startActivity(intent)
+                handleScannedUrl(scannedData)
             } else {
                 Toast.makeText(requireContext(), "QR-код не содержит ссылки: $scannedData", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    private fun handleScannedUrl(url: String) {
+        val uri = Uri.parse(url)
+        val lessonIdStr = uri.getQueryParameter("lesson_id")
+        
+        if (lessonIdStr != null) {
+            val lessonId = lessonIdStr.toIntOrNull() ?: -1
+            if (lessonId != -1) {
+                markAttendance(lessonId)
+            } else {
+                startActivity(Intent(Intent.ACTION_VIEW, uri))
+            }
+        } else {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        }
+    }
+
+    private fun markAttendance(lessonId: Int) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 100)
+            return
+        }
+
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                val lat = location?.latitude ?: 0.0
+                val lon = location?.longitude ?: 0.0
+                val deviceId = Settings.Secure.getString(requireContext().contentResolver, Settings.Secure.ANDROID_ID)
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val repository = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(requireContext())
+                    val result = repository.markAttendanceViaQr(lessonId, deviceId, lat, lon)
+                    
+                    launch(Dispatchers.Main) {
+                        when (result) {
+                            is com.example.kotlinroomdatabase.repository.AttendanceResult.Success -> {
+                                showSuccessCheck()
+                            }
+                            is com.example.kotlinroomdatabase.repository.AttendanceResult.Error -> {
+                                Toast.makeText(requireContext(), "Ошибка: ${result.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: SecurityException) {
+            Toast.makeText(requireContext(), "Нет разрешения на геолокацию", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -123,7 +178,7 @@ class User_Interface : Fragment() {
         options.setPrompt("Наведите камеру на QR-код")
         options.setBeepEnabled(true)
         options.setBarcodeImageEnabled(true)
-        options.setOrientationLocked(false)
+        options.setOrientationLocked(true)
         barcodeLauncher.launch(options)
     }
 }

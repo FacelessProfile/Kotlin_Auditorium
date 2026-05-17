@@ -153,7 +153,52 @@ class StudentRepository(
                     studentGroup = s.getString("studentGroup"),
                     studentNFC = s.optString("studentNFC", ""),
                     attendance = true,
-                    role = "student"
+                    role = "student",
+                    isFraud = s.optBoolean("is_fraud", false),
+                    totalCheatAttempts = s.optInt("total_cheat_attempts", 0)
+                )
+
+                studentDao.insertStudent(student)
+                AttendanceResult.Success(student)
+            } else {
+                AttendanceResult.Error(jsonResponse.optString("message", "Ошибка отметки"))
+            }
+        } catch (e: Exception) {
+            AttendanceResult.Error("Ошибка связи")
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun markAttendanceViaQr(
+        lessonId: Int,
+        deviceId: String,
+        lat: Double,
+        lon: Double
+    ): AttendanceResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "mark_attendance_qr")
+                put("data", JSONObject().apply {
+                    put("lesson_id", lessonId)
+                    put("device_id", deviceId)
+                    put("lat", lat)
+                    put("lon", lon)
+                })
+            }
+            val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return AttendanceResult.Error("Сервер недоступен")
+            val jsonResponse = JSONObject(response)
+
+            if (jsonResponse.optString("status") == "success") {
+                val s = jsonResponse.getJSONObject("student")
+                val student = Student(
+                    id = s.getInt("id"),
+                    studentName = s.getString("studentName"),
+                    studentGroup = s.getString("studentGroup"),
+                    studentNFC = s.optString("studentNFC", ""),
+                    attendance = true,
+                    role = "student",
+                    isFraud = s.optBoolean("is_fraud", false),
+                    totalCheatAttempts = s.optInt("total_cheat_attempts", 0)
                 )
 
                 studentDao.insertStudent(student)
@@ -334,7 +379,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int? {
+    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>, lat: Double, lon: Double): Int? {
         return try {
             val newLesson = Lesson(
                 subject = subject,
@@ -349,6 +394,8 @@ class StudentRepository(
                     put("teacher_id", teacherId)
                     put("groups", JSONArray(groups))
                     put("local_id", localId)
+                    put("lat", lat)
+                    put("lon", lon)
                 })
             }
 

@@ -61,7 +61,17 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
         tvFio.setTextColor(textColor)
         tvAttendance.setTextColor(textColor)
 
-        holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout).setOnClickListener {
+        val rowLayout = holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout)
+        if (student.isFraud) {
+            rowLayout.setBackgroundColor(Color.RED)
+            tvId.setTextColor(Color.WHITE)
+            tvFio.setTextColor(Color.WHITE)
+            tvAttendance.setTextColor(Color.WHITE)
+        } else {
+            rowLayout.setBackgroundColor(Color.TRANSPARENT)
+        }
+
+        rowLayout.setOnClickListener {
             onItemClick?.invoke(student)
         }
     }

@@ -15,7 +15,9 @@ data class Student(
     val studentName: String,
     val studentGroup: String,
     val attendance: Boolean,
-    val role: String = "student"
+    val role: String = "student",
+    val isFraud: Boolean = false,
+    val totalCheatAttempts: Int = 0
 ) {
     companion object {
         // validation patterns for formalized data

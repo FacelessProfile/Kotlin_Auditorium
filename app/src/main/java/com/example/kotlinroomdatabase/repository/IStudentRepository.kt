@@ -34,7 +34,7 @@ interface IStudentRepository {
     suspend fun clearLocalRoomData()
     suspend fun syncAllStudents(): SyncResult
     suspend fun getAllUniqueGroups(): List<String>
-    suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int?
+    suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>, lat: Double = 0.0, lon: Double = 0.0): Int?
 
     @OptIn(InternalSerializationApi::class)
     suspend fun getStudentByNfc(nfcId: String): Student?
@@ -45,5 +45,6 @@ interface IStudentRepository {
     fun getAllStudents(): kotlinx.coroutines.flow.Flow<List<Student>>
     suspend fun finishLesson(lessonId: Int): FinishLessonResult
     suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult
+    suspend fun markAttendanceViaQr(lessonId: Int, deviceId: String, lat: Double, lon: Double): AttendanceResult
     suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult
 }

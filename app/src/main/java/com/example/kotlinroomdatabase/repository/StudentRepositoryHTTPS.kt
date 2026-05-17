@@ -51,7 +51,7 @@ class StudentRepositoryHTTPS(
         try {
             val jsonRequest = JSONObject().apply {
             put("login", loginName)
-            put("password", sha256(passwordRaw))
+            put("password", passwordRaw)
         }
 
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
@@ -225,12 +225,14 @@ class StudentRepositoryHTTPS(
     override suspend fun getAllUniqueGroups(): List<String> = withContext(Dispatchers.IO) {
         studentDao.getAllGroups().firstOrNull() ?: emptyList()
     }
-    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>): Int? = withContext(Dispatchers.IO) {
+    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>, lat: Double, lon: Double): Int? = withContext(Dispatchers.IO) {
         try {
             val json = JSONObject().apply {
                 put("subject", subject)
                 put("teacher_id", teacherId)
                 put("groups", org.json.JSONArray(groups))
+                put("lat", lat)
+                put("lon", lon)
             }
             val request = Request.Builder()
                 .url("$BASE_URL/lessons/create")
@@ -254,6 +256,62 @@ class StudentRepositoryHTTPS(
 
     override suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult =
         AttendanceResult.Error("Not implemented via HTTP")
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun markAttendanceViaQr(
+        lessonId: Int,
+        deviceId: String,
+        lat: Double,
+        lon: Double
+    ): AttendanceResult = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext AttendanceResult.Error("No token")
+
+            val jsonRequest = JSONObject().apply {
+                put("lesson_id", lessonId)
+                put("device_id", deviceId)
+                put("lat", lat)
+                put("lon", lon)
+            }
+
+            val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/mark-attendance")
+                .post(body)
+                .addHeader("Authorization", token)
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) {
+                val errorMsg = JSONObject(responseStr).optString("error", "Error ${response.code}")
+                return@withContext AttendanceResult.Error(errorMsg)
+            }
+
+            val jsonResponse = JSONObject(responseStr)
+            if (jsonResponse.optBoolean("ok")) {
+                val result = jsonResponse.getJSONObject("result")
+                val student = Student(
+                    id = result.optInt("user_ID", 0),
+                    studentName = result.optString("login", ""),
+                    studentGroup = result.optString("group", ""),
+                    studentNFC = result.optString("nfc_tag", ""),
+                    attendance = true,
+                    role = result.optString("role", "student"),
+                    isFraud = result.optBoolean("is_fraud", false),
+                    totalCheatAttempts = result.optInt("total_cheat_attempts", 0)
+                )
+                studentDao.insertStudent(student)
+                AttendanceResult.Success(student)
+            } else {
+                AttendanceResult.Error(jsonResponse.optString("error", "Failed"))
+            }
+        } catch (e: Exception) {
+            AttendanceResult.Error("Network error")
+        }
+    }
 
     private fun saveToken(token: String?) {
         if (!token.isNullOrBlank()) {
