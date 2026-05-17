@@ -17,6 +17,10 @@ import com.example.kotlinroomdatabase.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+//QR
+import android.net.Uri
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 class User_Interface : Fragment() {
     private lateinit var rootLayout: ConstraintLayout
@@ -49,10 +53,16 @@ class User_Interface : Fragment() {
                 parts.size == 2 -> parts[1]
                 else -> parts[0]
             }
+
         }
 
         tvWelcome.text = "Добро пожаловать,\n$displayName"
         setNeutralState()
+
+        val btnScan = view.findViewById<Button>(R.id.btnScan)
+        btnScan.setOnClickListener {
+            startScanning()
+        }
     }
 
     override fun onResume() {
@@ -92,5 +102,28 @@ class User_Interface : Fragment() {
         statusIcon.setColorFilter(Color.parseColor("#6200EE"))
         statusText.text = "Поднесите к чекеру"
         statusText.setTextColor(Color.BLACK)
+    }
+    private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
+        if (result.contents == null) {
+            Toast.makeText(requireContext(), "Сканирование отменено", Toast.LENGTH_LONG).show()
+        } else {
+            val scannedData = result.contents
+            if (scannedData.startsWith("http://") || scannedData.startsWith("https://")) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(scannedData))
+                startActivity(intent)
+            } else {
+                Toast.makeText(requireContext(), "QR-код не содержит ссылки: $scannedData", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun startScanning() {
+        val options = ScanOptions()
+        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+        options.setPrompt("Наведите камеру на QR-код")
+        options.setBeepEnabled(true)
+        options.setBarcodeImageEnabled(true)
+        options.setOrientationLocked(false)
+        barcodeLauncher.launch(options)
     }
 }

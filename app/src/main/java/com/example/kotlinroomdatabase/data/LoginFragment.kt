@@ -172,7 +172,7 @@ class LoginFragment : Fragment() {
 
             enableHceForStudent(student)
 
-            if (student.role == "admin") {
+            if (student.role == "teacher") {
                 studentRepository.syncAllStudents()
                 withContext(Dispatchers.Main) {
                     findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)

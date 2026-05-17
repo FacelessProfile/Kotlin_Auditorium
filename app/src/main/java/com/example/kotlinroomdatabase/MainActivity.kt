@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
             val navController = findNavController(R.id.fragment)
             val currentDest = navController.currentDestination?.id
             if (currentDest == R.id.loginFragment) {
-                if (userRole == "admin") {
+                if (userRole == "admin" || userRole == "teacher") {
                     navController.navigate(R.id.action_loginFragment_to_lessonFragment)
                 } else {
                     navController.navigate(R.id.userHomeFragment)

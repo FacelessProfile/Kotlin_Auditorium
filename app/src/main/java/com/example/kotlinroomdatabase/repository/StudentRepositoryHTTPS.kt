@@ -15,6 +15,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import org.json.JSONObject
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 class StudentRepositoryHTTPS(
@@ -36,16 +37,22 @@ class StudentRepositoryHTTPS(
         .build()
 
     private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
-    private val BASE_URL = "http://192.168.0.55:20077"
+    private val BASE_URL = "http://109.172.114.128:9000"
     private val sharedPrefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+
+    fun sha256(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
 
     @OptIn(InternalSerializationApi::class)
     override suspend fun login(loginName: String, passwordRaw: String): LoginResult = withContext(Dispatchers.IO) {
         try {
             val jsonRequest = JSONObject().apply {
-                put("login", loginName)
-                put("password", passwordRaw)
-            }
+            put("login", loginName)
+            put("password", sha256(passwordRaw))
+        }
 
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
             val request = Request.Builder()
