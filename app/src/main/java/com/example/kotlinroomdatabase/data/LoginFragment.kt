@@ -13,6 +13,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.*
@@ -166,6 +167,7 @@ class LoginFragment : Fragment() {
                 putInt("current_student_id", student.id)
                 putString("user_role", student.role)
                 putString("student_name", student.studentName)
+                putString("student_group", student.studentGroup)
                 putString("nfc_payload", student.studentNFC)
                 apply()
             }
@@ -175,11 +177,15 @@ class LoginFragment : Fragment() {
             if (student.role == "teacher") {
                 studentRepository.syncAllStudents()
                 withContext(Dispatchers.Main) {
-                    findNavController().navigate(R.id.action_loginFragment_to_lessonFragment)
+                    findNavController().navigate(R.id.action_loginFragment_to_lessonFragment, null, navOptions {
+                        popUpTo(R.id.my_nav) { inclusive = true }
+                    })
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    findNavController().navigate(R.id.userHomeFragment)
+                    findNavController().navigate(R.id.userHomeFragment, null, navOptions {
+                        popUpTo(R.id.my_nav) { inclusive = true }
+                    })
                     Toast.makeText(context, "Режим пропуска активен!", Toast.LENGTH_SHORT).show()
                 }
             }

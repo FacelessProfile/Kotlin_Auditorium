@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.navOptions
 import androidx.navigation.ui.*
 import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.data.ZmqSockets
@@ -29,17 +30,38 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
+        val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        primaryColorHex?.let {
+            try {
+                val color = android.graphics.Color.parseColor(it)
+                binding.toolbar.setBackgroundColor(color)
+                window.statusBarColor = color
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Invalid color hex: $it")
+            }
+        }
+
         studentRepository = RepositoryZMQ.getStudentRepository(this)
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
         appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.userHomeFragment, R.id.listFragment, R.id.lessonFragment, R.id.profileFragment),
+            setOf(
+                R.id.userHomeFragment,
+                R.id.listFragment,
+                R.id.lessonFragment,
+                R.id.profileFragment,
+                R.id.historyFragment,
+                R.id.settingsFragment
+            ),
             binding.drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
+
+        updateNavHeader()
 
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val studentId = prefs.getInt("current_student_id", -1)
@@ -51,11 +73,15 @@ class MainActivity : AppCompatActivity() {
         if (studentId != -1) {
             val currentDest = navController.currentDestination?.id
             if (currentDest == R.id.loginFragment) {
-                if (userRole == "admin" || userRole == "teacher") {
-                    navController.navigate(R.id.action_loginFragment_to_lessonFragment)
+                val actionId = if (userRole == "admin" || userRole == "teacher") {
+                    R.id.action_loginFragment_to_lessonFragment
                 } else {
-                    navController.navigate(R.id.userHomeFragment)
+                    R.id.action_login_to_userHome
                 }
+                // Очищаем историю переходов, чтобы нельзя было вернуться к логину
+                navController.navigate(actionId, null, navOptions {
+                    popUpTo(R.id.my_nav) { inclusive = true }
+                })
             }
         }
 
@@ -64,7 +90,10 @@ class MainActivity : AppCompatActivity() {
                 R.id.logout -> {
                     val prefsLogout = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                     prefsLogout.edit().clear().apply()
-                    navController.navigate(R.id.loginFragment)
+                    // Очищаем стек при выходе
+                    navController.navigate(R.id.loginFragment, null, navOptions {
+                        popUpTo(R.id.my_nav) { inclusive = true }
+                    })
                     binding.drawerLayout.closeDrawers()
                     true
                 }
@@ -81,6 +110,25 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment
         val navController = navHostFragment.navController
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+    }
+
+    private fun updateNavHeader() {
+        val headerView = binding.navView.getHeaderView(0)
+        val tvName = headerView.findViewById<android.widget.TextView>(R.id.nav_header_name)
+        val tvEmail = headerView.findViewById<android.widget.TextView>(R.id.nav_header_email)
+        
+        val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val name = prefs.getString("student_name", "Студент")
+        tvName.text = name
+        tvEmail.text = "${name?.replace(" ", ".")?.lowercase()}@university.edu"
+
+        val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        primaryColorHex?.let {
+            try {
+                headerView.setBackgroundColor(android.graphics.Color.parseColor(it))
+            } catch (e: Exception) {}
+        }
     }
 
     @OptIn(InternalSerializationApi::class)

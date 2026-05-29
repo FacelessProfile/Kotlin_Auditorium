@@ -67,10 +67,14 @@
 
         <action
             android:id="@+id/action_login_to_userHome"
-            app:destination="@id/userHomeFragment" />
+            app:destination="@id/userHomeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_loginFragment_to_lessonFragment"
-            app:destination="@id/lessonFragment" />
+            app:destination="@id/lessonFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
     </fragment>
     <fragment
         android:id="@+id/lessonFragment"
@@ -89,11 +93,13 @@
 
     <fragment
         android:id="@+id/historyFragment"
-        android:name="com.example.kotlinroomdatabase.fragments.list.User_Interface"
-        android:label="История" />
+        android:name="com.example.kotlinroomdatabase.fragments.history.HistoryFragment"
+        android:label="История"
+        tools:layout="@layout/fragment_history" />
 
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.example.kotlinroomdatabase.fragments.list.User_Interface"
-        android:label="Настройки" />
+        android:name="com.example.kotlinroomdatabase.fragments.settings.SettingsFragment"
+        android:label="Настройки"
+        tools:layout="@layout/fragment_settings" />
 </navigation>

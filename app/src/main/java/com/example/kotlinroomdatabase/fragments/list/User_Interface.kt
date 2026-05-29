@@ -66,6 +66,14 @@ class User_Interface : Fragment() {
         setNeutralState()
 
         val btnScan = view.findViewById<Button>(R.id.btnScan)
+        val appPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        primaryColorHex?.let {
+            val color = Color.parseColor(it)
+            btnScan.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+            statusIcon.imageTintList = android.content.res.ColorStateList.valueOf(color)
+        }
+
         btnScan.setOnClickListener {
             startScanning()
         }

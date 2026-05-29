@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/windowBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Настройки"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Цветовая схема"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Выберите основной цвет интерфейса"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="16dp" />
+
+                <GridLayout
+                    android:id="@+id/colorPaletteGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="4"
+                    android:alignmentMode="alignMargins">
+
+                    <View android:id="@+id/color_red"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#F44336"
+                        android:backgroundTint="#F44336" />
+                    <View android:id="@+id/color_pink"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#E91E63"
+                        android:backgroundTint="#E91E63" />
+                    <View android:id="@+id/color_purple"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#9C27B0"
+                        android:backgroundTint="#9C27B0" />
+                    <View android:id="@+id/color_deep_purple"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#673AB7"
+                        android:backgroundTint="#673AB7" />
+                    <View android:id="@+id/color_indigo"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#3F51B5"
+                        android:backgroundTint="#3F51B5" />
+                    <View android:id="@+id/color_blue"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#2196F3"
+                        android:backgroundTint="#2196F3" />
+                    <View android:id="@+id/color_teal"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#009688"
+                        android:backgroundTint="#009688" />
+                    <View android:id="@+id/color_green"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#4CAF50"
+                        android:backgroundTint="#4CAF50" />
+                    <View android:id="@+id/color_yellow"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#FFEB3B"
+                        android:backgroundTint="#FFEB3B" />
+                    <View android:id="@+id/color_orange"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#FF9800"
+                        android:backgroundTint="#FF9800" />
+                    <View android:id="@+id/color_brown"
+                        android:layout_width="50dp" android:layout_height="50dp"
+                        android:layout_margin="8dp" android:background="#795548"
+                        android:backgroundTint="#795548" />
+
+                    <ImageButton
+                        android:id="@+id/btnCustomColor"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_margin="8dp"
+                        android:src="@drawable/ic_settings"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="?android:attr/textColorSecondary"
+                        android:contentDescription="Custom Color" />
+                </GridLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Уведомления"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Пуш-уведомления об отметках"
+                    android:checked="true" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnApplyTheme"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="24dp"
+            android:text="Применить тему"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+</ScrollView>
