@@ -414,4 +414,18 @@ class StudentRepository(
     }
     override suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult = AttendanceLinkResult.Error("Not supported in ZMQ")
 
+    override suspend fun uploadAvatar(imagePath: String): AvatarResult {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("operation", "upload_avatar")
+                put("data", JSONObject().apply {
+                    put("image_path_or_base64", imagePath)
+                })
+            }
+            Log.d("ZMQ_REPO", "Uploading avatar: $imagePath")
+            AvatarResult.Success("server_path_mock")
+        } catch (e: Exception) {
+            AvatarResult.Error(e.message ?: "Unknown error")
+        }
+    }
 }

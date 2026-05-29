@@ -50,9 +50,9 @@ class StudentRepositoryHTTPS(
     override suspend fun login(loginName: String, passwordRaw: String): LoginResult = withContext(Dispatchers.IO) {
         try {
             val jsonRequest = JSONObject().apply {
-            put("login", loginName)
-            put("password", passwordRaw)
-        }
+                put("login", loginName)
+                put("password", passwordRaw)
+            }
 
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
             val request = Request.Builder()
@@ -192,14 +192,14 @@ class StudentRepositoryHTTPS(
             if (token.isEmpty()) return@withContext AttendanceLinkResult.Error("Отсутствует токен авторизации")
 
             val jsonRequest = JSONObject().apply {
-                put("lesson_id", lessonId) // BACKend ждет lesson_id???? (логично вроде)
+                put("lesson_id", lessonId)
             }
 
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
             val request = Request.Builder()
                 .url("$BASE_URL/api/teacher/attendance-link")
                 .post(body)
-                .addHeader("Authorization", token) // ну и токен
+                .addHeader("Authorization", token)
                 .build()
 
             val response = client.newCall(request).execute()
@@ -222,9 +222,11 @@ class StudentRepositoryHTTPS(
             AttendanceLinkResult.Error("Ошибка сети: ${e.message}")
         }
     }
+
     override suspend fun getAllUniqueGroups(): List<String> = withContext(Dispatchers.IO) {
         studentDao.getAllGroups().firstOrNull() ?: emptyList()
     }
+
     override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>, lat: Double, lon: Double): Int? = withContext(Dispatchers.IO) {
         try {
             val json = JSONObject().apply {
@@ -316,6 +318,17 @@ class StudentRepositoryHTTPS(
     private fun saveToken(token: String?) {
         if (!token.isNullOrBlank()) {
             sharedPrefs.edit().putString("auth_token", token).apply()
+        }
+    }
+
+    override suspend fun uploadAvatar(imagePath: String): AvatarResult = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext AvatarResult.Error("No token")
+            Log.d("HTTP_REPO", "Avatar upload triggered for: $imagePath")
+            AvatarResult.Success("mock_server_url_for_$imagePath")
+        } catch (e: Exception) {
+            AvatarResult.Error("Upload failed: ${e.message}")
         }
     }
 }

@@ -9,10 +9,7 @@ import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.navOptions
 import androidx.navigation.ui.*
-import com.example.kotlinroomdatabase.data.StudentDatabase
-import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.databinding.ActivityMainBinding
-import com.example.kotlinroomdatabase.nfc.HCEservice
 import com.example.kotlinroomdatabase.repository.StudentRepository
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
@@ -112,15 +109,37 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
-    private fun updateNavHeader() {
+    fun updateNavHeader() {
         val headerView = binding.navView.getHeaderView(0)
         val tvName = headerView.findViewById<android.widget.TextView>(R.id.nav_header_name)
         val tvEmail = headerView.findViewById<android.widget.TextView>(R.id.nav_header_email)
+        val ivAvatar = headerView.findViewById<android.widget.ImageView>(R.id.nav_header_avatar)
         
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val name = prefs.getString("student_name", "Студент")
         tvName.text = name
         tvEmail.text = "${name?.replace(" ", ".")?.lowercase()}@university.edu"
+
+        val avatarPath = prefs.getString("avatar_path", null)
+        if (avatarPath != null) {
+            try {
+                val file = java.io.File(avatarPath)
+                if (file.exists()) {
+                    ivAvatar.setImageURI(android.net.Uri.fromFile(file))
+                    ivAvatar.imageTintList = null
+                } else if (avatarPath.startsWith("content://")) {
+                    val uri = android.net.Uri.parse(avatarPath)
+                    contentResolver.openInputStream(uri)?.use {
+                        ivAvatar.setImageURI(uri)
+                        ivAvatar.imageTintList = null
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading avatar from $avatarPath: ${e.message}")
+                ivAvatar.setImageResource(R.drawable.ic_person)
+                prefs.edit().remove("avatar_path").apply()
+            }
+        }
 
         val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")

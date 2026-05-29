@@ -10,10 +10,12 @@
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
     <ImageView
+        android:id="@+id/nav_header_avatar"
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:src="@drawable/ic_person"
         app:tint="?attr/colorOnPrimary"
+        android:scaleType="centerCrop"
         android:contentDescription="User Avatar" />
 
     <TextView

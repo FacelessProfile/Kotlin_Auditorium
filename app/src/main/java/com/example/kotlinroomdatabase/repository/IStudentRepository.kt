@@ -28,6 +28,11 @@ sealed class AttendanceLinkResult {
     data class Error(val message: String) : AttendanceLinkResult()
 }
 
+sealed class AvatarResult {
+    data class Success(val avatarUrl: String) : AvatarResult()
+    data class Error(val message: String) : AvatarResult()
+}
+
 interface IStudentRepository {
     suspend fun login(loginName: String, passwordRaw: String): LoginResult
     suspend fun register(name: String, group: String, passwordRaw: String): LoginResult
@@ -47,4 +52,5 @@ interface IStudentRepository {
     suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult
     suspend fun markAttendanceViaQr(lessonId: Int, deviceId: String, lat: Double, lon: Double): AttendanceResult
     suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult
+    suspend fun uploadAvatar(imagePath: String): AvatarResult
 }

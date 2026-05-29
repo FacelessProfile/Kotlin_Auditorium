@@ -21,10 +21,14 @@
             android:gravity="center">
 
             <ImageView
+                android:id="@+id/profileAvatar"
                 android:layout_width="100dp"
                 android:layout_height="100dp"
                 android:src="@drawable/ic_person"
-                app:tint="?attr/colorPrimary" />
+                app:tint="?attr/colorPrimary"
+                android:scaleType="centerCrop"
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/profileName"
