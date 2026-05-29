@@ -5,61 +5,79 @@
     android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
-    android:transitionName="root_transition">
+    android:background="?android:attr/windowBackground">
 
     <TextView
         android:id="@+id/tvWelcome"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="64dp"
+        android:layout_marginTop="32dp"
         android:text="Добро пожаловать,\nЗагрузка..."
         android:textAlignment="center"
-        android:textColor="@android:color/black"
+        android:textColor="?android:attr/textColorPrimary"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageView
-        android:id="@+id/statusIcon"
-        android:layout_width="180dp"
-        android:layout_height="180dp"
-        android:src="@drawable/ic_nfc"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.45"
-        app:tint="@color/purple_500" />
-
-    <TextView
-        android:id="@+id/statusText"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/nfcCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="32dp"
-        android:text="Поднесите телефон к терминалу"
-        android:textAlignment="center"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="18sp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="24dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="#33888888"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/statusIcon" />
+        app:layout_constraintTop_toBottomOf="@id/tvWelcome">
 
-    <Button
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <ImageView
+                android:id="@+id/statusIcon"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:src="@drawable/ic_nfc"
+                app:tint="?attr/colorPrimary" />
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="NFC активен"
+                android:textAlignment="center"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnScan"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="24dp"
         android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
         android:text="Сканировать QR"
-        android:backgroundTint="@color/purple_500"
-        android:textColor="@android:color/white"
-        app:layout_constraintTop_toBottomOf="@id/statusText"
+        android:textAllCaps="false"
+        android:textSize="18sp"
+        app:cornerRadius="12dp"
+        app:icon="@drawable/ic_qr_code"
+        app:iconGravity="textStart"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/nfcCard" />
 
     <TextView
         android:id="@+id/tvInfo"
@@ -67,7 +85,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
         android:text="Режим эмуляции карты активен"
-        android:textColor="@android:color/darker_gray"
+        android:textColor="?android:attr/textColorSecondary"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

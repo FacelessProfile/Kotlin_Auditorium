@@ -81,4 +81,19 @@
             app:destination="@id/listFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.profile.ProfileFragment"
+        android:label="Профиль"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/historyFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.list.User_Interface"
+        android:label="История" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.list.User_Interface"
+        android:label="Настройки" />
 </navigation>

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F7">
+    android:background="?android:attr/windowBackground">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardStatus"
@@ -12,7 +12,9 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         app:cardCornerRadius="24dp"
-        app:cardElevation="4dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="#33888888"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
@@ -32,7 +34,7 @@
                     android:layout_height="64dp"
                     android:src="@drawable/ic_nfc"
                     android:layout_gravity="center"
-                    app:tint="@color/purple_500" />
+                    app:tint="?attr/colorPrimary" />
 
                 <ImageView
                     android:id="@+id/ivQrCode"
@@ -48,7 +50,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="Готов!"
-                android:textColor="#FFFFAA"
+                android:textColor="?android:attr/textColorPrimary"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -57,7 +59,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Приложите метку"
-                android:textColor="#757575"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="14sp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -70,7 +72,7 @@
         android:layout_marginTop="16dp"
         android:text="Присутствующие"
         android:textAllCaps="true"
-        android:textColor="#757575"
+        android:textColor="?android:attr/textColorSecondary"
         android:textSize="12sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -103,19 +105,17 @@
             android:layout_height="56dp"
             android:layout_marginEnd="8dp"
             android:text="Все студенты"
-            app:cornerRadius="16dp"
-            app:icon="@android:drawable/ic_menu_sort_by_size" />
+            app:cornerRadius="16dp" />
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/fabCreateLesson"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Начать занятие"
-            android:textColor="@android:color/white"
-            app:backgroundTint="@color/purple_500"
+            android:textColor="?attr/colorOnPrimary"
+            app:backgroundTint="?attr/colorPrimary"
             app:cornerRadius="16dp"
-            app:icon="@android:drawable/ic_input_add"
-            app:iconTint="@android:color/white" />
+            app:iconTint="?attr/colorOnPrimary" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnFinishLesson"

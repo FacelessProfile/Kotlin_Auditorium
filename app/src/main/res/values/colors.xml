@@ -7,4 +7,18 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Photo Style Colors -->
+    <color name="photo_dark_background">#060606</color>
+    <color name="photo_primary_green">#C48E17</color>
+    <color name="photo_ivory_text">#FEFFEF</color>
+    <color name="photo_grey_text">#E2E8F0</color>
+
+    <!-- YADRO Style Colors -->
+    <color name="yadro_dark_background">@color/photo_dark_background</color>
+    <color name="yadro_dark_button">@color/photo_primary_green</color>
+    <color name="yadro_dark_variant">#5D931F</color>
+    <color name="yadro_light_background">@color/photo_ivory_text</color>
+    <color name="yadro_light_button">#1E22AA</color>
+    <color name="yadro_light_variant">#151877</color>
 </resources>

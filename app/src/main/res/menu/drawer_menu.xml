@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/userHomeFragment"
+            android:icon="@drawable/ic_home"
+            android:title="Главная" />
+        <item
+            android:id="@+id/profileFragment"
+            android:icon="@drawable/ic_person"
+            android:title="Профиль" />
+        <item
+            android:id="@+id/historyFragment"
+            android:icon="@drawable/ic_history"
+            android:title="История посещений" />
+        <item
+            android:id="@+id/settingsFragment"
+            android:icon="@drawable/ic_settings"
+            android:title="Настройки" />
+    </group>
+    <item android:title="Аккаунт">
+        <menu>
+            <item
+                android:id="@+id/logout"
+                android:icon="@drawable/ic_logout"
+                android:title="Выйти" />
+        </menu>
+    </item>
+</menu>

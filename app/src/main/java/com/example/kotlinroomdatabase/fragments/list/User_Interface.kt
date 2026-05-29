@@ -96,18 +96,15 @@ class User_Interface : Fragment() {
     }
 
     private fun setSuccessState() {
-        rootLayout.setBackgroundColor(Color.GREEN)
         statusIcon.setImageResource(R.drawable.ic_check)
-        statusIcon.setColorFilter(Color.WHITE)
-        statusText.setTextColor(Color.WHITE)
+        statusIcon.setColorFilter(Color.GREEN)
+        statusText.setTextColor(Color.GREEN)
     }
 
     private fun setNeutralState() {
-        rootLayout.setBackgroundColor(Color.WHITE)
         statusIcon.setImageResource(R.drawable.ic_nfc)
-        statusIcon.setColorFilter(Color.parseColor("#6200EE"))
+        statusIcon.colorFilter = null
         statusText.text = "Поднесите к чекеру"
-        statusText.setTextColor(Color.BLACK)
     }
     private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
         if (result.contents == null) {

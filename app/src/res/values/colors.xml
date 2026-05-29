@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Photo Style Colors -->
+    <color name="photo_dark_background">#0D1331</color>
+    <color name="photo_primary_green">#7BC02A</color>
+    <color name="photo_ivory_text">#FEFFEF</color>
+
+    <!-- Legacy / YADRO Mapping -->
+    <color name="yadro_dark_background">#0D1331</color>
+    <color name="yadro_dark_button">#7BC02A</color>
+    <color name="yadro_light_background">#FFFFFF</color>
+    <color name="yadro_light_button">#1E22AA</color>
+</resources>
