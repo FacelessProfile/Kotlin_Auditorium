@@ -1,7 +1,8 @@
-
 package com.example.kotlinroomdatabase.data
 
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -18,6 +19,7 @@ import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.*
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,9 +40,11 @@ class LoginFragment : Fragment() {
     private lateinit var groupLayout: View
     private lateinit var passwordConfirmLayout: View
 
+    private lateinit var nameLayout: TextInputLayout
+    private lateinit var passwordLayout: TextInputLayout
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
-
 
         val useHttp = true // MARK FALSE IF YOU USE ZMQ
 
@@ -62,10 +66,42 @@ class LoginFragment : Fragment() {
         btnAction = view.findViewById(R.id.btnAction)
         tvToggleMode = view.findViewById(R.id.tvToggleMode)
         tvTitle = view.findViewById(R.id.tvTitle)
+
+        nameLayout = view.findViewById(R.id.nameLayout)
         groupLayout = view.findViewById(R.id.groupLayout)
+        passwordLayout = view.findViewById(R.id.passwordLayout)
         passwordConfirmLayout = view.findViewById(R.id.passwordConfirmLayout)
 
+        applyTheme()
+
         return view
+    }
+
+    private fun applyTheme() {
+        val prefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val btnColorHex = prefs.getString("button_color", "#673AB7") ?: "#673AB7"
+        val inputColorHex = prefs.getString("input_color", "#673AB7") ?: "#673AB7"
+        
+        try {
+            val btnColor = Color.parseColor(btnColorHex)
+            val inputColor = Color.parseColor(inputColorHex)
+            
+            val buttonStates = ColorStateList.valueOf(btnColor)
+            btnAction.backgroundTintList = buttonStates
+            tvToggleMode.setTextColor(btnColor)
+
+            val inputStates = ColorStateList.valueOf(inputColor)
+            val layouts = listOf(nameLayout, groupLayout as TextInputLayout, passwordLayout, passwordConfirmLayout as TextInputLayout)
+            layouts.forEach {
+                it.setBoxStrokeColor(inputColor)
+                it.setStartIconTintList(inputStates)
+                it.defaultHintTextColor = inputStates
+                it.setHintTextColor(inputStates)
+                it.boxStrokeColor = inputColor
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("Login", "Theme application error", e)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -174,15 +210,15 @@ class LoginFragment : Fragment() {
 
             enableHceForStudent(student)
 
-            if (student.role == "teacher") {
-                studentRepository.syncAllStudents()
-                withContext(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
+                (activity as? com.example.kotlinroomdatabase.MainActivity)?.updateUIForRole()
+                
+                if (student.role == "teacher") {
+                    studentRepository.syncAllStudents()
                     findNavController().navigate(R.id.action_loginFragment_to_lessonFragment, null, navOptions {
                         popUpTo(R.id.my_nav) { inclusive = true }
                     })
-                }
-            } else {
-                withContext(Dispatchers.Main) {
+                } else {
                     findNavController().navigate(R.id.userHomeFragment, null, navOptions {
                         popUpTo(R.id.my_nav) { inclusive = true }
                     })

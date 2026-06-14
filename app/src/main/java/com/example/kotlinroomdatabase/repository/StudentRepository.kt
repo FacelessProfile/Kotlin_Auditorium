@@ -6,6 +6,10 @@ import com.example.kotlinroomdatabase.data.Crypto
 import com.example.kotlinroomdatabase.data.StudentDao
 import com.example.kotlinroomdatabase.model.Lesson
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.model.TeacherSubject
+import com.example.kotlinroomdatabase.model.StudentAttendanceStats
+import com.example.kotlinroomdatabase.model.AttendanceHistoryResponse
+import com.example.kotlinroomdatabase.model.HistoryItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.InternalSerializationApi
@@ -19,6 +23,10 @@ class StudentRepository(
     @OptIn(InternalSerializationApi::class)
     override fun getAllStudents(): Flow<List<Student>> {
         return studentDao.getAllStudents()
+    }
+
+    override fun getAllLessons(): Flow<List<com.example.kotlinroomdatabase.model.Lesson>> {
+        return studentDao.getAllLessons()
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -173,7 +181,8 @@ class StudentRepository(
         lessonId: Int,
         deviceId: String,
         lat: Double,
-        lon: Double
+        lon: Double,
+        inviteToken: String?
     ): AttendanceResult {
         return try {
             val jsonRequest = JSONObject().apply {
@@ -183,6 +192,7 @@ class StudentRepository(
                     put("device_id", deviceId)
                     put("lat", lat)
                     put("lon", lon)
+                    if (inviteToken != null) put("invite_token", inviteToken)
                 })
             }
             val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return AttendanceResult.Error("Сервер недоступен")
@@ -255,7 +265,7 @@ class StudentRepository(
     fun getAllGroups(): Flow<List<String>> = studentDao.getAllGroups()
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun insertStudent(student: Student): Long {
+    override suspend fun insertStudent(student: Student): Long {
         val newId = studentDao.insertStudent(student)
         if (zeroMQSender != null) {
             syncStudentToServer(student.copy(id = newId.toInt()), "insert")
@@ -264,7 +274,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun updateStudent(student: Student) {
+    override suspend fun updateStudent(student: Student) {
         studentDao.updateStudent(student)
         if (zeroMQSender != null) {
             syncStudentToServer(student, "update")
@@ -272,7 +282,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun deleteStudent(student: Student) {
+    override suspend fun deleteStudent(student: Student) {
         if (zeroMQSender != null) {
             syncStudentToServer(student, "delete")
         }
@@ -280,7 +290,7 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    suspend fun deleteAllStudents() {
+    override suspend fun deleteAllStudents() {
         val studentList = studentDao.getAllStudents().first()
         if (zeroMQSender != null && studentList.isNotEmpty()) {
             for (student in studentList) {
@@ -428,4 +438,9 @@ class StudentRepository(
             AvatarResult.Error(e.message ?: "Unknown error")
         }
     }
+
+    override suspend fun getTeacherSubjects(): List<TeacherSubject> = emptyList()
+    override suspend fun getGroupAttendance(groupId: Int, subjectId: Int): List<StudentAttendanceStats> = emptyList()
+    override suspend fun getStudentHistory(year: Int): AttendanceHistoryResponse = AttendanceHistoryResponse(emptyList(), year)
+    override suspend fun getDetailedStudentHistory(studentId: Int, subjectId: Int): List<HistoryItem> = emptyList()
 }

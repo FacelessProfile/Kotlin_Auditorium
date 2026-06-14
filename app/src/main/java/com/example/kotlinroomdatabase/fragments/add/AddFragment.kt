@@ -14,7 +14,7 @@ import com.example.kotlinroomdatabase.databinding.FragmentAddBinding
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.nfc.HCEservice
-import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.repository.*
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
@@ -24,7 +24,7 @@ class AddFragment :  NFC_Tools() {
     private val binding get() = _binding!!
     private var currentnfcData: String = ""
     private var editingStudentId: Int = 0
-    private lateinit var studentRepository: StudentRepository
+    private lateinit var studentRepository: IStudentRepository
     private val TAG_ZMQ = "ZeroMQ_AddFragment"
 
     override fun onAttach(context: android.content.Context) {
@@ -37,6 +37,9 @@ class AddFragment :  NFC_Tools() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentAddBinding.inflate(inflater, container, false)
+        
+        applyTheme()
+
         setupNfcReading()
         setupClickListeners()
 
@@ -46,6 +49,18 @@ class AddFragment :  NFC_Tools() {
         }
 
         return binding.root
+    }
+
+    private fun applyTheme() {
+        val prefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val btnColor = android.graphics.Color.parseColor(prefs.getString("button_color", "#673AB7"))
+        val toggleColor = android.graphics.Color.parseColor(prefs.getString("toggle_color", "#4CAF50"))
+        
+        val buttonStates = android.content.res.ColorStateList.valueOf(btnColor)
+        binding.addBtn.backgroundTintList = buttonStates
+        binding.btnReadNfc.backgroundTintList = buttonStates
+        
+        binding.attendanceCb.buttonTintList = android.content.res.ColorStateList.valueOf(toggleColor)
     }
 
     private fun setupClickListeners() {

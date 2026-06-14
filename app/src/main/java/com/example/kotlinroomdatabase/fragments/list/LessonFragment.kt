@@ -1,5 +1,6 @@
 package com.example.kotlinroomdatabase.fragments.list
 
+import android.app.AlertDialog
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -50,6 +51,7 @@ class LessonFragment : NFC_Tools() {
 
     private var currentLessonId: Int? = null
     private var isLessonActive = false
+    private var currentSubject: String? = null
 
     private lateinit var tvStatus: TextView
     private lateinit var tvSubStatus: TextView
@@ -58,6 +60,12 @@ class LessonFragment : NFC_Tools() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var fabCreateLesson: ExtendedFloatingActionButton
     private lateinit var btnFinishLesson: Button
+
+    private val LESSON_PREFS = "lesson_active_prefs"
+    private val KEY_LESSON_ID = "lesson_id"
+    private val KEY_SUBJECT = "subject"
+    private val KEY_START_TIME = "start_time"
+    private val LESSON_DURATION_MS = 90 * 60 * 1000L // 1.5 hours
 
     @OptIn(InternalSerializationApi::class)
     override fun onAttach(context: android.content.Context) {
@@ -76,6 +84,7 @@ class LessonFragment : NFC_Tools() {
         Log.d("NFC_DEBUG", "NFC Adapter initialized: ${nfcAdapter != null}")
     }
 
+    @OptIn(InternalSerializationApi::class)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -99,10 +108,79 @@ class LessonFragment : NFC_Tools() {
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
+        applyTheme(view)
+
+        adapter.setOnItemClickListener { student ->
+            val bundle = Bundle()
+            bundle.putInt("studentId", student.id)
+            findNavController().navigate(R.id.action_lessonFragment_to_history, bundle)
+        }
+
         fabCreateLesson.setOnClickListener { showCreateLessonSheet() }
-        btnFinishLesson.setOnClickListener { finishCurrentLesson() }
+        btnFinishLesson.setOnClickListener { 
+            AlertDialog.Builder(requireContext())
+                .setTitle("Завершить занятие?")
+                .setMessage("Вы действительно хотите завершить текущее занятие?")
+                .setPositiveButton("Да") { dialog, which -> finishCurrentLesson() }
+                .setNegativeButton("Отмена", null)
+                .show()
+        }
+
+        loadLessonState()
 
         return view
+    }
+
+    private fun saveLessonState(id: Int, subject: String) {
+        val prefs = requireContext().getSharedPreferences(LESSON_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putInt(KEY_LESSON_ID, id)
+            putString(KEY_SUBJECT, subject)
+            putLong(KEY_START_TIME, System.currentTimeMillis())
+            apply()
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun loadLessonState() {
+        val prefs = requireContext().getSharedPreferences(LESSON_PREFS, Context.MODE_PRIVATE)
+        val id = prefs.getInt(KEY_LESSON_ID, -1)
+        val subject = prefs.getString(KEY_SUBJECT, null)
+        val startTime = prefs.getLong(KEY_START_TIME, 0)
+
+        if (id != -1 && subject != null && (System.currentTimeMillis() - startTime) < LESSON_DURATION_MS) {
+            currentLessonId = id
+            currentSubject = subject
+            lifecycleScope.launch {
+                studentRepository.getAllStudents().collect { allStudents ->
+                    if (isLessonActive) {
+                        attendedStudents.clear()
+                        attendedStudents.addAll(allStudents.filter { it.attendance })
+                        adapter.setData(attendedStudents)
+                    }
+                }
+            }
+
+            updateUiOnLessonStart(subject, null)
+        } else {
+            resetUiAfterLesson()
+        }
+    }
+
+    private fun clearSavedLessonState() {
+        val prefs = requireContext().getSharedPreferences(LESSON_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+    }
+
+    private fun applyTheme(view: View) {
+        val prefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val btnColor = Color.parseColor(prefs.getString("button_color", "#673AB7"))
+        
+        val buttonStates = android.content.res.ColorStateList.valueOf(btnColor)
+        fabCreateLesson.backgroundTintList = buttonStates
+        statusIcon.imageTintList = buttonStates
+        
+        view.findViewById<Button>(R.id.btnViewAllStudents).setTextColor(btnColor)
     }
 
     private val nfcStateReceiver = object : BroadcastReceiver() {
@@ -127,6 +205,7 @@ class LessonFragment : NFC_Tools() {
                 is FinishLessonResult.Success -> {
                     Toast.makeText(context, "Занятие завершено!", Toast.LENGTH_LONG).show()
                     stopNfcReadingMode()
+                    clearSavedLessonState()
                     resetUiAfterLesson()
                 }
                 is FinishLessonResult.Error -> {
@@ -200,27 +279,67 @@ class LessonFragment : NFC_Tools() {
 
     @SuppressLint("SetTextI18n", "InflateParams")
     private fun showCreateLessonSheet() {
-        val bottomSheet = BottomSheetDialog(requireContext(), com.google.android.material.R.style.Theme_Design_Light_BottomSheetDialog)
+        val bottomSheet = BottomSheetDialog(requireContext(), R.style.FullScreenBottomSheetDialog)
         val sheetView = layoutInflater.inflate(R.layout.lesson_dialog, null)
         bottomSheet.setContentView(sheetView)
+        bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        
+        bottomSheet.setOnShowListener { dialog ->
+            val d = dialog as BottomSheetDialog
+            val bottomSheetInternal = d.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            bottomSheetInternal?.let {
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+                it.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
 
         val acSubject = sheetView.findViewById<AutoCompleteTextView>(R.id.acSubject)
         val acGroupSearch = sheetView.findViewById<AutoCompleteTextView>(R.id.acGroupSearch)
         val chipGroup = sheetView.findViewById<ChipGroup>(R.id.chipGroupGroups)
         val btnStart = sheetView.findViewById<Button>(R.id.btnStartLesson)
 
-        acSubject.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, LessonsConfig.SUBJECTS_POOL))
-
-        val groupAdapter = ContainsArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line)
+        val groupAdapter = ContainsArrayAdapter(requireContext(), R.layout.dropdown_item)
         acGroupSearch.setAdapter(groupAdapter)
-        acGroupSearch.threshold = 1
+        acGroupSearch.threshold = 0
+
+        acSubject.setOnClickListener { acSubject.showDropDown() }
+        acSubject.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) acSubject.showDropDown()
+        }
+        acGroupSearch.setOnClickListener { acGroupSearch.showDropDown() }
+        acGroupSearch.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) acGroupSearch.showDropDown()
+        }
+        acGroupSearch.setDropDownBackgroundResource(android.R.color.white)
+
         lifecycleScope.launch {
-            val groups = studentRepository.getAllUniqueGroups()
-            Log.d("DEBUG", "Загружено групп: ${groups.size}")
-            if (groups.isNotEmpty()) {
-                groupAdapter.updateData(groups)
+            val teacherSubjects = studentRepository.getTeacherSubjects()
+            val localGroups = studentRepository.getAllUniqueGroups()
+            
+            if (teacherSubjects.isNotEmpty()) {
+                val subjectNames = teacherSubjects.map { it.subject_name }.distinct()
+                acSubject.setAdapter(ArrayAdapter(requireContext(), R.layout.dropdown_item, subjectNames))
+                val allGroups = (teacherSubjects.flatMap { it.groups }.map { it.name } + localGroups).distinct().sorted()
+                groupAdapter.updateData(allGroups)
+
+                acSubject.setOnItemClickListener { parent, _, position, _ ->
+                    val selectedSubjectName = parent.getItemAtPosition(position).toString()
+                    val selectedSubject = teacherSubjects.find { it.subject_name == selectedSubjectName }
+                    val groupsForSubject = selectedSubject?.groups?.map { it.name }?.distinct() ?: emptyList()
+                    
+                    if (groupsForSubject.isNotEmpty()) {
+                        groupAdapter.updateData(groupsForSubject)
+                    } else {
+                        groupAdapter.updateData(allGroups)
+                    }
+                }
             } else {
-                Toast.makeText(context, "Список групп пуст! Синхронизируйте данные.", Toast.LENGTH_SHORT).show()
+                acSubject.setAdapter(ArrayAdapter(requireContext(), R.layout.dropdown_item, LessonsConfig.SUBJECTS_POOL))
+                if (localGroups.isNotEmpty()) {
+                    groupAdapter.updateData(localGroups)
+                }
             }
         }
 
@@ -238,6 +357,9 @@ class LessonFragment : NFC_Tools() {
                 chipGroup.addView(chip)
             }
             acGroupSearch.setText("")
+            val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.hideSoftInputFromWindow(acGroupSearch.windowToken, 0)
+
             acGroupSearch.post { groupAdapter.filter.filter(null) }
         }
 
@@ -258,11 +380,16 @@ class LessonFragment : NFC_Tools() {
                 val lat = location?.latitude ?: 0.0
                 val lon = location?.longitude ?: 0.0
 
+                val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                val teacherId = prefs.getInt("current_student_id", 0)
+
                 lifecycleScope.launch {
                     try {
-                        val id = studentRepository.createLesson(subject, 1, selectedGroups.toList(), lat, lon)
+                        val id = studentRepository.createLesson(subject, teacherId, selectedGroups.toList(), lat, lon)
                         if (id != null) {
                             currentLessonId = id
+                            currentSubject = subject
+                            saveLessonState(id, subject)
                             updateUiOnLessonStart(subject, bottomSheet)
                         } else {
                             Toast.makeText(context, "Ошибка создания", Toast.LENGTH_SHORT).show()
@@ -276,14 +403,11 @@ class LessonFragment : NFC_Tools() {
         bottomSheet.show()
     }
 
-    @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n")
-    private fun updateUiOnLessonStart(subject: String, dialog: BottomSheetDialog) {
+    private fun updateUiOnLessonStart(subject: String, dialog: BottomSheetDialog?) {
         isLessonActive = true
-        attendedStudents.clear()
-        adapter.setData(attendedStudents)
         adapter.setLessonState(true)
-        Log.d("NFC_DEBUG", "Включение NFC...")
+
         startNfcReadingMode(infiniteMode = true)
 
         tvStatus.text = "Идет занятие: $subject"
@@ -291,8 +415,8 @@ class LessonFragment : NFC_Tools() {
         btnFinishLesson.visibility = View.VISIBLE
         fabCreateLesson.hide()
 
-        dialog.dismiss()
-        Toast.makeText(context, "Занятие начато!", Toast.LENGTH_SHORT).show()
+        dialog?.dismiss()
+        if (dialog != null) Toast.makeText(context, "Занятие начато!", Toast.LENGTH_SHORT).show()
 
         loadAndDisplayQrCode(currentLessonId!!)
     }

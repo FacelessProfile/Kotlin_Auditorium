@@ -6,6 +6,14 @@
             android:icon="@drawable/ic_home"
             android:title="Главная" />
         <item
+            android:id="@+id/lessonFragment"
+            android:icon="@drawable/ic_qr_code"
+            android:title="Занятие" />
+        <item
+            android:id="@+id/listFragment"
+            android:icon="@drawable/ic_person"
+            android:title="Студенты" />
+        <item
             android:id="@+id/profileFragment"
             android:icon="@drawable/ic_person"
             android:title="Профиль" />

@@ -9,143 +9,265 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="16dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Настройки"
-            android:textSize="28sp"
+            android:text="Настройки темы"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:layout_marginBottom="24dp"
+            android:textColor="?android:attr/textColorPrimary"/>
+
+        <!-- Navigation Category -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Панель навигации"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AppBar, статусбар"
+                        android:textSize="12sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/navbarColorPresets"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:layout_marginEnd="8dp" android:tag="#673AB7"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#2196F3" android:layout_marginEnd="8dp" android:tag="#2196F3"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#009688" android:tag="#009688"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Buttons Category -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Кнопки и FAB"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Основные действия"
+                        android:textSize="12sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/buttonColorPresets"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:layout_marginEnd="8dp" android:tag="#673AB7"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#FF9800" android:layout_marginEnd="8dp" android:tag="#FF9800"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#4CAF50" android:tag="#4CAF50"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Поля ввода"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Обводка, курсор, Label"
+                        android:textSize="12sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/inputColorPresets"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:layout_marginEnd="8dp" android:tag="#673AB7"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#2196F3" android:layout_marginEnd="8dp" android:tag="#2196F3"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#009688" android:tag="#009688"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Переключатели"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Toggle, Checkbox, Radio"
+                        android:textSize="12sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/toggleColorPresets"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#4CAF50" android:layout_marginEnd="8dp" android:tag="#4CAF50"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#FF9800" android:layout_marginEnd="8dp" android:tag="#FF9800"/>
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:tag="#673AB7"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="#33888888"
+            app:cardBackgroundColor="#0D000000">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
-
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Цветовая схема"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Выберите основной цвет интерфейса"
+                    android:text="Предпросмотр (расширенная тема)"
+                    android:textSize="12sp"
                     android:textColor="?android:attr/textColorSecondary"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="8dp"/>
 
-                <GridLayout
-                    android:id="@+id/colorPaletteGrid"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/previewInputLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:columnCount="4"
-                    android:alignmentMode="alignMargins">
+                    android:layout_marginBottom="12dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Поле ввода (активное)"
+                        android:enabled="true"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
-                    <View android:id="@+id/color_red"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#F44336"
-                        android:backgroundTint="#F44336" />
-                    <View android:id="@+id/color_pink"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#E91E63"
-                        android:backgroundTint="#E91E63" />
-                    <View android:id="@+id/color_purple"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#9C27B0"
-                        android:backgroundTint="#9C27B0" />
-                    <View android:id="@+id/color_deep_purple"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#673AB7"
-                        android:backgroundTint="#673AB7" />
-                    <View android:id="@+id/color_indigo"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#3F51B5"
-                        android:backgroundTint="#3F51B5" />
-                    <View android:id="@+id/color_blue"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#2196F3"
-                        android:backgroundTint="#2196F3" />
-                    <View android:id="@+id/color_teal"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#009688"
-                        android:backgroundTint="#009688" />
-                    <View android:id="@+id/color_green"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#4CAF50"
-                        android:backgroundTint="#4CAF50" />
-                    <View android:id="@+id/color_yellow"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#FFEB3B"
-                        android:backgroundTint="#FFEB3B" />
-                    <View android:id="@+id/color_orange"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#FF9800"
-                        android:backgroundTint="#FF9800" />
-                    <View android:id="@+id/color_brown"
-                        android:layout_width="50dp" android:layout_height="50dp"
-                        android:layout_margin="8dp" android:background="#795548"
-                        android:backgroundTint="#795548" />
-
-                    <ImageButton
-                        android:id="@+id/btnCustomColor"
-                        android:layout_width="50dp"
-                        android:layout_height="50dp"
-                        android:layout_margin="8dp"
-                        android:src="@drawable/ic_settings"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        app:tint="?android:attr/textColorSecondary"
-                        android:contentDescription="Custom Color" />
-                </GridLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Уведомления"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Пуш-уведомления об отметках"
-                    android:checked="true" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Пуш-уведомления"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/previewSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"/>
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnApplyTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="ПРИМЕНИТЬ ТЕМУ"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="8dp"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnApplyTheme"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginTop="24dp"
-            android:text="Применить тему"
-            app:cornerRadius="12dp" />
 
     </LinearLayout>
 </ScrollView>

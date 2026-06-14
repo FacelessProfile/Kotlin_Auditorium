@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/rounded_corners"
+    android:background="#FFFFFF"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -27,7 +27,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:isScrollContainer="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -55,7 +56,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Поиск группы"
@@ -63,15 +64,15 @@
                 app:hintTextColor="@color/purple_500"
                 app:boxStrokeColor="@color/purple_500"
                 app:boxBackgroundColor="#FFFFFF"
-                app:endIconMode="clear_text">
+                app:endIconMode="dropdown_menu">
 
-                <AutoCompleteTextView
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/acGroupSearch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="#212121"
                     android:padding="16dp"
-                    android:completionThreshold="1"
+                    android:completionThreshold="0"
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 

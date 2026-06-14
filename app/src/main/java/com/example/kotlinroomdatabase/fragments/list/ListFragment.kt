@@ -20,7 +20,7 @@ import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.databinding.FragmentListBinding
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
-import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.repository.*
 import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.flow.first
@@ -40,11 +40,18 @@ class ListFragment : NFC_Tools() {
     private var studentList: MutableList<Student> = mutableListOf()
 
     private var toolbarSpinner: Spinner? = null
-    private lateinit var studentRepository: StudentRepository
+    private lateinit var studentRepository: IStudentRepository
 
+    @OptIn(InternalSerializationApi::class)
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
+        val useHttp = true // Можно вынести в настройки
+        if (useHttp) {
+            val db = StudentDatabase.getInstance(requireContext())
+            studentRepository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
+        } else {
+            studentRepository = RepositoryZMQ.getStudentRepository(requireContext())
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -198,7 +205,21 @@ class ListFragment : NFC_Tools() {
                 deleteAllStudents()
                 true
             }
+            R.id.menu_sync -> {
+                syncStudents()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun syncStudents() {
+        lifecycleScope.launch {
+            val result = studentRepository.syncAllStudents()
+            when (result) {
+                is SyncResult.Success -> Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                is SyncResult.Error -> Toast.makeText(requireContext(), "Ошибка: ${result.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

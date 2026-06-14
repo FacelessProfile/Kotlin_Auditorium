@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        val primaryColorHex = appPrefs.getString("navbar_color", "#C48E17")
         primaryColorHex?.let {
             try {
                 val color = android.graphics.Color.parseColor(it)
@@ -58,11 +58,11 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
 
-        updateNavHeader()
-
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val studentId = prefs.getInt("current_student_id", -1)
         val userRole = prefs.getString("user_role", "student")
+        val studentId = prefs.getInt("current_student_id", -1)
+
+        updateUIForRole()
 
         lifecycleScope.launch {
             studentRepository.testConnection()
@@ -109,6 +109,25 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
+    fun updateUIForRole() {
+        val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val userRole = prefs.getString("user_role", "student")
+        
+        val menu = binding.navView.menu
+        if (userRole == "teacher" || userRole == "admin") {
+            menu.findItem(R.id.userHomeFragment)?.isVisible = false
+            menu.findItem(R.id.historyFragment)?.isVisible = false
+            menu.findItem(R.id.lessonFragment)?.isVisible = true
+            menu.findItem(R.id.listFragment)?.isVisible = true
+        } else {
+            menu.findItem(R.id.userHomeFragment)?.isVisible = true
+            menu.findItem(R.id.historyFragment)?.isVisible = true
+            menu.findItem(R.id.lessonFragment)?.isVisible = false
+            menu.findItem(R.id.listFragment)?.isVisible = false
+        }
+        updateNavHeader()
+    }
+
     fun updateNavHeader() {
         val headerView = binding.navView.getHeaderView(0)
         val tvName = headerView.findViewById<android.widget.TextView>(R.id.nav_header_name)
@@ -116,9 +135,16 @@ class MainActivity : AppCompatActivity() {
         val ivAvatar = headerView.findViewById<android.widget.ImageView>(R.id.nav_header_avatar)
         
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val name = prefs.getString("student_name", "Студент")
+        val userRole = prefs.getString("user_role", "student")
+        val localizedRole = when(userRole) {
+            "teacher" -> "Преподаватель"
+            "admin" -> "Администратор"
+            else -> "Студент"
+        }
+        val name = prefs.getString("student_name", localizedRole)
+        
         tvName.text = name
-        tvEmail.text = "${name?.replace(" ", ".")?.lowercase()}@university.edu"
+        tvEmail.text = if (userRole == "teacher") localizedRole else prefs.getString("student_group", "Студент")
 
         val avatarPath = prefs.getString("avatar_path", null)
         if (avatarPath != null) {
@@ -142,7 +168,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        val primaryColorHex = appPrefs.getString("navbar_color", "#C48E17")
         primaryColorHex?.let {
             try {
                 headerView.setBackgroundColor(android.graphics.Color.parseColor(it))

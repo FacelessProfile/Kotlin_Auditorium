@@ -30,9 +30,16 @@ class ProfileFragment : Fragment() {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        binding.profileName.text = prefs.getString("student_name", "Имя Студента")
-        binding.profileRole.text = prefs.getString("user_role", "Студент")
-        binding.profileGroup.text = prefs.getString("student_group", "Группа не указана")
+        val userRole = prefs.getString("user_role", "student")
+        val localizedRole = when(userRole) {
+            "teacher" -> "Преподаватель"
+            "admin" -> "Администратор"
+            else -> "Студент"
+        }
+        
+        binding.profileName.text = prefs.getString("student_name", localizedRole)
+        binding.profileRole.text = localizedRole
+        binding.profileGroup.text = if (userRole == "teacher") "Учитель" else prefs.getString("student_group", "Группа не указана")
         binding.profileEmail.text = "${prefs.getString("student_name", "user")?.replace(" ", ".")?.lowercase()}@university.edu"
         // Дата регистрации должна браться из БД!!!!!!!!!!!!!!!!
         binding.profileRegDate.text = "01.09.2023"
@@ -53,7 +60,7 @@ class ProfileFragment : Fragment() {
         }
 
         val appPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        val primaryColorHex = appPrefs.getString("button_color", "#C48E17")
         primaryColorHex?.let {
             val color = android.graphics.Color.parseColor(it)
             binding.editProfileButton.backgroundTintList = android.content.res.ColorStateList.valueOf(color)

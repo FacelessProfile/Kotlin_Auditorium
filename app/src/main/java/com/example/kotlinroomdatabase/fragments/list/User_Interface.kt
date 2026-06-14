@@ -19,6 +19,7 @@ import com.google.android.gms.location.LocationServices
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -67,7 +68,7 @@ class User_Interface : Fragment() {
 
         val btnScan = view.findViewById<Button>(R.id.btnScan)
         val appPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("primary_color", "#C48E17")
+        val primaryColorHex = appPrefs.getString("button_color", "#C48E17")
         primaryColorHex?.let {
             val color = Color.parseColor(it)
             btnScan.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
@@ -76,6 +77,10 @@ class User_Interface : Fragment() {
 
         btnScan.setOnClickListener {
             startScanning()
+        }
+
+        view.findViewById<Button>(R.id.btnHistory).setOnClickListener {
+            findNavController().navigate(R.id.action_userHome_to_history)
         }
     }
 
@@ -130,20 +135,17 @@ class User_Interface : Fragment() {
     private fun handleScannedUrl(url: String) {
         val uri = Uri.parse(url)
         val lessonIdStr = uri.getQueryParameter("lesson_id")
+        val token = uri.getQueryParameter("token")
         
-        if (lessonIdStr != null) {
-            val lessonId = lessonIdStr.toIntOrNull() ?: -1
-            if (lessonId != -1) {
-                markAttendance(lessonId)
-            } else {
-                startActivity(Intent(Intent.ACTION_VIEW, uri))
-            }
+        if (token != null || lessonIdStr != null) {
+            val lessonId = lessonIdStr?.toIntOrNull() ?: 0
+            markAttendance(lessonId, token)
         } else {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         }
     }
 
-    private fun markAttendance(lessonId: Int) {
+    private fun markAttendance(lessonId: Int, inviteToken: String? = null) {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 100)
             return
@@ -158,7 +160,7 @@ class User_Interface : Fragment() {
 
                 lifecycleScope.launch(Dispatchers.IO) {
                     val repository = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(requireContext())
-                    val result = repository.markAttendanceViaQr(lessonId, deviceId, lat, lon)
+                    val result = repository.markAttendanceViaQr(lessonId, deviceId, lat, lon, inviteToken)
                     
                     launch(Dispatchers.Main) {
                         when (result) {

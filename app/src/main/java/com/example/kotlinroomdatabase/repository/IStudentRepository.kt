@@ -1,7 +1,13 @@
 package com.example.kotlinroomdatabase.repository
 
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.model.Lesson
+import com.example.kotlinroomdatabase.model.TeacherSubject
+import com.example.kotlinroomdatabase.model.StudentAttendanceStats
+import com.example.kotlinroomdatabase.model.AttendanceHistoryResponse
+import com.example.kotlinroomdatabase.model.HistoryItem
 import kotlinx.serialization.InternalSerializationApi
+import kotlinx.coroutines.flow.Flow
 
 sealed class LoginResult {
     data class Success @OptIn(InternalSerializationApi::class) constructor(val student: Student) : LoginResult()
@@ -47,10 +53,24 @@ interface IStudentRepository {
     suspend fun getStudentById(id: Int): Student?
     suspend fun updateAttendance(id: Int, status: Boolean)
     @OptIn(InternalSerializationApi::class)
-    fun getAllStudents(): kotlinx.coroutines.flow.Flow<List<Student>>
+    fun getAllStudents(): Flow<List<Student>>
+    fun getAllLessons(): Flow<List<Lesson>>
+
+    @OptIn(InternalSerializationApi::class)
+    suspend fun insertStudent(student: Student): Long
+    @OptIn(InternalSerializationApi::class)
+    suspend fun updateStudent(student: Student)
+    @OptIn(InternalSerializationApi::class)
+    suspend fun deleteStudent(student: Student)
+    suspend fun deleteAllStudents()
+
     suspend fun finishLesson(lessonId: Int): FinishLessonResult
     suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult
-    suspend fun markAttendanceViaQr(lessonId: Int, deviceId: String, lat: Double, lon: Double): AttendanceResult
+    suspend fun markAttendanceViaQr(lessonId: Int, deviceId: String, lat: Double, lon: Double, inviteToken: String? = null): AttendanceResult
     suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult
     suspend fun uploadAvatar(imagePath: String): AvatarResult
+    suspend fun getTeacherSubjects(): List<TeacherSubject>
+    suspend fun getGroupAttendance(groupId: Int, subjectId: Int): List<StudentAttendanceStats>
+    suspend fun getStudentHistory(year: Int): AttendanceHistoryResponse
+    suspend fun getDetailedStudentHistory(studentId: Int, subjectId: Int): List<HistoryItem>
 }

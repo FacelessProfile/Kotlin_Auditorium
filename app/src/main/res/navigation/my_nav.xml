@@ -9,7 +9,11 @@
         android:id="@+id/userHomeFragment"
         android:name="com.example.kotlinroomdatabase.fragments.list.User_Interface"
         android:label="Меню"
-        tools:layout="@layout/user_ui" />
+        tools:layout="@layout/user_ui" >
+        <action
+            android:id="@+id/action_userHome_to_history"
+            app:destination="@id/historyFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/listFragment"
@@ -83,6 +87,9 @@
         <action
             android:id="@+id/action_lessonFragment_to_listFragment"
             app:destination="@id/listFragment" />
+        <action
+            android:id="@+id/action_lessonFragment_to_history"
+            app:destination="@id/historyFragment" />
     </fragment>
 
     <fragment
@@ -95,7 +102,16 @@
         android:id="@+id/historyFragment"
         android:name="com.example.kotlinroomdatabase.fragments.history.HistoryFragment"
         android:label="История"
-        tools:layout="@layout/fragment_history" />
+        tools:layout="@layout/fragment_history" >
+        <argument
+            android:name="studentId"
+            app:argType="integer"
+            android:defaultValue="0" />
+        <argument
+            android:name="subjectId"
+            app:argType="integer"
+            android:defaultValue="0" />
+    </fragment>
 
     <fragment
         android:id="@+id/settingsFragment"
