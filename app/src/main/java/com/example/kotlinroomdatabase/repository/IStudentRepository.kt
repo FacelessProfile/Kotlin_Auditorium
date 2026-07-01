@@ -44,6 +44,7 @@ interface IStudentRepository {
     suspend fun register(name: String, group: String, passwordRaw: String): LoginResult
     suspend fun clearLocalRoomData()
     suspend fun syncAllStudents(): SyncResult
+    suspend fun syncLessonAttendance(subjectId: Int, groupIds: List<Int>): SyncResult
     suspend fun getAllUniqueGroups(): List<String>
     suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>, lat: Double = 0.0, lon: Double = 0.0): Int?
 
@@ -66,7 +67,7 @@ interface IStudentRepository {
 
     suspend fun finishLesson(lessonId: Int): FinishLessonResult
     suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult
-    suspend fun markAttendanceViaQr(lessonId: Int, deviceId: String, lat: Double, lon: Double, inviteToken: String? = null): AttendanceResult
+    suspend fun markAttendanceViaQr(lessonId: Int, deviceId: String, lat: Double, lon: Double, inviteToken: String? = null, totpCode: String? = null): AttendanceResult
     suspend fun getAttendanceLink(lessonId: Int): AttendanceLinkResult
     suspend fun uploadAvatar(imagePath: String): AvatarResult
     suspend fun getTeacherSubjects(): List<TeacherSubject>

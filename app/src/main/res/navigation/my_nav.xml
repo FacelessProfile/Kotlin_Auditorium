@@ -118,4 +118,10 @@
         android:name="com.example.kotlinroomdatabase.fragments.settings.SettingsFragment"
         android:label="Настройки"
         tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/totpFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.totp.TotpFragment"
+        android:label="Аутентификатор"
+        tools:layout="@layout/fragment_totp" />
 </navigation>

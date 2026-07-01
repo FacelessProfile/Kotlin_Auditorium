@@ -12,8 +12,11 @@ import androidx.navigation.ui.*
 import com.example.kotlinroomdatabase.databinding.ActivityMainBinding
 import com.example.kotlinroomdatabase.repository.StudentRepository
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,12 +25,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val themeMode = appPrefs.getString("theme_mode", "system") ?: "system"
+        val appCompatMode = when (themeMode) {
+            "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            "dark" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+            else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(appCompatMode)
+
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val primaryColorHex = appPrefs.getString("navbar_color", "#C48E17")
         primaryColorHex?.let {
             try {
@@ -87,6 +98,9 @@ class MainActivity : AppCompatActivity() {
                 R.id.logout -> {
                     val prefsLogout = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                     prefsLogout.edit().clear().apply()
+                    val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    authPrefs.edit().remove("avatar_url").apply()
+
                     // Очищаем стек при выходе
                     navController.navigate(R.id.loginFragment, null, navOptions {
                         popUpTo(R.id.my_nav) { inclusive = true }
@@ -116,7 +130,7 @@ class MainActivity : AppCompatActivity() {
         val menu = binding.navView.menu
         if (userRole == "teacher" || userRole == "admin") {
             menu.findItem(R.id.userHomeFragment)?.isVisible = false
-            menu.findItem(R.id.historyFragment)?.isVisible = false
+            menu.findItem(R.id.historyFragment)?.isVisible = true
             menu.findItem(R.id.lessonFragment)?.isVisible = true
             menu.findItem(R.id.listFragment)?.isVisible = true
         } else {
@@ -147,24 +161,21 @@ class MainActivity : AppCompatActivity() {
         tvEmail.text = if (userRole == "teacher") localizedRole else prefs.getString("student_group", "Студент")
 
         val avatarPath = prefs.getString("avatar_path", null)
+        val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val avatarUrl = authPrefs.getString("avatar_url", null)
+
+        Log.d("MainActivity", "Updating header: path=$avatarPath, url=$avatarUrl")
+
         if (avatarPath != null) {
-            try {
-                val file = java.io.File(avatarPath)
-                if (file.exists()) {
-                    ivAvatar.setImageURI(android.net.Uri.fromFile(file))
-                    ivAvatar.imageTintList = null
-                } else if (avatarPath.startsWith("content://")) {
-                    val uri = android.net.Uri.parse(avatarPath)
-                    contentResolver.openInputStream(uri)?.use {
-                        ivAvatar.setImageURI(uri)
-                        ivAvatar.imageTintList = null
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error loading avatar from $avatarPath: ${e.message}")
-                ivAvatar.setImageResource(R.drawable.ic_person)
-                prefs.edit().remove("avatar_path").apply()
+            val file = java.io.File(avatarPath)
+            if (file.exists()) {
+                ivAvatar.setImageURI(android.net.Uri.fromFile(file))
+                ivAvatar.imageTintList = null
+            } else {
+                loadAvatarFromUrl(avatarUrl, ivAvatar)
             }
+        } else {
+            loadAvatarFromUrl(avatarUrl, ivAvatar)
         }
 
         val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -173,6 +184,48 @@ class MainActivity : AppCompatActivity() {
             try {
                 headerView.setBackgroundColor(android.graphics.Color.parseColor(it))
             } catch (e: Exception) {}
+        }
+    }
+
+    private fun loadAvatarFromUrl(url: String?, imageView: android.widget.ImageView) {
+        if (url.isNullOrBlank() || url == "null") {
+            imageView.setImageResource(R.drawable.ic_person)
+            imageView.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Handle relative URLs
+                val finalUrl = if (url.startsWith("http")) {
+                    url
+                } else {
+                    "http://109.172.114.128:9000${if (url.startsWith("/")) "" else "/"}$url"
+                }
+
+                Log.d("MainActivity", "Loading avatar from: $finalUrl")
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(finalUrl).build()
+                val response = client.newCall(request).execute()
+                
+                if (response.isSuccessful) {
+                    val bytes = response.body.bytes()
+                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    withContext(Dispatchers.Main) {
+                        imageView.setImageBitmap(bitmap)
+                        imageView.imageTintList = null
+                        Log.d("MainActivity", "Avatar loaded successfully")
+                    }
+                } else {
+                    Log.e("MainActivity", "Failed to download avatar: ${response.code}")
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading avatar: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    imageView.setImageResource(R.drawable.ic_person)
+                    imageView.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+                }
+            }
         }
     }
 

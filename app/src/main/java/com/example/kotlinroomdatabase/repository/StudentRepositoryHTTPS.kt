@@ -10,9 +10,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import org.json.JSONArray
@@ -167,72 +167,125 @@ class StudentRepositoryHTTPS(
     override suspend fun syncAllStudents(): SyncResult = withContext(Dispatchers.IO) {
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
-            Log.d("HTTP_REPO", "syncAllStudents token: $token")
-            if (token.isEmpty()) {
-                Log.e("HTTP_REPO", "syncAllStudents: No token found in sharedPrefs")
-                return@withContext SyncResult.Error("No token found")
-            }
+            if (token.isEmpty()) return@withContext SyncResult.Error("No token found")
             
             val authHeader = "Bearer $token"
 
-            val subjects = getTeacherSubjects()
-            var totalSynced = 0
-            subjects.forEach { subject ->
-                subject.groups.forEach { group ->
-                    val stats = getGroupAttendance(group.id, subject.subject_id)
-                    Log.d("HTTP_REPO", "Syncing group ${group.name}, found ${stats.size} students")
-                    stats.forEach { stat ->
-                        val student = Student(
-                            id = stat.student_id,
-                            studentName = stat.student_name,
-                            studentGroup = group.name,
-                            studentNFC = "", // NFC tag might not be in stats, but login sync can fill it
-                            attendance = stat.attendance_percent > 50.0, // Example logic
-                            role = "student"
-                        )
-                        studentDao.insertStudent(student)
-                        totalSynced++
+            // 1. Sync profile
+            val profileRequest = Request.Builder()
+                .url("$BASE_URL/profile")
+                .get()
+                .addHeader("Authorization", authHeader)
+                .build()
+
+            val profileResponse = client.newCall(profileRequest).execute()
+            val profileStr = profileResponse.body?.string() ?: ""
+            val profileJson = JSONObject(profileStr)
+
+            if (profileResponse.isSuccessful && profileJson.optBoolean("ok")) {
+                val resultObj = profileJson.getJSONObject("result")
+                val avatarUrl = resultObj.optString("avatar", "")
+                val studentName = resultObj.optString("name", resultObj.optString("student_name", "Unknown"))
+                val studentGroup = resultObj.optString("group_name", resultObj.optString("group", "Unknown"))
+                val userIdStr = resultObj.optString("user_id", "0")
+                val role = resultObj.optString("role", "student")
+                val nfcTag = resultObj.optString("nfc_tag", "")
+
+                sharedPrefs.edit().putString("avatar_url", avatarUrl).apply()
+
+                val profileStudent = Student(
+                    id = userIdStr.hashCode(),
+                    studentName = studentName,
+                    studentGroup = studentGroup,
+                    studentNFC = nfcTag,
+                    attendance = false,
+                    role = role
+                )
+                studentDao.insertStudent(profileStudent)
+            }
+
+            // 2. Get Active Session to know the start time
+            var activeSessionStartTime: String? = null
+            try {
+                val activeRequest = Request.Builder()
+                    .url("$BASE_URL/api/teacher/attendance/session/active")
+                    .get()
+                    .addHeader("Authorization", authHeader)
+                    .build()
+                val activeResponse = client.newCall(activeRequest).execute()
+                val activeStr = activeResponse.body?.string() ?: ""
+                val activeJson = JSONObject(activeStr)
+                if (activeResponse.isSuccessful && activeJson.optBoolean("ok")) {
+                    val result = activeJson.getJSONObject("result")
+                    if (result.optBoolean("active")) {
+                        activeSessionStartTime = result.getJSONObject("session").optString("created_at")
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("HTTP_REPO", "Error getting active session", e)
+            }
+
+            // 3. Get Teacher subjects and sync attendance
+            val subjects = getTeacherSubjects()
+            val studentsToUpdate = mutableMapOf<Int, Student>()
+            var totalSynced = 0
+
+            subjects.forEach { subject ->
+                subject.groups.forEach { group ->
+                    try {
+                        val stats = getGroupAttendance(group.id, subject.subject_id)
+                        stats.forEach { stat ->
+                            var isPresentInCurrentSession = false
+                            
+                            if (activeSessionStartTime != null && !stat.last_marked_at.isNullOrBlank()) {
+                                isPresentInCurrentSession = try {
+                                    val lastMarked = java.time.OffsetDateTime.parse(stat.last_marked_at)
+                                    val sessionStart = java.time.OffsetDateTime.parse(activeSessionStartTime)
+                                    !lastMarked.isBefore(sessionStart)
+                                } catch (e: Exception) {
+                                    Log.e("HTTP_REPO", "Error parsing date: lastMarked=${stat.last_marked_at}, sessionStart=$activeSessionStartTime", e)
+                                    stat.last_marked_at >= activeSessionStartTime
+                                }
+                                Log.d("HTTP_REPO", "Checking student ${stat.student_name}: last_marked=${stat.last_marked_at}, session_start=$activeSessionStartTime, result=$isPresentInCurrentSession")
+                            }
+                            
+                            val existingLocal = studentDao.getStudentById(stat.student_id)
+                            val nfc = existingLocal?.studentNFC ?: ""
+                            
+                            studentsToUpdate[stat.student_id] = Student(
+                                id = stat.student_id,
+                                studentName = stat.student_name,
+                                studentGroup = group.name,
+                                studentNFC = nfc, 
+                                attendance = isPresentInCurrentSession,
+                                role = "student"
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("HTTP_REPO", "Error syncing group ${group.name}", e)
+                    }
+                }
+            }
+
+            studentsToUpdate.values.forEach { 
+                studentDao.insertStudent(it)
+                totalSynced++
             }
 
             if (totalSynced > 0) {
                 SyncResult.Success(totalSynced, "Синхронизировано $totalSynced студентов")
             } else {
-                val request = Request.Builder()
-                    .url("$BASE_URL/profile")
-                    .get()
-                    .addHeader("Authorization", authHeader)
-                    .build()
-
-                val response = client.newCall(request).execute()
-                val responseStr = response.body?.string() ?: ""
-                val jsonRes = JSONObject(responseStr)
-
-                if (response.isSuccessful && jsonRes.optBoolean("ok")) {
-                    val resultObj = jsonRes.getJSONObject("result")
-                    if (resultObj.optString("role") == "student") {
-                        val student = Student(
-                            id = resultObj.optString("student_id", resultObj.optString("user_id", "0")).hashCode(),
-                            studentName = resultObj.optString("student_name", resultObj.optString("name", "Unknown")),
-                            studentGroup = resultObj.optString("group_name", "Unknown"),
-                            studentNFC = resultObj.optString("nfc_tag", ""),
-                            attendance = false,
-                            role = "student"
-                        )
-                        studentDao.insertStudent(student)
-                        Log.d("HTTP_REPO", "Student profile synced and saved: ${student.studentName}")
-                    }
-                    
-                    SyncResult.Success(1, "Профиль синхронизирован")
-                } else {
-                    SyncResult.Error("Ошибка синхронизации: ${response.code}")
-                }
+                SyncResult.Success(1, "Профиль синхронизирован")
             }
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "syncAllStudents error", e)
             SyncResult.Error("Sync Exception: ${e.message}")
         }
+    }
+
+    override suspend fun syncLessonAttendance(subjectId: Int, groupIds: List<Int>): SyncResult = withContext(Dispatchers.IO) {
+        // Для простоты используем общую синхронизацию, она теперь корректно мержит статусы
+        syncAllStudents()
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -353,7 +406,11 @@ class StudentRepositoryHTTPS(
                     val result = jsonObj.getJSONObject("result")
                     val lessonId = result.optInt("lesson_id")
                     val inviteToken = result.optString("invite_token")
-                    sharedPrefs.edit().putString("last_invite_token", inviteToken).apply()
+                    val totpSecret = result.optString("totp_secret")
+                    sharedPrefs.edit().apply {
+                        putString("last_invite_token", inviteToken)
+                        if (totpSecret.isNotBlank()) putString("last_totp_secret", totpSecret)
+                    }.apply()
                     val lesson = Lesson(
                         subject = subject,
                         date = System.currentTimeMillis(),
@@ -381,45 +438,110 @@ class StudentRepositoryHTTPS(
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             val inviteToken = sharedPrefs.getString("last_invite_token", "") ?: ""
+            val studentToken = nfcTag // Student's JWT token transmitted via HCE
             
+            // Get location if saved in prefs by LessonFragment
+            val lat = sharedPrefs.getFloat("last_lat", 0.0f).toDouble()
+            val lon = sharedPrefs.getFloat("last_lon", 0.0f).toDouble()
+
             val jsonRequest = JSONObject().apply {
                 put("lesson_id", lessonId)
-                put("invite_token", inviteToken)
-                put("device_id", nfcTag)
-                put("lat", 0.0)
-                put("lon", 0.0)
+                if (!inviteToken.isNullOrBlank()) {
+                    put("invite_token", inviteToken)
+                } else {
+                    put("invite_token", token) 
+                }
+                put("device_id", studentToken)
+                put("lat", lat)
+                put("lon", lon)
             }
-
+            
+            Log.d("HTTP_REPO", "NFC Mark Attempt 1 (Standard): $jsonRequest")
+            
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
             val request = Request.Builder()
                 .url("$BASE_URL/api/student/mark-attendance")
                 .post(body)
-                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Authorization", "Bearer $studentToken")
                 .build()
 
-            val response = client.newCall(request).execute()
-            val responseStr = response.body?.string() ?: ""
+            var response = client.newCall(request).execute()
+            var responseStr = response.body?.string() ?: ""
+            Log.d("HTTP_REPO", "NFC Mark Response 1 (${response.code}): $responseStr")
+
+            if (response.code == 403 || response.code == 400) {
+                // Try second attempt: maybe the server wants /api/student/attendance/confirm
+                val jsonConfirm = JSONObject().apply {
+                    put("invite_token", if (inviteToken.isNotBlank()) inviteToken else token)
+                }
+                Log.d("HTTP_REPO", "NFC Mark Attempt 2 (Confirm): $jsonConfirm")
+                
+                val requestConfirm = Request.Builder()
+                    .url("$BASE_URL/api/student/attendance/confirm")
+                    .post(jsonConfirm.toString().toRequestBody(JSON_TYPE))
+                    .addHeader("Authorization", "Bearer $studentToken")
+                    .build()
+                
+                response = client.newCall(requestConfirm).execute()
+                responseStr = response.body?.string() ?: ""
+                Log.d("HTTP_REPO", "NFC Mark Response 2 (${response.code}): $responseStr")
+            }
 
             if (response.isSuccessful) {
                 val jsonResponse = JSONObject(responseStr)
                 if (jsonResponse.optBoolean("ok")) {
-                    val localStudent = studentDao.getStudentByNfc(nfcTag)
-                    localStudent?.let {
-                        studentDao.updateAttendance(it.id, true)
+                    var student: Student? = null
+                    try {
+                        val profileRequest = Request.Builder()
+                            .url("$BASE_URL/profile")
+                            .get()
+                            .addHeader("Authorization", "Bearer $studentToken")
+                            .build()
+                        val profileResponse = client.newCall(profileRequest).execute()
+                        val profileStr = profileResponse.body?.string() ?: ""
+                        val profileJson = JSONObject(profileStr)
+                        if (profileResponse.isSuccessful && profileJson.optBoolean("ok")) {
+                            val resultObj = profileJson.getJSONObject("result")
+                            val studentName = resultObj.optString("name", resultObj.optString("student_name", "Unknown"))
+                            val studentGroup = resultObj.optString("group_name", resultObj.optString("group", "Unknown"))
+                            val userIdStr = resultObj.optString("user_id", "0")
+                            val role = resultObj.optString("role", "student")
+                            val nfcTagVal = resultObj.optString("nfc_tag", "")
+                            
+                            student = Student(
+                                id = userIdStr.toIntOrNull() ?: userIdStr.hashCode(),
+                                studentName = studentName,
+                                studentGroup = studentGroup,
+                                studentNFC = nfcTagVal,
+                                attendance = true,
+                                role = role
+                            )
+                            studentDao.insertStudent(student)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("HTTP_REPO", "Failed to fetch student profile for token", e)
+                    }
+
+                    if (student == null) {
+                        val localStudent = studentDao.getStudentByNfc(nfcTag)
+                        localStudent?.let {
+                            studentDao.updateAttendance(it.id, true)
+                            student = it.copy(attendance = true)
+                        }
                     }
                     
-                    val student = localStudent ?: Student(
-                        studentName = "Student $nfcTag",
-                        studentGroup = "Unknown",
+                    val finalStudent = student ?: Student(
+                        studentName = "Студент",
+                        studentGroup = "Группа",
                         studentNFC = nfcTag,
                         attendance = true
                     )
-                    return@withContext AttendanceResult.Success(student)
-                } else {
-                    return@withContext AttendanceResult.Error(jsonResponse.optString("error", "Failed to mark"))
+                    return@withContext AttendanceResult.Success(finalStudent)
                 }
             }
-            AttendanceResult.Error("Server error: ${response.code}")
+            
+            val finalError = try { JSONObject(responseStr).optString("error", "Error ${response.code}") } catch(e:Exception) { "Error ${response.code}" }
+            AttendanceResult.Error(finalError)
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "markAttendanceInLesson error", e)
             AttendanceResult.Error("Network error")
@@ -432,7 +554,8 @@ class StudentRepositoryHTTPS(
         deviceId: String,
         lat: Double,
         lon: Double,
-        inviteToken: String?
+        inviteToken: String?,
+        totpCode: String?
     ): AttendanceResult = withContext(Dispatchers.IO) {
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
@@ -441,6 +564,7 @@ class StudentRepositoryHTTPS(
             val jsonRequest = JSONObject().apply {
                 if (lessonId > 0) put("lesson_id", lessonId)
                 if (!inviteToken.isNullOrBlank()) put("invite_token", inviteToken)
+                if (!totpCode.isNullOrBlank()) put("totp_code", totpCode)
                 put("device_id", deviceId)
                 put("lat", lat)
                 put("lon", lon)
@@ -498,9 +622,36 @@ class StudentRepositoryHTTPS(
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext AvatarResult.Error("No token")
-            Log.d("HTTP_REPO", "Avatar upload triggered for: $imagePath")
-            AvatarResult.Success("mock_server_url_for_$imagePath")
+            
+            val file = java.io.File(imagePath)
+            if (!file.exists()) return@withContext AvatarResult.Error("File not found")
+
+            val body = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("avatar", file.name, file.asRequestBody("image/jpeg".toMediaType()))
+                .build()
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/user/upload-avatar")
+                .post(body)
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            Log.d("HTTP_REPO", "NFC Mark Response (${response.code}): $responseStr")
+
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val url = jsonResponse.optString("result")
+                    sharedPrefs.edit().putString("avatar_url", url).apply()
+                    return@withContext AvatarResult.Success(url)
+                }
+            }
+            AvatarResult.Error("Server error: ${response.code}")
         } catch (e: Exception) {
+            Log.e("HTTP_REPO", "uploadAvatar error", e)
             AvatarResult.Error("Upload failed: ${e.message}")
         }
     }
@@ -584,6 +735,7 @@ class StudentRepositoryHTTPS(
 
             val response = client.newCall(request).execute()
             val responseStr = response.body?.string() ?: ""
+            Log.d("HTTP_REPO", "NFC Mark Response (${response.code}): $responseStr")
 
             if (response.isSuccessful) {
                 val jsonResponse = JSONObject(responseStr)
@@ -616,6 +768,7 @@ class StudentRepositoryHTTPS(
 
             val response = client.newCall(request).execute()
             val responseStr = response.body?.string() ?: ""
+            Log.d("HTTP_REPO", "NFC Mark Response (${response.code}): $responseStr")
 
             if (response.isSuccessful) {
                 val jsonResponse = JSONObject(responseStr)

@@ -87,6 +87,10 @@ class StudentRepository(
         }
     }
 
+    override suspend fun syncLessonAttendance(subjectId: Int, groupIds: List<Int>): SyncResult {
+        return syncAllStudents()
+    }
+
     @OptIn(InternalSerializationApi::class)
     override suspend fun login(loginName: String, passwordRaw: String): LoginResult {
         return try {
@@ -182,7 +186,8 @@ class StudentRepository(
         deviceId: String,
         lat: Double,
         lon: Double,
-        inviteToken: String?
+        inviteToken: String?,
+        totpCode: String?
     ): AttendanceResult {
         return try {
             val jsonRequest = JSONObject().apply {

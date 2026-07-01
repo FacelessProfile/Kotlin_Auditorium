@@ -77,4 +77,9 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     // Google Play Services for Location
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    
+    // Security Crypto
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Commons Codec for Base32
+    implementation("commons-codec:commons-codec:1.16.1")
 }

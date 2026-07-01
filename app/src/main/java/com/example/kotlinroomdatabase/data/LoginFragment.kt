@@ -198,30 +198,48 @@ class LoginFragment : Fragment() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             studentRepository.clearLocalRoomData()
+            val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+            val token = authPrefs.getString("auth_token", "") ?: ""
             prefs.edit().apply {
                 clear()
                 putInt("current_student_id", student.id)
                 putString("user_role", student.role)
                 putString("student_name", student.studentName)
                 putString("student_group", student.studentGroup)
-                putString("nfc_payload", student.studentNFC)
+                if (student.role == "student" && token.isNotEmpty()) {
+                    putString("nfc_payload", token)
+                } else {
+                    putString("nfc_payload", student.studentNFC)
+                }
                 apply()
             }
 
             enableHceForStudent(student)
 
             withContext(Dispatchers.Main) {
-                (activity as? com.example.kotlinroomdatabase.MainActivity)?.updateUIForRole()
+                val mainActivity = activity as? com.example.kotlinroomdatabase.MainActivity
+                mainActivity?.updateUIForRole()
                 
                 if (student.role == "teacher") {
-                    studentRepository.syncAllStudents()
-                    findNavController().navigate(R.id.action_loginFragment_to_lessonFragment, null, navOptions {
-                        popUpTo(R.id.my_nav) { inclusive = true }
-                    })
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        studentRepository.syncAllStudents()
+                        withContext(Dispatchers.Main) {
+                            mainActivity?.updateNavHeader()
+                            findNavController().navigate(R.id.action_loginFragment_to_lessonFragment, null, navOptions {
+                                popUpTo(R.id.my_nav) { inclusive = true }
+                            })
+                        }
+                    }
                 } else {
-                    findNavController().navigate(R.id.userHomeFragment, null, navOptions {
-                        popUpTo(R.id.my_nav) { inclusive = true }
-                    })
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        studentRepository.syncAllStudents()
+                        withContext(Dispatchers.Main) {
+                            mainActivity?.updateNavHeader()
+                            findNavController().navigate(R.id.userHomeFragment, null, navOptions {
+                                popUpTo(R.id.my_nav) { inclusive = true }
+                            })
+                        }
+                    }
                     Toast.makeText(context, "Режим пропуска активен!", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -257,7 +275,9 @@ class LoginFragment : Fragment() {
     @OptIn(InternalSerializationApi::class)
     private fun enableHceForStudent(student: Student) {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val tagForHce = student.studentNFC
+        val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val token = authPrefs.getString("auth_token", "") ?: ""
+        val tagForHce = if (student.role == "student" && token.isNotEmpty()) token else student.studentNFC
 
         if (!tagForHce.isNullOrBlank()) {
             prefs.edit().putString("nfc_payload", tagForHce).apply()

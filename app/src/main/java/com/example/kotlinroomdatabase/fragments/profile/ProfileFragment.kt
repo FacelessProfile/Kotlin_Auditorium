@@ -13,8 +13,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.kotlinroomdatabase.databinding.FragmentProfileBinding
 import com.example.kotlinroomdatabase.repository.AvatarResult
-import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import com.example.kotlinroomdatabase.settings.RepositoryHTTPS
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
@@ -45,14 +49,18 @@ class ProfileFragment : Fragment() {
         binding.profileRegDate.text = "01.09.2023"
 
         val avatarPath = prefs.getString("avatar_path", null)
+        val avatarUrl = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("avatar_url", null)
+
         if (avatarPath != null) {
             val file = java.io.File(avatarPath)
             if (file.exists()) {
                 binding.profileAvatar.setImageURI(Uri.fromFile(file))
                 binding.profileAvatar.imageTintList = null
             } else {
-                Log.e("ProfileFragment", "Avatar file does not exist: $avatarPath")
+                loadAvatarFromUrl(avatarUrl)
             }
+        } else {
+            loadAvatarFromUrl(avatarUrl)
         }
 
         binding.profileAvatar.setOnClickListener {
@@ -83,10 +91,10 @@ class ProfileFragment : Fragment() {
         // Notify MainActivity to update header
         (activity as? com.example.kotlinroomdatabase.MainActivity)?.updateNavHeader()
 
-        // Mock server request
+        // Server request
         lifecycleScope.launch {
             try {
-                val repository = RepositoryZMQ.getStudentRepository(requireContext())
+                val repository = RepositoryHTTPS.getStudentRepository(requireContext())
                 val result = repository.uploadAvatar(internalPath)
                 if (result is AvatarResult.Success) {
                     // Toast.makeText(requireContext(), "Аватарка загружена", Toast.LENGTH_SHORT).show()
@@ -115,6 +123,43 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private fun loadAvatarFromUrl(url: String?) {
+        if (url.isNullOrBlank() || url == "null") {
+            binding.profileAvatar.setImageResource(com.example.kotlinroomdatabase.R.drawable.ic_person)
+            binding.profileAvatar.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.GRAY)
+            return
+        }
+
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // Handle relative URLs
+                val finalUrl = if (url.startsWith("http")) {
+                    url
+                } else {
+                    "http://109.172.114.128:9000${if (url.startsWith("/")) "" else "/"}$url"
+                }
+
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(finalUrl).build()
+                val response = client.newCall(request).execute()
+                
+                if (response.isSuccessful) {
+                    val bytes = response.body.bytes()
+                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        binding.profileAvatar.setImageBitmap(bitmap)
+                        binding.profileAvatar.imageTintList = null
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    binding.profileAvatar.setImageResource(com.example.kotlinroomdatabase.R.drawable.ic_person)
+                    binding.profileAvatar.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.GRAY)
+                }
+            }
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -123,19 +168,63 @@ class ProfileFragment : Fragment() {
     private fun setupActivityCalendar() {
         val calendarGrid = binding.activityCalendar
         val context = requireContext()
+        val prefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val userRole = prefs.getString("user_role", "student")
         
-        // Mock data
-        val activityData = List(140) { 
-            val rand = (0..10).random()
-            when {
-                rand > 9 -> 4
-                rand > 8 -> 3
-                rand > 7 -> 2
-                rand > 5 -> 1
-                else -> 0
-            }
-        } 
+        lifecycleScope.launch {
+            try {
+                val repository = RepositoryHTTPS.getStudentRepository(context)
+                val activityMap = mutableMapOf<String, Int>()
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                
+                if (userRole == "teacher") {
+                    repository.getAllLessons().first().forEach { lesson ->
+                        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(lesson.date))
+                        activityMap[dateKey] = (activityMap[dateKey] ?: 0) + 1
+                    }
+                } else {
+                    val history = repository.getStudentHistory(Calendar.getInstance().get(Calendar.YEAR))
+                    history.items.forEach { item ->
+                        // Assuming date is in dd.MM.yyyy or similar, try to parse it
+                        try {
+                            val parts = item.date.split(".")
+                            if (parts.size == 3) {
+                                val normalizedDate = "${parts[2]}-${parts[1]}-${parts[0]}"
+                                activityMap[normalizedDate] = (activityMap[normalizedDate] ?: 0) + 1
+                            }
+                        } catch (e: Exception) {}
+                    }
+                }
 
+                val activityData = mutableListOf<Int>()
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DAY_OF_YEAR, -139) // Last 140 days
+                
+                for (i in 0 until 140) {
+                    val dateKey = dateFormat.format(cal.time)
+                    val count = activityMap[dateKey] ?: 0
+                    activityData.add(when {
+                        count >= 4 -> 4
+                        count == 3 -> 3
+                        count == 2 -> 2
+                        count == 1 -> 1
+                        else -> 0
+                    })
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                }
+
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    renderHeatmap(activityData)
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileFragment", "Error loading heatmap data", e)
+            }
+        }
+    }
+
+    private fun renderHeatmap(activityData: List<Int>) {
+        val calendarGrid = binding.activityCalendar ?: return
+        val context = context ?: return
         calendarGrid.removeAllViews()
 
         for (i in activityData.indices) {

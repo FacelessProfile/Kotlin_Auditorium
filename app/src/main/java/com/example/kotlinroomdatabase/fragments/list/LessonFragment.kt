@@ -19,6 +19,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.getColorFromAttr
 import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.settings.LessonsConfig
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
@@ -36,6 +37,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
@@ -47,11 +51,13 @@ class LessonFragment : NFC_Tools() {
 
     @OptIn(InternalSerializationApi::class)
     private val attendedStudents = mutableListOf<Student>()
-    private val selectedGroups = mutableSetOf<String>()
+    private var selectedGroups = mutableSetOf<String>()
 
     private var currentLessonId: Int? = null
     private var isLessonActive = false
     private var currentSubject: String? = null
+    private var pollingJob: Job? = null
+    private var qrUpdateJob: Job? = null
 
     private lateinit var tvStatus: TextView
     private lateinit var tvSubStatus: TextView
@@ -65,6 +71,7 @@ class LessonFragment : NFC_Tools() {
     private val KEY_LESSON_ID = "lesson_id"
     private val KEY_SUBJECT = "subject"
     private val KEY_START_TIME = "start_time"
+    private val KEY_SELECTED_GROUPS = "selected_groups"
     private val LESSON_DURATION_MS = 90 * 60 * 1000L // 1.5 hours
 
     @OptIn(InternalSerializationApi::class)
@@ -127,16 +134,54 @@ class LessonFragment : NFC_Tools() {
         }
 
         loadLessonState()
+        observeStudents()
 
         return view
     }
 
-    private fun saveLessonState(id: Int, subject: String) {
+    @OptIn(InternalSerializationApi::class)
+    private fun observeStudents() {
+        lifecycleScope.launch {
+            studentRepository.getAllStudents().collect { allStudents ->
+                Log.d("OBSERVE", "Got ${allStudents.size} students. isLessonActive=$isLessonActive")
+                if (isLessonActive) {
+                    val filtered = allStudents.filter { it.attendance && selectedGroups.contains(it.studentGroup) }
+                    Log.d("OBSERVE", "Filtered to ${filtered.size} students for groups: $selectedGroups")
+                    
+                    if (attendedStudents.size != filtered.size || !attendedStudents.containsAll(filtered)) {
+                        attendedStudents.clear()
+                        attendedStudents.addAll(filtered.sortedByDescending { it.id })
+                        adapter.setData(attendedStudents)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startAttendancePolling() {
+        pollingJob?.cancel()
+        pollingJob = lifecycleScope.launch(Dispatchers.Main) { // Use Main to keep it simple or IO with careful observation
+            while (isLessonActive) {
+                try {
+                    Log.d("POLLING", "Auto-syncing attendance for lesson $currentLessonId")
+                    withContext(Dispatchers.IO) {
+                        studentRepository.syncAllStudents()
+                    }
+                } catch (e: Exception) {
+                    Log.e("POLLING", "Sync failed: ${e.message}")
+                }
+                delay(5000)
+            }
+        }
+    }
+
+    private fun saveLessonState(id: Int, subject: String, groups: List<String>) {
         val prefs = requireContext().getSharedPreferences(LESSON_PREFS, Context.MODE_PRIVATE)
         prefs.edit().apply {
             putInt(KEY_LESSON_ID, id)
             putString(KEY_SUBJECT, subject)
             putLong(KEY_START_TIME, System.currentTimeMillis())
+            putStringSet(KEY_SELECTED_GROUPS, groups.toSet())
             apply()
         }
     }
@@ -147,20 +192,14 @@ class LessonFragment : NFC_Tools() {
         val id = prefs.getInt(KEY_LESSON_ID, -1)
         val subject = prefs.getString(KEY_SUBJECT, null)
         val startTime = prefs.getLong(KEY_START_TIME, 0)
+        val groups = prefs.getStringSet(KEY_SELECTED_GROUPS, null)
 
         if (id != -1 && subject != null && (System.currentTimeMillis() - startTime) < LESSON_DURATION_MS) {
             currentLessonId = id
             currentSubject = subject
-            lifecycleScope.launch {
-                studentRepository.getAllStudents().collect { allStudents ->
-                    if (isLessonActive) {
-                        attendedStudents.clear()
-                        attendedStudents.addAll(allStudents.filter { it.attendance })
-                        adapter.setData(attendedStudents)
-                    }
-                }
-            }
-
+            selectedGroups = groups?.toMutableSet() ?: mutableSetOf()
+            isLessonActive = true 
+            
             updateUiOnLessonStart(subject, null)
         } else {
             resetUiAfterLesson()
@@ -205,6 +244,7 @@ class LessonFragment : NFC_Tools() {
                 is FinishLessonResult.Success -> {
                     Toast.makeText(context, "Занятие завершено!", Toast.LENGTH_LONG).show()
                     stopNfcReadingMode()
+                    pollingJob?.cancel()
                     clearSavedLessonState()
                     resetUiAfterLesson()
                 }
@@ -223,9 +263,12 @@ class LessonFragment : NFC_Tools() {
         attendedStudents.clear()
         adapter.setData(emptyList())
         tvStatus.text = "Создайте занятие"
-        tvStatus.setTextColor(Color.BLACK)
+        tvStatus.setTextColor(requireContext().getColorFromAttr(android.R.attr.textColorPrimary))
         btnFinishLesson.visibility = View.GONE
         fabCreateLesson.show()
+
+        qrUpdateJob?.cancel()
+        qrUpdateJob = null
 
         ivQrCode.visibility = View.GONE
         ivQrCode.setImageBitmap(null)
@@ -277,6 +320,7 @@ class LessonFragment : NFC_Tools() {
         }
     }
 
+    @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n", "InflateParams")
     private fun showCreateLessonSheet() {
         val bottomSheet = BottomSheetDialog(requireContext(), R.style.FullScreenBottomSheetDialog)
@@ -312,7 +356,6 @@ class LessonFragment : NFC_Tools() {
         acGroupSearch.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) acGroupSearch.showDropDown()
         }
-        acGroupSearch.setDropDownBackgroundResource(android.R.color.white)
 
         lifecycleScope.launch {
             val teacherSubjects = studentRepository.getTeacherSubjects()
@@ -385,11 +428,24 @@ class LessonFragment : NFC_Tools() {
 
                 lifecycleScope.launch {
                     try {
+                        @OptIn(InternalSerializationApi::class)
                         val id = studentRepository.createLesson(subject, teacherId, selectedGroups.toList(), lat, lon)
                         if (id != null) {
                             currentLessonId = id
                             currentSubject = subject
-                            saveLessonState(id, subject)
+                            saveLessonState(id, subject, selectedGroups.toList())
+                            
+                            // Сохраняем координаты для NFC отметки
+                            val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                            authPrefs.edit().putFloat("last_lat", lat.toFloat()).putFloat("last_lon", lon.toFloat()).apply()
+
+                            // Сбрасываем посещаемость всех студентов локально перед началом нового занятия
+                            @OptIn(InternalSerializationApi::class)
+                            val students = studentRepository.getAllStudents().first()
+                            students.forEach { student ->
+                                studentRepository.updateAttendance(student.id, false)
+                            }
+                            studentRepository.syncAllStudents()
                             updateUiOnLessonStart(subject, bottomSheet)
                         } else {
                             Toast.makeText(context, "Ошибка создания", Toast.LENGTH_SHORT).show()
@@ -409,6 +465,7 @@ class LessonFragment : NFC_Tools() {
         adapter.setLessonState(true)
 
         startNfcReadingMode(infiniteMode = true)
+        startAttendancePolling()
 
         tvStatus.text = "Идет занятие: $subject"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
@@ -422,22 +479,37 @@ class LessonFragment : NFC_Tools() {
     }
 
     private fun loadAndDisplayQrCode(lessonId: Int) {
-        lifecycleScope.launch {
+        qrUpdateJob?.cancel()
+        qrUpdateJob = lifecycleScope.launch {
             val result = studentRepository.getAttendanceLink(lessonId)
             when (result) {
                 is AttendanceLinkResult.Success -> {
-                    val bitmap = withContext(Dispatchers.Default) {
-                        GenQR.generateQrCode(result.url)
-                    }
-                    withContext(Dispatchers.Main) {
-                        if (bitmap != null) {
-                            statusIcon.visibility = View.GONE
-                            ivQrCode.setImageBitmap(bitmap)
-                            ivQrCode.visibility = View.VISIBLE
-                            tvSubStatus.text = "Или отсканируйте QR-код"
-                        } else {
-                            Toast.makeText(context, "Ошибка генерации QR", Toast.LENGTH_SHORT).show()
+                    val baseUrl = result.url
+                    val prefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+
+                    while (isLessonActive) {
+                        var totpSecret = prefs.getString("last_totp_secret", "") ?: ""
+                        if (totpSecret.isBlank()) {
+                            totpSecret = "JBSWY3DPEHPK3PXP" // Fallback secret for testing/demo
                         }
+                        val totpCode = com.example.kotlinroomdatabase.utils.TotpUtils.generateCurrentCode(totpSecret, 5, 6)
+                        val currentUrl = if (baseUrl.contains("?")) "$baseUrl&totp_code=$totpCode" else "$baseUrl?totp_code=$totpCode"
+
+                        val bitmap = withContext(Dispatchers.Default) {
+                            GenQR.generateQrCode(currentUrl)
+                        }
+                        withContext(Dispatchers.Main) {
+                            if (bitmap != null) {
+                                statusIcon.visibility = View.GONE
+                                ivQrCode.setImageBitmap(bitmap)
+                                ivQrCode.visibility = View.VISIBLE
+                                tvSubStatus.text = "Или отсканируйте QR-код"
+                            } else {
+                                Toast.makeText(context, "Ошибка генерации QR", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        
+                        delay(5000)
                     }
                 }
                 is AttendanceLinkResult.Error -> {
@@ -459,11 +531,11 @@ class LessonFragment : NFC_Tools() {
 
         if (adapterNfc == null || !adapterNfc.isEnabled) {
             tvStatus.text = "Не готов!"
-            tvStatus.setTextColor(Color.parseColor("#8B0000"))
+            tvStatus.setTextColor(Color.parseColor("#E53935"))
             tvSubStatus.text = "Включите NFC"
         } else {
             tvStatus.text = "Готов!"
-            tvStatus.setTextColor(Color.parseColor("#FFFFAA"))
+            tvStatus.setTextColor(Color.parseColor("#4CAF50"))
 
             if (ivQrCode.visibility == View.VISIBLE) {
                 tvSubStatus.text = "Или отсканируйте QR-код"

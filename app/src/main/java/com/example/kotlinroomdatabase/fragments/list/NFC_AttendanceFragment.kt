@@ -18,6 +18,7 @@ import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.StudentRepository
 import com.example.kotlinroomdatabase.repository.SyncResult
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import com.example.kotlinroomdatabase.getColorFromAttr
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 
@@ -174,10 +175,10 @@ class NFC_AttendanceFragment : NFC_Tools() {
 
     private fun setNeutralState() {
         if (!isAdded || isDetached) return
-        rootLayout.setBackgroundColor(Color.WHITE)
+        rootLayout.setBackgroundColor(requireContext().getColorFromAttr(android.R.attr.windowBackground))
         statusIcon.setImageResource(R.drawable.ic_nfc)
         statusIcon.setColorFilter(resources.getColor(R.color.purple_500, null))
-        statusText.setTextColor(Color.BLACK)
+        statusText.setTextColor(requireContext().getColorFromAttr(android.R.attr.textColorPrimary))
     }
 
     private fun setSuccessState() {

@@ -21,6 +21,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.getColorFromAttr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -118,6 +119,7 @@ class User_Interface : Fragment() {
         statusIcon.setImageResource(R.drawable.ic_nfc)
         statusIcon.colorFilter = null
         statusText.text = "Поднесите к чекеру"
+        statusText.setTextColor(requireContext().getColorFromAttr(android.R.attr.textColorPrimary))
     }
     private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
         if (result.contents == null) {
@@ -136,16 +138,17 @@ class User_Interface : Fragment() {
         val uri = Uri.parse(url)
         val lessonIdStr = uri.getQueryParameter("lesson_id")
         val token = uri.getQueryParameter("token")
+        val totpCode = uri.getQueryParameter("totp_code")
         
         if (token != null || lessonIdStr != null) {
             val lessonId = lessonIdStr?.toIntOrNull() ?: 0
-            markAttendance(lessonId, token)
+            markAttendance(lessonId, token, totpCode)
         } else {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         }
     }
 
-    private fun markAttendance(lessonId: Int, inviteToken: String? = null) {
+    private fun markAttendance(lessonId: Int, inviteToken: String? = null, totpCode: String? = null) {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 100)
             return
@@ -160,7 +163,7 @@ class User_Interface : Fragment() {
 
                 lifecycleScope.launch(Dispatchers.IO) {
                     val repository = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(requireContext())
-                    val result = repository.markAttendanceViaQr(lessonId, deviceId, lat, lon, inviteToken)
+                    val result = repository.markAttendanceViaQr(lessonId, deviceId, lat, lon, inviteToken, totpCode)
                     
                     launch(Dispatchers.Main) {
                         when (result) {

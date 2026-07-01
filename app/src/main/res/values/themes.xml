@@ -16,6 +16,9 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Background -->
         <item name="android:windowBackground">@color/yadro_light_background</item>
+        <!-- Text Colors -->
+        <item name="android:textColorPrimary">@color/text_primary_light</item>
+        <item name="android:textColorSecondary">@color/text_secondary_light</item>
         <!-- Customize your theme here. -->
     </style>
     <style name="FullScreenBottomSheetDialog" parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">

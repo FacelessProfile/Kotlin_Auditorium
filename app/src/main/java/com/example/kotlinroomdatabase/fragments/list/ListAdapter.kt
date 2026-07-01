@@ -9,6 +9,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.getColorFromAttr
 import kotlinx.serialization.InternalSerializationApi
 
 class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
@@ -56,7 +57,12 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
         tvId.text = (position + 1).toString()
         tvFio.text = fio
         tvAttendance.text = if (student.attendance) "+" else "-"
-        val textColor = if (isLessonActive) Color.BLACK else Color.LTGRAY
+        val context = holder.itemView.context
+        val textColor = if (isLessonActive) {
+            context.getColorFromAttr(android.R.attr.textColorPrimary)
+        } else {
+            context.getColorFromAttr(android.R.attr.textColorSecondary)
+        }
         tvId.setTextColor(textColor)
         tvFio.setTextColor(textColor)
         tvAttendance.setTextColor(textColor)
@@ -71,8 +77,16 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
             rowLayout.setBackgroundColor(Color.TRANSPARENT)
         }
 
-        rowLayout.setOnClickListener {
-            onItemClick?.invoke(student)
+        if (isLessonActive) {
+            rowLayout.setOnClickListener(null)
+            rowLayout.isClickable = false
+            rowLayout.isFocusable = false
+        } else {
+            rowLayout.isClickable = true
+            rowLayout.isFocusable = true
+            rowLayout.setOnClickListener {
+                onItemClick?.invoke(student)
+            }
         }
     }
 

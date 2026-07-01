@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="?attr/colorSurface"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -20,7 +20,7 @@
         android:text="Новое занятие"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="#212121"
+        android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="24dp"/>
 
     <androidx.core.widget.NestedScrollView
@@ -43,14 +43,14 @@
                 android:textColorHint="#757575"
                 app:hintTextColor="@color/purple_500"
                 app:boxStrokeColor="@color/purple_500"
-                app:boxBackgroundColor="#FFFFFF"
+                app:boxBackgroundColor="?attr/colorSurface"
                 android:layout_marginBottom="20dp">
 
                 <AutoCompleteTextView
                     android:id="@+id/acSubject"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="#212121"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:inputType="none"
                     android:padding="16dp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -63,14 +63,14 @@
                 android:textColorHint="#757575"
                 app:hintTextColor="@color/purple_500"
                 app:boxStrokeColor="@color/purple_500"
-                app:boxBackgroundColor="#FFFFFF"
+                app:boxBackgroundColor="?attr/colorSurface"
                 app:endIconMode="dropdown_menu">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/acGroupSearch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="#212121"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:padding="16dp"
                     android:completionThreshold="0"
                     android:inputType="text" />

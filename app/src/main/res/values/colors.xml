@@ -21,4 +21,7 @@
     <color name="yadro_light_background">@color/photo_ivory_text</color>
     <color name="yadro_light_button">#1E22AA</color>
     <color name="yadro_light_variant">#151877</color>
+    <color name="text_primary_light">#212121</color>
+    <color name="text_secondary_light">#666666</color>
+    <color name="surface_dark">#121212</color>
 </resources>
