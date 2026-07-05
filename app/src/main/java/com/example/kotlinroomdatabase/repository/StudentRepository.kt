@@ -448,4 +448,27 @@ class StudentRepository(
     override suspend fun getGroupAttendance(groupId: Int, subjectId: Int): List<StudentAttendanceStats> = emptyList()
     override suspend fun getStudentHistory(year: Int): AttendanceHistoryResponse = AttendanceHistoryResponse(emptyList(), year)
     override suspend fun getDetailedStudentHistory(studentId: Int, subjectId: Int): List<HistoryItem> = emptyList()
+
+    override suspend fun getStudentGradesAll(): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance> = emptyList()
+    override suspend fun getStudentGradesBySubject(subjectId: Int): List<com.example.kotlinroomdatabase.model.StudentGradePoint> = emptyList()
+    override suspend fun getStudentPerformanceRadar(): List<com.example.kotlinroomdatabase.model.SubjectPerformancePoint> = emptyList()
+    override suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow> = emptyList()
+    override suspend fun getTeacherGradeItems(subjectId: Int): List<com.example.kotlinroomdatabase.model.GradeItem> = emptyList()
+    override suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse? = null
+    override suspend fun createGradeItem(subjectId: Int, title: String, maxScore: Int, itemType: String, deadline: String?): Boolean = false
+    override suspend fun updateGradeItem(itemId: Int, title: String, maxScore: Int, itemType: String, deadline: String?): Boolean = false
+    override suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String?): Boolean = false
+    override suspend fun createRewardPunishment(studentId: Int, subjectId: Int, score: Int, reason: String): Boolean = false
+    override suspend fun syncOfflineGrades(): Boolean = false
+
+    override suspend fun forgotPassword(identity: String): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun resetPassword(token: String, newPassword: String): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun registerByInvite(inviteCode: String, login: String, passwordRaw: String): LoginResult = LoginResult.Error("Not supported in ZMQ")
+    override suspend fun getStaffOverview(): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun teacherMarkAttendance(lessonId: Int, studentId: Int, status: String): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getSessionMarkedCount(lessonId: Int): GenericResult<Int> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getSessionTimer(lessonId: Int): GenericResult<Int> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getStudentScheduleDay(date: String?): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun updateUserEmail(email: String): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
 }

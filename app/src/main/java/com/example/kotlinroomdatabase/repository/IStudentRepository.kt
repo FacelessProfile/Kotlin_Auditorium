@@ -39,6 +39,11 @@ sealed class AvatarResult {
     data class Error(val message: String) : AvatarResult()
 }
 
+sealed class GenericResult<out T> {
+    data class Success<out T>(val data: T) : GenericResult<T>()
+    data class Error(val message: String) : GenericResult<Nothing>()
+}
+
 interface IStudentRepository {
     suspend fun login(loginName: String, passwordRaw: String): LoginResult
     suspend fun register(name: String, group: String, passwordRaw: String): LoginResult
@@ -74,4 +79,29 @@ interface IStudentRepository {
     suspend fun getGroupAttendance(groupId: Int, subjectId: Int): List<StudentAttendanceStats>
     suspend fun getStudentHistory(year: Int): AttendanceHistoryResponse
     suspend fun getDetailedStudentHistory(studentId: Int, subjectId: Int): List<HistoryItem>
+
+    // Grading endpoints
+    suspend fun getStudentGradesAll(): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance>
+    suspend fun getStudentGradesBySubject(subjectId: Int): List<com.example.kotlinroomdatabase.model.StudentGradePoint>
+    suspend fun getStudentPerformanceRadar(): List<com.example.kotlinroomdatabase.model.SubjectPerformancePoint>
+    
+    suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow>
+    suspend fun getTeacherGradeItems(subjectId: Int): List<com.example.kotlinroomdatabase.model.GradeItem>
+    suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse?
+    suspend fun createGradeItem(subjectId: Int, title: String, maxScore: Int, itemType: String, deadline: String? = null): Boolean
+    suspend fun updateGradeItem(itemId: Int, title: String, maxScore: Int, itemType: String, deadline: String? = null): Boolean
+    suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String? = null): Boolean
+    suspend fun createRewardPunishment(studentId: Int, subjectId: Int, score: Int, reason: String): Boolean
+    
+    suspend fun syncOfflineGrades(): Boolean
+
+    suspend fun forgotPassword(identity: String): GenericResult<String>
+    suspend fun resetPassword(token: String, newPassword: String): GenericResult<String>
+    suspend fun registerByInvite(inviteCode: String, login: String, passwordRaw: String): LoginResult
+    suspend fun getStaffOverview(): GenericResult<String>
+    suspend fun teacherMarkAttendance(lessonId: Int, studentId: Int, status: String): GenericResult<String>
+    suspend fun getSessionMarkedCount(lessonId: Int): GenericResult<Int>
+    suspend fun getSessionTimer(lessonId: Int): GenericResult<Int>
+    suspend fun getStudentScheduleDay(date: String?): GenericResult<String>
+    suspend fun updateUserEmail(email: String): GenericResult<String>
 }

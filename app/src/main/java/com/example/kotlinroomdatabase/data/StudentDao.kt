@@ -3,6 +3,7 @@ package com.example.kotlinroomdatabase.data
 import androidx.room.*
 import com.example.kotlinroomdatabase.model.Lesson
 import com.example.kotlinroomdatabase.model.Student
+import com.example.kotlinroomdatabase.model.OfflineGradeAction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.InternalSerializationApi
 
@@ -55,4 +56,15 @@ interface StudentDao {
     @Query("SELECT * FROM lessons_table ORDER BY date DESC")
     fun getAllLessons(): Flow<List<Lesson>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOfflineGradeAction(action: OfflineGradeAction): Long
+
+    @Query("SELECT * FROM offline_grade_actions WHERE isSynced = 0 ORDER BY timestamp ASC")
+    suspend fun getUnsyncedGradeActions(): List<OfflineGradeAction>
+
+    @Query("UPDATE offline_grade_actions SET isSynced = 1 WHERE id = :id")
+    suspend fun markGradeActionSynced(id: Int)
+
+    @Delete
+    suspend fun deleteOfflineGradeAction(action: OfflineGradeAction)
 }

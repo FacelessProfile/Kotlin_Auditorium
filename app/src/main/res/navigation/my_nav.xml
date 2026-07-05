@@ -13,7 +13,16 @@
         <action
             android:id="@+id/action_userHome_to_history"
             app:destination="@id/historyFragment" />
+        <action
+            android:id="@+id/action_userHome_to_grades"
+            app:destination="@id/gradesFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/gradesFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.grades.GradesFragment"
+        android:label="Оценки"
+        tools:layout="@layout/fragment_grades" />
 
     <fragment
         android:id="@+id/listFragment"

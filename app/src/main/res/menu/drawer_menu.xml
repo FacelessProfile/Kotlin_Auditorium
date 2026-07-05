@@ -22,6 +22,10 @@
             android:icon="@drawable/ic_history"
             android:title="История посещений" />
         <item
+            android:id="@+id/gradesFragment"
+            android:icon="@drawable/ic_star"
+            android:title="Оценки" />
+        <item
             android:id="@+id/settingsFragment"
             android:icon="@drawable/ic_settings"
             android:title="Настройки" />

@@ -82,4 +82,7 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     // Commons Codec for Base32
     implementation("commons-codec:commons-codec:1.16.1")
+
+    // Charts
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 }

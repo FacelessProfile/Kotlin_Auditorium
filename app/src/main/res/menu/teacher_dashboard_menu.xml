@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_gradebook"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="Журнал" />
+    <item
+        android:id="@+id/nav_analytics"
+        android:icon="@android:drawable/ic_menu_gallery"
+        android:title="Аналитика" />
+    <item
+        android:id="@+id/nav_assignments"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:title="Задания" />
+</menu>

@@ -40,6 +40,17 @@ class StudentRepositoryHTTPS(
 
     private val client = OkHttpClient.Builder()
         .addInterceptor(logger)
+        .addInterceptor { chain ->
+            val request = chain.request()
+            val response = chain.proceed(request)
+            if (response.code == 401) {
+                sharedPrefs.edit().remove("auth_token").apply()
+                val intent = android.content.Intent("com.example.kotlinroomdatabase.LOGOUT")
+                intent.setPackage(context.packageName)
+                context.sendBroadcast(intent)
+            }
+            response
+        }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
@@ -783,5 +794,486 @@ class StudentRepositoryHTTPS(
             Log.e("HTTP_REPO", "getDetailedStudentHistory error", e)
             emptyList()
         }
+    }
+
+    override suspend fun getStudentGradesAll(): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext emptyList()
+            
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/grades/all")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val resultObjStr = jsonResponse.getJSONObject("result").toString()
+                    val decoded = jsonSerializer.decodeFromString<com.example.kotlinroomdatabase.model.StudentAllGradesResponse>(resultObjStr)
+                    return@withContext decoded.subjects
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getStudentGradesAll error", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getStudentGradesBySubject(subjectId: Int): List<com.example.kotlinroomdatabase.model.StudentGradePoint> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext emptyList()
+            
+            val jsonRequest = JSONObject().apply { put("subject_id", subjectId) }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/grades")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val items = jsonResponse.getJSONObject("result").getJSONArray("items").toString()
+                    return@withContext jsonSerializer.decodeFromString<List<com.example.kotlinroomdatabase.model.StudentGradePoint>>(items)
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getStudentGradesBySubject error", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getStudentPerformanceRadar(): List<com.example.kotlinroomdatabase.model.SubjectPerformancePoint> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext emptyList()
+            
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/performance/radar")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val resultArr = jsonResponse.getJSONArray("result").toString()
+                    return@withContext jsonSerializer.decodeFromString<List<com.example.kotlinroomdatabase.model.SubjectPerformancePoint>>(resultArr)
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getStudentPerformanceRadar error", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext emptyList()
+            
+            val jsonRequest = JSONObject().apply { 
+                put("group_id", groupId)
+                put("subject_id", subjectId)
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/group/performance")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val studentsArr = jsonResponse.getJSONObject("result").getJSONArray("students").toString()
+                    return@withContext jsonSerializer.decodeFromString<List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow>>(studentsArr)
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getTeacherGroupSubjectPerformance error", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getTeacherGradeItems(subjectId: Int): List<com.example.kotlinroomdatabase.model.GradeItem> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext emptyList()
+            
+            val jsonRequest = JSONObject().apply { put("subject_id", subjectId) }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/items/list")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val resultObj = jsonResponse.optJSONObject("result")
+                    if (resultObj != null) {
+                        val itemsArr = resultObj.optJSONArray("items")?.toString() ?: "[]"
+                        return@withContext jsonSerializer.decodeFromString<List<com.example.kotlinroomdatabase.model.GradeItem>>(itemsArr)
+                    }
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getTeacherGradeItems error", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse? = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext null
+            
+            val jsonRequest = JSONObject().apply { 
+                put("student_id", studentId)
+                put("subject_id", subjectId)
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/student")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val resultObj = jsonResponse.getJSONObject("result").toString()
+                    return@withContext jsonSerializer.decodeFromString<com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse>(resultObj)
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getTeacherStudentGrades error", e)
+            null
+        }
+    }
+
+    override suspend fun createGradeItem(subjectId: Int, title: String, maxScore: Int, itemType: String, deadline: String?): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext false
+            
+            val jsonRequest = JSONObject().apply { 
+                put("subject_id", subjectId)
+                put("title", title)
+                put("max_score", maxScore)
+                put("item_type", itemType)
+                if (deadline != null) put("deadline", deadline)
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/items")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                return@withContext jsonResponse.optBoolean("ok", false)
+            }
+            false
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "createGradeItem error", e)
+            false
+        }
+    }
+
+    override suspend fun updateGradeItem(itemId: Int, title: String, maxScore: Int, itemType: String, deadline: String?): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext false
+
+            val jsonRequest = JSONObject().apply {
+                put("item_id", itemId)
+                put("title", title)
+                put("max_score", maxScore)
+                put("item_type", itemType)
+                if (deadline != null) put("deadline", deadline)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/items/update")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                return@withContext jsonResponse.optBoolean("ok", false)
+            }
+            false
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "updateGradeItem error", e)
+            false
+        }
+    }
+
+    override suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String?): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) {
+                studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
+                    studentId = studentId, itemId = itemId, score = score, comment = comment
+                ))
+                return@withContext true // Optimistic offline success
+            }
+            
+            val jsonRequest = JSONObject().apply { 
+                put("student_id", studentId)
+                put("item_id", itemId)
+                put("score", score)
+                if (comment != null) put("comment", comment)
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(responseStr)
+                return@withContext jsonResponse.optBoolean("ok", false)
+            } else {
+                studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
+                    studentId = studentId, itemId = itemId, score = score, comment = comment
+                ))
+                return@withContext true // Saved offline
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "setStudentGrade error", e)
+            studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
+                studentId = studentId, itemId = itemId, score = score, comment = comment
+            ))
+            return@withContext true // Saved offline
+        }
+    }
+
+    override suspend fun createRewardPunishment(studentId: Int, subjectId: Int, score: Int, reason: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext false
+
+            val jsonRequest = JSONObject().apply {
+                put("student_id", studentId)
+                put("subject_id", subjectId)
+                put("score", score)
+                put("reason", reason)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/rewards")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(response.body?.string() ?: "")
+                return@withContext jsonResponse.optBoolean("ok", false)
+            }
+            return@withContext false
+        } catch (e: java.lang.Exception) {
+            Log.e("HTTP_REPO", "createRewardPunishment error", e)
+            return@withContext false
+        }
+    }
+
+    override suspend fun syncOfflineGrades(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext false
+
+            val unsynced = studentDao.getUnsyncedGradeActions()
+            if (unsynced.isEmpty()) return@withContext true
+
+            var allSynced = true
+            for (action in unsynced) {
+                val jsonRequest = JSONObject().apply { 
+                    put("student_id", action.studentId)
+                    put("item_id", action.itemId)
+                    put("score", action.score)
+                    if (action.comment != null) put("comment", action.comment)
+                }
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/teacher/grades")
+                    .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful && JSONObject(response.body?.string() ?: "{}").optBoolean("ok", false)) {
+                    studentDao.markGradeActionSynced(action.id)
+                } else {
+                    allSynced = false
+                }
+            }
+            return@withContext allSynced
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "syncOfflineGrades error", e)
+            return@withContext false
+        }
+    }
+
+    override suspend fun forgotPassword(identity: String): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val jsonRequest = JSONObject().apply { put("identity", identity) }
+            val request = Request.Builder().url("$BASE_URL/api/auth/forgot-password")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE)).build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success("OK")
+            else GenericResult.Error(JSONObject(respStr).optString("error", "Error ${response.code}"))
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun resetPassword(token: String, newPasswordRaw: String): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val jsonRequest = JSONObject().apply { put("token", token); put("new_password", newPasswordRaw) }
+            val request = Request.Builder().url("$BASE_URL/api/auth/reset-password")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE)).build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success("OK")
+            else GenericResult.Error(JSONObject(respStr).optString("error", "Error ${response.code}"))
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun registerByInvite(inviteCode: String, loginName: String, passwordRaw: String): LoginResult = withContext(Dispatchers.IO) {
+        try {
+            val jsonRequest = JSONObject().apply { put("invite_code", inviteCode); put("login", loginName); put("password", passwordRaw) }
+            val request = Request.Builder().url("$BASE_URL/register/by-invite")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE)).build()
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) return@withContext LoginResult.Error(JSONObject(responseStr).optString("error", "Registration Error"))
+            
+            val jsonResponse = JSONObject(responseStr)
+            if (jsonResponse.optBoolean("ok")) {
+                val result = jsonResponse.getJSONObject("result")
+                val token = result.optString("token")
+                saveToken(token)
+
+                val userIdStr = result.optString("user_id", "0")
+                val s = Student(
+                    id = userIdStr.hashCode(),
+                    studentName = result.optString("login", "Unknown"),
+                    studentGroup = result.optString("group_name", ""),
+                    studentNFC = "", attendance = false,
+                    role = result.optString("role", "student")
+                )
+                studentDao.insertStudent(s)
+                LoginResult.Success(s)
+            } else {
+                LoginResult.Error("Registration Failed")
+            }
+        } catch (e: Exception) { LoginResult.Error("Network error") }
+    }
+
+    override suspend fun getStaffOverview(): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val request = Request.Builder().url("$BASE_URL/api/staff/overview")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success(respStr)
+            else GenericResult.Error("Error")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun teacherMarkAttendance(lessonId: Int, studentId: Int, status: String): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val jsonRequest = JSONObject().apply { put("lesson_id", lessonId); put("student_id", studentId); put("status", status) }
+            val request = Request.Builder().url("$BASE_URL/api/teacher/attendance/mark")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success("OK")
+            else GenericResult.Error(JSONObject(respStr).optString("error", "Error"))
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getSessionMarkedCount(lessonId: Int): GenericResult<Int> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val request = Request.Builder().url("$BASE_URL/api/teacher/attendance/session/marked-count?lesson_id=$lessonId")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success(JSONObject(respStr).getJSONObject("result").optInt("marked_count", 0))
+            else GenericResult.Error("Error")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getSessionTimer(lessonId: Int): GenericResult<Int> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val request = Request.Builder().url("$BASE_URL/api/teacher/attendance/session/timer?lesson_id=$lessonId")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success(JSONObject(respStr).getJSONObject("result").optInt("remaining_seconds", 0))
+            else GenericResult.Error("Error")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getStudentScheduleDay(date: String?): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val url = if (date == null) "$BASE_URL/api/student/schedule/day" else "$BASE_URL/api/student/schedule/day?date=$date"
+            val request = Request.Builder().url(url)
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success(respStr)
+            else GenericResult.Error("Error")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun updateUserEmail(email: String): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val jsonRequest = JSONObject().apply { put("email", email) }
+            val request = Request.Builder().url("$BASE_URL/api/user/email")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) GenericResult.Success("OK")
+            else GenericResult.Error("Error")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
     }
 }

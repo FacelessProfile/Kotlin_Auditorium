@@ -24,6 +24,41 @@ class MainActivity : AppCompatActivity() {
     private lateinit var studentRepository: StudentRepository
     private lateinit var appBarConfiguration: AppBarConfiguration
 
+    private val logoutReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: android.content.Intent?) {
+            if (intent?.action == "com.example.kotlinroomdatabase.LOGOUT") {
+                lifecycleScope.launch(Dispatchers.Main) {
+                    val prefsLogout = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                    prefsLogout.edit().clear().apply()
+                    val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    authPrefs.edit().remove("avatar_url").apply()
+                    try {
+                        val navController = (supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment).navController
+                        navController.navigate(R.id.loginFragment, null, navOptions {
+                            popUpTo(R.id.my_nav) { inclusive = true }
+                        })
+                    } catch (e: Exception) { Log.e("LOGOUT", e.toString()) }
+                    binding.drawerLayout.closeDrawers()
+                }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = android.content.IntentFilter("com.example.kotlinroomdatabase.LOGOUT")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(logoutReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(logoutReceiver, filter)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(logoutReceiver)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val themeMode = appPrefs.getString("theme_mode", "system") ?: "system"
