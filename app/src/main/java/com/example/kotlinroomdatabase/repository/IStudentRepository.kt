@@ -81,13 +81,13 @@ interface IStudentRepository {
     suspend fun getDetailedStudentHistory(studentId: Int, subjectId: Int): List<HistoryItem>
 
     // Grading endpoints
-    suspend fun getStudentGradesAll(): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance>
+    suspend fun getStudentGradesAll(semesterId: Int? = null): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance>
     suspend fun getStudentGradesBySubject(subjectId: Int): List<com.example.kotlinroomdatabase.model.StudentGradePoint>
     suspend fun getStudentPerformanceRadar(): List<com.example.kotlinroomdatabase.model.SubjectPerformancePoint>
     
-    suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow>
-    suspend fun getTeacherGradeItems(subjectId: Int): List<com.example.kotlinroomdatabase.model.GradeItem>
-    suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse?
+    suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int, semesterId: Int? = null): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow>
+    suspend fun getTeacherGradeItems(subjectId: Int, semesterId: Int? = null): List<com.example.kotlinroomdatabase.model.GradeItem>
+    suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int, semesterId: Int? = null): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse?
     suspend fun createGradeItem(subjectId: Int, title: String, maxScore: Int, itemType: String, deadline: String? = null): Boolean
     suspend fun updateGradeItem(itemId: Int, title: String, maxScore: Int, itemType: String, deadline: String? = null): Boolean
     suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String? = null): Boolean
@@ -104,4 +104,21 @@ interface IStudentRepository {
     suspend fun getSessionTimer(lessonId: Int): GenericResult<Int>
     suspend fun getStudentScheduleDay(date: String?): GenericResult<String>
     suspend fun updateUserEmail(email: String): GenericResult<String>
+
+    // New methods from project reports & backend expansion
+    suspend fun getUserAgreementCurrent(): GenericResult<com.example.kotlinroomdatabase.model.UserAgreementStatus>
+    suspend fun setUserAgreementDecision(version: String, decision: String): GenericResult<Boolean>
+    suspend fun registerDeviceToken(token: String, platform: String = "android"): GenericResult<Boolean>
+    suspend fun deleteDeviceToken(token: String): GenericResult<Boolean>
+    suspend fun getUserNotifications(): GenericResult<List<com.example.kotlinroomdatabase.model.UserNotification>>
+    suspend fun getUnreadNotificationsCount(): GenericResult<Int>
+    suspend fun markNotificationRead(notificationId: Long): GenericResult<Boolean>
+    suspend fun deleteNotification(notificationId: Long): GenericResult<Boolean>
+    suspend fun markAllNotificationsRead(): GenericResult<Boolean>
+    suspend fun getSemesters(): GenericResult<List<com.example.kotlinroomdatabase.model.SemesterInfo>>
+    suspend fun getCurrentSemester(): GenericResult<com.example.kotlinroomdatabase.model.SemesterInfo>
+    suspend fun downloadPerformanceReport(format: String, semesterId: Int?, outputFile: java.io.File): GenericResult<java.io.File>
+    suspend fun deleteTeacherGrade(gradeId: Long): GenericResult<Boolean>
+    suspend fun deleteTeacherGradeItem(itemId: Long): GenericResult<Boolean>
+    suspend fun testConnection(): Boolean
 }

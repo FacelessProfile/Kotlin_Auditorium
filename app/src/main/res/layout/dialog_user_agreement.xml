@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvAgreementTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Пользовательское соглашение"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary" />
+
+    <TextView
+        android:id="@+id/tvAgreementVersion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Версия: 2026-08-01"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:layout_marginTop="16dp"
+        android:background="#121212"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvAgreementBody"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Настоящим соглашением подтверждается ваше согласие на обработку персональных данных, включая фиксацию присутствия на занятиях, данные геолокации и антифрод-верификацию в LMS Auditorium.\n\nВсе действия в системе логируются для обеспечения целостности учебного процесса."
+            android:textSize="14sp"
+            android:textColor="#E0E0E0"
+            android:lineSpacingExtra="4dp" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnDecline"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Отклонить"
+            android:textColor="#FF5252" />
+
+        <Button
+            android:id="@+id/btnAccept"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Принять" />
+    </LinearLayout>
+
+</LinearLayout>

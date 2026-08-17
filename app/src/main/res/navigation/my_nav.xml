@@ -133,4 +133,10 @@
         android:name="com.example.kotlinroomdatabase.fragments.totp.TotpFragment"
         android:label="Аутентификатор"
         tools:layout="@layout/fragment_totp" />
+
+    <fragment
+        android:id="@+id/notificationsFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.notifications.NotificationsFragment"
+        android:label="Уведомления"
+        tools:layout="@layout/fragment_notifications" />
 </navigation>

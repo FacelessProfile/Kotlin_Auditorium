@@ -28,7 +28,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
     private lateinit var statusIcon: ImageView
     private lateinit var statusText: TextView
     private lateinit var btnClose: Button
-    private lateinit var studentRepository: StudentRepository
+    private lateinit var studentRepository: com.example.kotlinroomdatabase.repository.IStudentRepository
     private var TAG = "ZMQ_UPD_FRAG"
 
     @OptIn(InternalSerializationApi::class)

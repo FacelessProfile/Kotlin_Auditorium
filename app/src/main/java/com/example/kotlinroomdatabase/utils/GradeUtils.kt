@@ -27,4 +27,32 @@ object GradeUtils {
             else -> type
         }
     }
+
+    fun setupNoFilterAdapter(
+        autoCompleteTextView: com.google.android.material.textfield.MaterialAutoCompleteTextView,
+        context: android.content.Context,
+        items: List<String>,
+        onItemSelected: (Int, String) -> Unit
+    ) {
+        val adapter = object : android.widget.ArrayAdapter<String>(context, android.R.layout.simple_dropdown_item_1line, items) {
+            private val noFilter = object : android.widget.Filter() {
+                override fun performFiltering(constraint: CharSequence?): android.widget.Filter.FilterResults {
+                    return android.widget.Filter.FilterResults().apply {
+                        values = items
+                        count = items.size
+                    }
+                }
+                override fun publishResults(constraint: CharSequence?, results: android.widget.Filter.FilterResults?) {
+                    notifyDataSetChanged()
+                }
+            }
+            override fun getFilter(): android.widget.Filter = noFilter
+        }
+        autoCompleteTextView.setAdapter(adapter)
+        autoCompleteTextView.setOnItemClickListener { _, _, position, _ ->
+            if (position in items.indices) {
+                onItemSelected(position, items[position])
+            }
+        }
+    }
 }

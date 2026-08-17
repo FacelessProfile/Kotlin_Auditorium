@@ -15,6 +15,7 @@ data class GradeItem(
 
 @Serializable
 data class StudentGradePoint(
+    val grade_id: Long? = null,
     val item_id: Int,
     val title: String,
     val max_score: Int,
@@ -45,7 +46,7 @@ data class GroupSubjectPerformanceRow(
     val current_score: Int
 ) {
     val percent: Int
-        get() = if (passed_max > 0) (current_score * 100) / passed_max else 0
+        get() = if (total_max > 0) ((current_score * 100) / total_max).coerceAtMost(100) else 0
 }
 
 @Serializable
@@ -85,7 +86,10 @@ data class StudentSubjectPerformance(
     val passed_max: Int,
     val grades: List<StudentGradePoint> = emptyList(),
     val rewards: List<RewardPunishment> = emptyList()
-)
+) {
+    val displayPercent: Int
+        get() = if (total_max > 0) ((current_score * 100) / total_max).coerceAtMost(100) else 0
+}
 
 @Serializable
 data class StudentAllGradesSummary(

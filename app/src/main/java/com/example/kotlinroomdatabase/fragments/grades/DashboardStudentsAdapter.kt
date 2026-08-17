@@ -33,7 +33,7 @@ class DashboardStudentsAdapter(
         holder.tvAttendance.text = "Посещаемость: ${student.attended_sessions}/${student.total_sessions}"
         holder.tvScore.text = "Оценка: ${student.current_score}/${student.total_max}"
         val safeTotal = if (student.total_max > 0) student.total_max else 1
-        val calculatedPercent = (student.current_score * 100) / safeTotal
+        val calculatedPercent = ((student.current_score * 100) / safeTotal).coerceAtMost(100)
         
         holder.tvPercent.text = "${calculatedPercent}%"
         GradeUtils.applyColorToTextView(holder.tvPercent, calculatedPercent)

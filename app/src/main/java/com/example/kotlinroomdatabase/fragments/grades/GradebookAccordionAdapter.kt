@@ -17,7 +17,8 @@ class GradebookAccordionAdapter(
     private var students: List<GroupSubjectPerformanceRow>,
     private val onLoadGrades: (Int, (List<StudentGradePoint>) -> Unit) -> Unit,
     private val onGradeStudent: (GroupSubjectPerformanceRow) -> Unit,
-    private val onEditSpecificGrade: (StudentGradePoint, GroupSubjectPerformanceRow) -> Unit
+    private val onEditSpecificGrade: (StudentGradePoint, GroupSubjectPerformanceRow) -> Unit,
+    private val onDeleteSpecificGrade: ((StudentGradePoint, GroupSubjectPerformanceRow) -> Unit)? = null
 ) : RecyclerView.Adapter<GradebookAccordionAdapter.ViewHolder>() {
 
     private val expandedStates = mutableMapOf<Int, Boolean>()
@@ -83,9 +84,15 @@ class GradebookAccordionAdapter(
         if (holder.rvStudentGrades.layoutManager == null) {
             holder.rvStudentGrades.layoutManager = LinearLayoutManager(holder.itemView.context)
         }
-        val innerAdapter = StudentGradesInnerAdapter(grades) { gradePoint ->
-            onEditSpecificGrade(gradePoint, student)
-        }
+        val innerAdapter = StudentGradesInnerAdapter(
+            grades,
+            onGradeClick = { gradePoint ->
+                onEditSpecificGrade(gradePoint, student)
+            },
+            onDeleteGradeClick = onDeleteSpecificGrade?.let { callback ->
+                { gradePoint -> callback(gradePoint, student) }
+            }
+        )
         holder.rvStudentGrades.adapter = innerAdapter
     }
 

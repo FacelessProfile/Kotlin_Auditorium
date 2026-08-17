@@ -38,8 +38,8 @@ class SubjectGradesAdapter(
         val subject = subjects[position]
         holder.tvSubjectName.text = subject.subject_name
         holder.tvScore.text = "Баллы: ${subject.current_score} / ${subject.total_max}"
-        holder.tvPercent.text = "${subject.percent}%"
-        GradeUtils.applyColorToTextView(holder.tvPercent, subject.percent)
+        holder.tvPercent.text = "${subject.displayPercent}%"
+        GradeUtils.applyColorToTextView(holder.tvPercent, subject.displayPercent)
 
         val isExpanded = expandedStates[subject.subject_id] == true
         holder.layoutContainer.visibility = if (isExpanded) View.VISIBLE else View.GONE

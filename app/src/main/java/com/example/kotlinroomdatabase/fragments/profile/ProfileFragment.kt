@@ -132,14 +132,18 @@ class ProfileFragment : Fragment() {
 
         lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                // Handle relative URLs
-                val finalUrl = if (url.startsWith("http")) {
-                    url
-                } else {
-                    "http://109.172.114.128:9000${if (url.startsWith("/")) "" else "/"}$url"
+                val finalUrl = when {
+                    url.startsWith("http://localhost:9001") -> url.replace("http://localhost:9001", "https://127.0.0.1:9001")
+                    url.startsWith("http://109.172.114.128:9000") -> url.replace("http://109.172.114.128:9000", "https://127.0.0.1:9001")
+                    url.startsWith("http://109.172.114.128:9001") -> url.replace("http://109.172.114.128:9001", "https://127.0.0.1:9001")
+                    url.startsWith("https://192.168.0.56:9001") -> url.replace("https://192.168.0.56:9001", "https://127.0.0.1:9001")
+                    url.startsWith("https://lms.signal.qlabs.pro:9001") -> url.replace("https://lms.signal.qlabs.pro:9001", "https://127.0.0.1:9001")
+                    url.startsWith("https://") || url.startsWith("http://") -> url
+                    else -> "https://127.0.0.1:9001${if (url.startsWith("/")) "" else "/"}$url"
                 }
 
-                val client = okhttp3.OkHttpClient()
+                val repo = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(requireContext())
+                val client = repo.getUnsafeOkHttpClient()
                 val request = okhttp3.Request.Builder().url(finalUrl).build()
                 val response = client.newCall(request).execute()
                 

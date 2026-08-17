@@ -30,6 +30,10 @@
             android:icon="@drawable/ic_settings"
             android:title="Настройки" />
         <item
+            android:id="@+id/notificationsFragment"
+            android:icon="@drawable/ic_notifications"
+            android:title="Уведомления" />
+        <item
             android:id="@+id/totpFragment"
             android:icon="@drawable/ic_qr_code"
             android:title="Аутентификатор" />

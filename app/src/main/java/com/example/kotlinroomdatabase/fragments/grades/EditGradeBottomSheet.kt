@@ -90,8 +90,8 @@ class EditGradeBottomSheet : BottomSheetDialogFragment() {
                 gradeItems = repository.getTeacherGradeItems(subjectId)
                 if (gradeItems.isNotEmpty()) {
                     val actvGradeItems = view.findViewById<com.google.android.material.textfield.MaterialAutoCompleteTextView>(R.id.actvGradeItems)
-                    val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, gradeItems.map { it.title })
-                    actvGradeItems.setAdapter(adapter)
+                    val titles = gradeItems.map { it.title }
+                    com.example.kotlinroomdatabase.utils.GradeUtils.setupNoFilterAdapter(actvGradeItems, requireContext(), titles) { _, _ -> }
                     
                     val preselectedId = arguments?.getInt("preselected_item_id", -1) ?: -1
                     if (preselectedId != -1) {

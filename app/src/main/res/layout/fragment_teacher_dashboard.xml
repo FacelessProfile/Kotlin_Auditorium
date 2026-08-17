@@ -5,42 +5,58 @@
     android:layout_height="match_parent"
     android:background="?attr/colorSurface">
 
-    <TextView
-        android:id="@+id/tvDashboardSubjectName"
+    <LinearLayout
+        android:id="@+id/headerTeacherDashboard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:text="Предмет"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:padding="16dp"/>
-
-    <!-- Tab 1: Gradebook -->
-    <LinearLayout
-        android:id="@+id/layoutGradebook"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/tvDashboardSubjectName"
-        android:layout_above="@+id/bottomNavDashboard"
         android:orientation="vertical"
-        android:visibility="visible">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp"
+        android:background="?attr/colorSurface">
+
+        <TextView
+            android:id="@+id/tvDashboardSubjectName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Предмет"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:gravity="center_vertical">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Группировать по: "
-                android:textSize="16sp"/>
+            android:baselineAligned="false">
+
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp">
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:hint="Семестр">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/actvSemester"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:cursorVisible="false"
+                    android:inputType="none"
+                    android:singleLine="true"
+                    android:ellipsize="end"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:hint="Группа">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/actvGradebookGrouping"
@@ -48,9 +64,22 @@
                     android:layout_height="wrap_content"
                     android:focusable="false"
                     android:cursorVisible="false"
-                    android:inputType="none"/>
+                    android:inputType="none"
+                    android:singleLine="true"
+                    android:ellipsize="end"/>
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
+    </LinearLayout>
+
+    <!-- Tab 1: Gradebook -->
+    <LinearLayout
+        android:id="@+id/layoutGradebook"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/headerTeacherDashboard"
+        android:layout_above="@+id/bottomNavDashboard"
+        android:orientation="vertical"
+        android:visibility="visible">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvGradebook"
@@ -65,7 +94,7 @@
         android:id="@+id/layoutAnalytics"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/tvDashboardSubjectName"
+        android:layout_below="@id/headerTeacherDashboard"
         android:layout_above="@+id/bottomNavDashboard"
         android:orientation="vertical"
         android:visibility="gone">
@@ -211,33 +240,57 @@
                     </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Распределение оценок"
-                    android:textStyle="bold"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="8dp"/>
-
-                <com.github.mikephil.charting.charts.PieChart
-                    android:id="@+id/pieChart"
+                <!-- Export Reports Container -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:layout_margin="8dp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Успеваемость vs Посещаемость по студентам (%)"
-                    android:textStyle="bold"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="2dp">
 
-                <com.github.mikephil.charting.charts.BarChart
-                    android:id="@+id/barChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="250dp"
-                    android:layout_margin="8dp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Экспорт ведомости успеваемости"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="8dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnExportPDF"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="Экспорт в PDF"
+                                app:icon="@android:drawable/ic_menu_save"/>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnExportXLSX"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:text="Экспорт в Excel"
+                                app:icon="@android:drawable/ic_menu_save"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
                 <TextView
                     android:layout_width="wrap_content"

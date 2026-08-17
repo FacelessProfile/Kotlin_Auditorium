@@ -21,7 +21,7 @@ import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 class StudentRepositoryHTTPS(
-    context: Context,
+    private val context: Context,
     private val studentDao: StudentDao
 ) : IStudentRepository {
 
@@ -38,7 +38,28 @@ class StudentRepositoryHTTPS(
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val client = OkHttpClient.Builder()
+    private fun getUnsafeOkHttpClientBuilder(): OkHttpClient.Builder {
+        return try {
+            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(
+                object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun checkServerTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                }
+            )
+            val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            val sslSocketFactory = sslContext.socketFactory
+
+            OkHttpClient.Builder()
+                .sslSocketFactory(sslSocketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
+                .hostnameVerifier { _, _ -> true }
+        } catch (e: Exception) {
+            OkHttpClient.Builder()
+        }
+    }
+
+    private val client = getUnsafeOkHttpClientBuilder()
         .addInterceptor(logger)
         .addInterceptor { chain ->
             val request = chain.request()
@@ -57,7 +78,9 @@ class StudentRepositoryHTTPS(
         .build()
 
     private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
-    private val BASE_URL = "http://109.172.114.128:9000"
+    private val BASE_URL = "https://127.0.0.1:9001"
+
+    fun getUnsafeOkHttpClient(): OkHttpClient = client
 
     fun sha256(input: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
@@ -796,13 +819,18 @@ class StudentRepositoryHTTPS(
         }
     }
 
-    override suspend fun getStudentGradesAll(): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance> = withContext(Dispatchers.IO) {
+    override suspend fun getStudentGradesAll(semesterId: Int?): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance> = withContext(Dispatchers.IO) {
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext emptyList()
             
+            val url = if (semesterId != null && semesterId > 0) {
+                "$BASE_URL/api/student/grades/all?semester_id=$semesterId"
+            } else {
+                "$BASE_URL/api/student/grades/all"
+            }
             val request = Request.Builder()
-                .url("$BASE_URL/api/student/grades/all")
+                .url(url)
                 .get()
                 .addHeader("Authorization", "Bearer $token")
                 .build()
@@ -879,7 +907,7 @@ class StudentRepositoryHTTPS(
         }
     }
 
-    override suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow> = withContext(Dispatchers.IO) {
+    override suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int, semesterId: Int?): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow> = withContext(Dispatchers.IO) {
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext emptyList()
@@ -887,6 +915,9 @@ class StudentRepositoryHTTPS(
             val jsonRequest = JSONObject().apply { 
                 put("group_id", groupId)
                 put("subject_id", subjectId)
+                if (semesterId != null && semesterId > 0) {
+                    put("semester_id", semesterId)
+                }
             }
             val request = Request.Builder()
                 .url("$BASE_URL/api/teacher/group/performance")
@@ -910,12 +941,17 @@ class StudentRepositoryHTTPS(
         }
     }
 
-    override suspend fun getTeacherGradeItems(subjectId: Int): List<com.example.kotlinroomdatabase.model.GradeItem> = withContext(Dispatchers.IO) {
+    override suspend fun getTeacherGradeItems(subjectId: Int, semesterId: Int?): List<com.example.kotlinroomdatabase.model.GradeItem> = withContext(Dispatchers.IO) {
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext emptyList()
             
-            val jsonRequest = JSONObject().apply { put("subject_id", subjectId) }
+            val jsonRequest = JSONObject().apply { 
+                put("subject_id", subjectId) 
+                if (semesterId != null && semesterId > 0) {
+                    put("semester_id", semesterId)
+                }
+            }
             val request = Request.Builder()
                 .url("$BASE_URL/api/teacher/grades/items/list")
                 .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
@@ -941,7 +977,7 @@ class StudentRepositoryHTTPS(
         }
     }
 
-    override suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse? = withContext(Dispatchers.IO) {
+    override suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int, semesterId: Int?): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse? = withContext(Dispatchers.IO) {
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext null
@@ -949,6 +985,9 @@ class StudentRepositoryHTTPS(
             val jsonRequest = JSONObject().apply { 
                 put("student_id", studentId)
                 put("subject_id", subjectId)
+                if (semesterId != null && semesterId > 0) {
+                    put("semester_id", semesterId)
+                }
             }
             val request = Request.Builder()
                 .url("$BASE_URL/api/teacher/grades/student")
@@ -1275,5 +1314,306 @@ class StudentRepositoryHTTPS(
             if (response.isSuccessful) GenericResult.Success("OK")
             else GenericResult.Error("Error")
         } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getUserAgreementCurrent(): GenericResult<UserAgreementStatus> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder().url("$BASE_URL/api/user/agreements/current")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    val resultObjStr = jsonObj.getJSONObject("result").toString()
+                    val status = jsonSerializer.decodeFromString<UserAgreementStatus>(resultObjStr)
+                    return@withContext GenericResult.Success(status)
+                }
+            }
+            GenericResult.Error(try { JSONObject(respStr).optString("error", "Error ${response.code}") } catch(e: Exception) { "Error ${response.code}" })
+        } catch (e: Exception) { GenericResult.Error("Network error: ${e.message}") }
+    }
+
+    override suspend fun setUserAgreementDecision(version: String, decision: String): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val jsonRequest = JSONObject().apply {
+                put("agreement", "user_agreement")
+                put("version", version)
+                put("decision", decision)
+            }
+            val request = Request.Builder().url("$BASE_URL/api/user/agreements/decision")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful && JSONObject(respStr).optBoolean("ok")) {
+                GenericResult.Success(true)
+            } else {
+                GenericResult.Error(try { JSONObject(respStr).optString("error", "Error ${response.code}") } catch(e: Exception) { "Error ${response.code}" })
+            }
+        } catch (e: Exception) { GenericResult.Error("Network error: ${e.message}") }
+    }
+
+    override suspend fun registerDeviceToken(token: String, platform: String): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val jsonRequest = JSONObject().apply {
+                put("device_token", token)
+                put("platform", platform)
+            }
+            val request = Request.Builder().url("$BASE_URL/api/user/device-token")
+                .post(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) GenericResult.Success(true)
+            else GenericResult.Error("Failed to register token")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun deleteDeviceToken(token: String): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val jsonRequest = JSONObject().apply { put("device_token", token) }
+            val request = Request.Builder().url("$BASE_URL/api/user/device-token")
+                .delete(jsonRequest.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) GenericResult.Success(true)
+            else GenericResult.Error("Failed to delete token")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getUserNotifications(): GenericResult<List<UserNotification>> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder().url("$BASE_URL/api/user/notifications")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    val resultObj = jsonObj.getJSONObject("result")
+                    val itemsArr = (resultObj.optJSONArray("items") ?: resultObj.optJSONArray("notifications"))?.toString() ?: "[]"
+                    val list = jsonSerializer.decodeFromString<List<UserNotification>>(itemsArr)
+
+                    // Trigger local system notification for any unread 2FA code or system update
+                    list.filter { !it.is_read }.forEach { notification ->
+                        val totpCode = if (notification.message.contains("code is:")) {
+                            notification.message.substringAfter("code is:").trim()
+                        } else null
+
+                        com.example.kotlinroomdatabase.util.LocalNotificationHelper.showSystemNotificationOnce(
+                            context = this@StudentRepositoryHTTPS.context,
+                            notificationId = notification.realId.toInt(),
+                            title = notification.title,
+                            message = notification.message,
+                            totpCode = totpCode
+                        )
+                    }
+
+                    return@withContext GenericResult.Success(list)
+                }
+            }
+            GenericResult.Error("Failed to load notifications")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getUnreadNotificationsCount(): GenericResult<Int> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder().url("$BASE_URL/api/user/notifications/unread-count")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    val count = jsonObj.getJSONObject("result").optInt("unread_count", 0)
+                    return@withContext GenericResult.Success(count)
+                }
+            }
+            GenericResult.Error("Error loading count")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun markNotificationRead(notificationId: Long): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder().url("$BASE_URL/api/user/notifications/$notificationId/read")
+                .patch("{}".toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) GenericResult.Success(true)
+            else GenericResult.Error("Error marking notification")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun deleteNotification(notificationId: Long): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder().url("$BASE_URL/api/user/notifications/$notificationId")
+                .delete()
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) GenericResult.Success(true)
+            else GenericResult.Error("Error deleting notification")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun markAllNotificationsRead(): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder().url("$BASE_URL/api/user/notifications/read-all")
+                .patch("{}".toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) GenericResult.Success(true)
+            else GenericResult.Error("Error marking all read")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getSemesters(): GenericResult<List<SemesterInfo>> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val request = Request.Builder().url("$BASE_URL/api/semesters")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    val resObj = jsonObj.optJSONObject("result")
+                    val itemsArr = (resObj?.optJSONArray("items") ?: resObj?.optJSONArray("semesters") ?: jsonObj.optJSONArray("result"))?.toString() ?: "[]"
+                    val list = jsonSerializer.decodeFromString<List<SemesterInfo>>(itemsArr)
+                    return@withContext GenericResult.Success(list)
+                }
+            }
+            GenericResult.Error("Failed to fetch semesters")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun getCurrentSemester(): GenericResult<SemesterInfo> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val request = Request.Builder().url("$BASE_URL/api/semesters/current")
+                .addHeader("Authorization", "Bearer $t").build()
+            val response = client.newCall(request).execute()
+            val respStr = response.body?.string() ?: ""
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    val semStr = jsonObj.getJSONObject("result").toString()
+                    val info = jsonSerializer.decodeFromString<SemesterInfo>(semStr)
+                    return@withContext GenericResult.Success(info)
+                } else {
+                    val err = jsonObj.optString("error", "Failed to fetch current semester")
+                    return@withContext GenericResult.Error(err)
+                }
+            }
+            GenericResult.Error("Failed to fetch current semester (${response.code})")
+        } catch (e: Exception) { GenericResult.Error("Network error") }
+    }
+
+    override suspend fun downloadPerformanceReport(format: String, semesterId: Int?, outputFile: java.io.File): GenericResult<java.io.File> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            
+            val ext = if (format.lowercase().contains("pdf")) "pdf" else "xlsx"
+            var url = "$BASE_URL/api/staff/reports/performance.$ext"
+            if (semesterId != null && semesterId > 0) {
+                url += "?semester_id=$semesterId"
+            }
+            
+            val request = Request.Builder().url(url)
+                .addHeader("Authorization", "Bearer $t").build()
+                
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext GenericResult.Error("Server returned code ${response.code}")
+            }
+            
+            val bodyBytes = response.body?.bytes()
+            if (bodyBytes == null || bodyBytes.isEmpty()) {
+                return@withContext GenericResult.Error("Empty report body")
+            }
+            
+            outputFile.parentFile?.mkdirs()
+            outputFile.writeBytes(bodyBytes)
+            GenericResult.Success(outputFile)
+        } catch (e: Exception) {
+            GenericResult.Error("Failed to download report: ${e.message}")
+        }
+    }
+
+    override suspend fun deleteTeacherGrade(gradeId: Long): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/$gradeId")
+                .delete()
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val respStr = response.body?.string() ?: ""
+                val jsonObj = org.json.JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    return@withContext GenericResult.Success(true)
+                }
+            }
+            GenericResult.Error("Failed to delete grade")
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "deleteTeacherGrade failed", e)
+            GenericResult.Error("Network error")
+        }
+    }
+
+    override suspend fun deleteTeacherGradeItem(itemId: Long): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            if (t.isEmpty()) return@withContext GenericResult.Error("No token")
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teacher/grades/items/$itemId")
+                .delete()
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val respStr = response.body?.string() ?: ""
+                val jsonObj = org.json.JSONObject(respStr)
+                if (jsonObj.optBoolean("ok")) {
+                    return@withContext GenericResult.Success(true)
+                }
+            }
+            GenericResult.Error("Failed to delete grade item")
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "deleteTeacherGradeItem failed", e)
+            GenericResult.Error("Network error")
+        }
+    }
+
+    override suspend fun testConnection(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$BASE_URL/api/semesters/current").get().build()
+            val response = client.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "testConnection failed", e)
+            false
+        }
     }
 }

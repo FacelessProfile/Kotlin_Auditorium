@@ -376,11 +376,12 @@ class StudentRepository(
         return LoginResult.Success(student)
     }
 
-    suspend fun testConnection(): String {
+    override suspend fun testConnection(): Boolean {
         return try {
-            zeroMQSender?.testConnection() ?: "ZeroMQ sender is not available"
+            zeroMQSender?.testConnection()
+            true
         } catch (e: Exception) {
-            "Connection test error: ${e.message}"
+            false
         }
     }
 
@@ -449,12 +450,12 @@ class StudentRepository(
     override suspend fun getStudentHistory(year: Int): AttendanceHistoryResponse = AttendanceHistoryResponse(emptyList(), year)
     override suspend fun getDetailedStudentHistory(studentId: Int, subjectId: Int): List<HistoryItem> = emptyList()
 
-    override suspend fun getStudentGradesAll(): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance> = emptyList()
+    override suspend fun getStudentGradesAll(semesterId: Int?): List<com.example.kotlinroomdatabase.model.StudentSubjectPerformance> = emptyList()
     override suspend fun getStudentGradesBySubject(subjectId: Int): List<com.example.kotlinroomdatabase.model.StudentGradePoint> = emptyList()
     override suspend fun getStudentPerformanceRadar(): List<com.example.kotlinroomdatabase.model.SubjectPerformancePoint> = emptyList()
-    override suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow> = emptyList()
-    override suspend fun getTeacherGradeItems(subjectId: Int): List<com.example.kotlinroomdatabase.model.GradeItem> = emptyList()
-    override suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse? = null
+    override suspend fun getTeacherGroupSubjectPerformance(groupId: Int, subjectId: Int, semesterId: Int?): List<com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow> = emptyList()
+    override suspend fun getTeacherGradeItems(subjectId: Int, semesterId: Int?): List<com.example.kotlinroomdatabase.model.GradeItem> = emptyList()
+    override suspend fun getTeacherStudentGrades(studentId: Int, subjectId: Int, semesterId: Int?): com.example.kotlinroomdatabase.model.TeacherStudentGradesResponse? = null
     override suspend fun createGradeItem(subjectId: Int, title: String, maxScore: Int, itemType: String, deadline: String?): Boolean = false
     override suspend fun updateGradeItem(itemId: Int, title: String, maxScore: Int, itemType: String, deadline: String?): Boolean = false
     override suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String?): Boolean = false
@@ -471,4 +472,19 @@ class StudentRepository(
     override suspend fun getSessionTimer(lessonId: Int): GenericResult<Int> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getStudentScheduleDay(date: String?): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun updateUserEmail(email: String): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+
+    override suspend fun getUserAgreementCurrent(): GenericResult<com.example.kotlinroomdatabase.model.UserAgreementStatus> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun setUserAgreementDecision(version: String, decision: String): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun registerDeviceToken(token: String, platform: String): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun deleteDeviceToken(token: String): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getUserNotifications(): GenericResult<List<com.example.kotlinroomdatabase.model.UserNotification>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getUnreadNotificationsCount(): GenericResult<Int> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun markNotificationRead(notificationId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun deleteNotification(notificationId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun markAllNotificationsRead(): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getSemesters(): GenericResult<List<com.example.kotlinroomdatabase.model.SemesterInfo>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getCurrentSemester(): GenericResult<com.example.kotlinroomdatabase.model.SemesterInfo> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun downloadPerformanceReport(format: String, semesterId: Int?, outputFile: java.io.File): GenericResult<java.io.File> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun deleteTeacherGrade(gradeId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun deleteTeacherGradeItem(itemId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
 }

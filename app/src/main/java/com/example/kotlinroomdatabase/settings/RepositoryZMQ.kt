@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.data.ZmqSockets
+import com.example.kotlinroomdatabase.repository.IStudentRepository
 import com.example.kotlinroomdatabase.repository.StudentRepository
 
 object RepositoryZMQ {
@@ -18,9 +19,8 @@ object RepositoryZMQ {
         }
     }
 
-    fun getStudentRepository(context: Context): StudentRepository {
-        initialize(context)
-        return _studentRepository!!
+    fun getStudentRepository(context: Context): IStudentRepository {
+        return RepositoryHTTPS.getStudentRepository(context)
     }
 
     fun getSharedPreferences(context: Context): SharedPreferences {

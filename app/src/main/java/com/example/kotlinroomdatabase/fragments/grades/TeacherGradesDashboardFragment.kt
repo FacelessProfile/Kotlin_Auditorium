@@ -1,50 +1,51 @@
 package com.example.kotlinroomdatabase.fragments.grades
 
+import android.content.Intent
+import android.util.Log
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.data.StudentDatabase
+import com.example.kotlinroomdatabase.repository.GenericResult
+import com.example.kotlinroomdatabase.model.GradeItem
 import com.example.kotlinroomdatabase.model.GroupSubjectPerformanceRow
+import com.example.kotlinroomdatabase.model.SemesterInfo
+import com.example.kotlinroomdatabase.model.StudentGradePoint
+import com.example.kotlinroomdatabase.utils.GradeUtils
 import com.example.kotlinroomdatabase.repository.IStudentRepository
 import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
-import com.example.kotlinroomdatabase.utils.GradeUtils
-import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.example.kotlinroomdatabase.getColorFromAttr
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlinx.coroutines.launch
+import java.io.File
 
 class TeacherGradesDashboardFragment : Fragment() {
 
-    private lateinit var pieChart: PieChart
-    private lateinit var barChart: BarChart
     private lateinit var rvDashboardStudents: RecyclerView
     private lateinit var rvAssignments: RecyclerView
     private lateinit var rvGradebook: RecyclerView
-    private lateinit var actvAnalyticsGroup: com.google.android.material.textfield.MaterialAutoCompleteTextView
-    private lateinit var actvGradebookGrouping: com.google.android.material.textfield.MaterialAutoCompleteTextView
+    private lateinit var actvAnalyticsGroup: MaterialAutoCompleteTextView
+    private lateinit var actvGradebookGrouping: MaterialAutoCompleteTextView
+    private lateinit var actvSemester: MaterialAutoCompleteTextView
     private lateinit var tvDashboardSubjectName: TextView
     private lateinit var tvAvgGrade: TextView
     private lateinit var tvAvgAttendance: TextView
     private lateinit var tvTotalStudents: TextView
+    private lateinit var btnExportPDF: MaterialButton
+    private lateinit var btnExportXLSX: MaterialButton
+
     private lateinit var adapter: DashboardStudentsAdapter
     private lateinit var assignmentsAdapter: AssignmentsAdapter
     private lateinit var gradebookAdapter: GradebookAccordionAdapter
@@ -57,6 +58,10 @@ class TeacherGradesDashboardFragment : Fragment() {
 
     private var subjectId: Int = -1
     private var subjectName: String = ""
+    private var selectedSemesterId: Int? = null
+    private var availableSemesters: List<SemesterInfo> = emptyList()
+    private var currentGroupId: Int = -1
+    private var semesterListenersInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_teacher_dashboard, container, false)
@@ -66,17 +71,19 @@ class TeacherGradesDashboardFragment : Fragment() {
         layoutAssignments = view.findViewById(R.id.layoutAssignments)
         bottomNavDashboard = view.findViewById(R.id.bottomNavDashboard)
 
-        pieChart = view.findViewById(R.id.pieChart)
-        barChart = view.findViewById(R.id.barChart)
         rvDashboardStudents = view.findViewById(R.id.rvDashboardStudents)
         rvAssignments = view.findViewById(R.id.rvAssignments)
         rvGradebook = view.findViewById(R.id.rvGradebook)
         actvAnalyticsGroup = view.findViewById(R.id.actvAnalyticsGroup)
         actvGradebookGrouping = view.findViewById(R.id.actvGradebookGrouping)
+        actvSemester = view.findViewById(R.id.actvSemester)
         tvDashboardSubjectName = view.findViewById(R.id.tvDashboardSubjectName)
         tvAvgGrade = view.findViewById(R.id.tvAvgGrade)
         tvAvgAttendance = view.findViewById(R.id.tvAvgAttendance)
         tvTotalStudents = view.findViewById(R.id.tvTotalStudents)
+
+        btnExportPDF = view.findViewById(R.id.btnExportPDF)
+        btnExportXLSX = view.findViewById(R.id.btnExportXLSX)
 
         subjectId = arguments?.getInt("subject_id", -1) ?: -1
         subjectName = arguments?.getString("subject_name", "") ?: ""
@@ -97,19 +104,25 @@ class TeacherGradesDashboardFragment : Fragment() {
         rvDashboardStudents.adapter = adapter
 
         rvAssignments.layoutManager = LinearLayoutManager(requireContext())
-        assignmentsAdapter = AssignmentsAdapter(emptyList()) { assignment ->
-            val dialog = GradeItemDialogFragment().apply {
-                arguments = Bundle().apply {
-                    putInt("subject_id", subjectId)
-                    putInt("item_id", assignment.item_id)
-                    putString("title", assignment.title)
-                    putInt("max_score", assignment.max_score)
-                    putString("item_type", assignment.item_type)
-                    putString("deadline", assignment.deadline ?: "")
+        assignmentsAdapter = AssignmentsAdapter(
+            emptyList(),
+            onClick = { assignment ->
+                val dialog = GradeItemDialogFragment().apply {
+                    arguments = Bundle().apply {
+                        putInt("subject_id", subjectId)
+                        putInt("item_id", assignment.item_id)
+                        putString("title", assignment.title)
+                        putInt("max_score", assignment.max_score)
+                        putString("item_type", assignment.item_type)
+                        putString("deadline", assignment.deadline ?: "")
+                    }
                 }
+                dialog.show(parentFragmentManager, "GradeItemDialogFragment")
+            },
+            onDeleteClick = { assignment ->
+                confirmDeleteGradeItem(assignment)
             }
-            dialog.show(parentFragmentManager, "GradeItemDialogFragment")
-        }
+        )
         rvAssignments.adapter = assignmentsAdapter
 
         rvGradebook.layoutManager = LinearLayoutManager(requireContext())
@@ -117,12 +130,13 @@ class TeacherGradesDashboardFragment : Fragment() {
             students = emptyList(),
             onLoadGrades = { studentId, callback ->
                 lifecycleScope.launch {
-                    val gradesResp = repository.getTeacherStudentGrades(studentId, subjectId)
+                    val gradesResp = repository.getTeacherStudentGrades(studentId, subjectId, selectedSemesterId)
                     val combinedList = gradesResp?.grades?.toMutableList() ?: mutableListOf()
                     val rewardsList = gradesResp?.rewards ?: emptyList()
                     rewardsList.forEach { r ->
                         combinedList.add(
-                            com.example.kotlinroomdatabase.model.StudentGradePoint(
+                            StudentGradePoint(
+                                grade_id = r.id.toLong(),
                                 item_id = -1,
                                 title = if (r.score > 0) "Поощрение" else "Наказание",
                                 max_score = kotlin.math.abs(r.score),
@@ -141,6 +155,9 @@ class TeacherGradesDashboardFragment : Fragment() {
             },
             onEditSpecificGrade = { gradePoint, student ->
                 showEditGradeBottomSheet(student.student_id, student.student_name, gradePoint.item_id, gradePoint.score, gradePoint.comment)
+            },
+            onDeleteSpecificGrade = { gradePoint, student ->
+                confirmDeleteGrade(gradePoint, student)
             }
         )
         rvGradebook.adapter = gradebookAdapter
@@ -153,11 +170,12 @@ class TeacherGradesDashboardFragment : Fragment() {
             dialog.show(parentFragmentManager, "GradeItemDialogFragment")
         }
 
+        btnExportPDF.setOnClickListener { downloadReport("pdf") }
+        btnExportXLSX.setOnClickListener { downloadReport("xlsx") }
+
         val db = StudentDatabase.getInstance(requireContext())
         repository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
 
-        setupPieChart()
-        setupBarChart()
         loadGroupsAndData()
         
         // Load default tab
@@ -170,6 +188,82 @@ class TeacherGradesDashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         parentFragmentManager.setFragmentResultListener("request_refresh", viewLifecycleOwner) { _, _ ->
             refreshData()
+        }
+    }
+
+    private fun confirmDeleteGrade(gradePoint: StudentGradePoint, student: GroupSubjectPerformanceRow) {
+        val gradeId = gradePoint.grade_id
+        if (gradeId == null || gradeId <= 0) {
+            Toast.makeText(requireContext(), "Невозможно удалить эту запись", Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("Удаление оценки")
+            .setMessage("Удалить оценку за '${gradePoint.title}' для студента ${student.student_name}?")
+            .setPositiveButton("Удалить") { _, _ ->
+                lifecycleScope.launch {
+                    val res = repository.deleteTeacherGrade(gradeId)
+                    if (res is GenericResult.Success) {
+                        Toast.makeText(requireContext(), "Оценка удалена", Toast.LENGTH_SHORT).show()
+                        refreshData()
+                    } else if (res is GenericResult.Error) {
+                        Toast.makeText(requireContext(), "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun confirmDeleteGradeItem(assignment: GradeItem) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Удаление задания")
+            .setMessage("Удалить задание '${assignment.title}' и все выставленные за него оценки?")
+            .setPositiveButton("Удалить") { _, _ ->
+                lifecycleScope.launch {
+                    val res = repository.deleteTeacherGradeItem(assignment.item_id.toLong())
+                    if (res is GenericResult.Success) {
+                        Toast.makeText(requireContext(), "Задание удалено", Toast.LENGTH_SHORT).show()
+                        loadAssignments()
+                        refreshData()
+                    } else if (res is GenericResult.Error) {
+                        Toast.makeText(requireContext(), "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun downloadReport(format: String) {
+        lifecycleScope.launch {
+            Toast.makeText(requireContext(), "Скачивание отчета ($format)...", Toast.LENGTH_SHORT).show()
+            val ext = if (format.lowercase().contains("pdf")) "pdf" else "xlsx"
+            val file = File(requireContext().getExternalFilesDir(null), "performance_report.$ext")
+            val res = repository.downloadPerformanceReport(ext, selectedSemesterId, file)
+            if (res is GenericResult.Success) {
+                Toast.makeText(requireContext(), "Отчет сохранен: ${res.data.name}", Toast.LENGTH_LONG).show()
+                openReportFile(res.data, if (ext == "pdf") "application/pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            } else if (res is GenericResult.Error) {
+                Toast.makeText(requireContext(), "Ошибка экспорта: ${res.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun openReportFile(file: File, mimeType: String) {
+        try {
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Файл сохранен в ${file.absolutePath}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -214,7 +308,7 @@ class TeacherGradesDashboardFragment : Fragment() {
     private fun loadAssignments() {
         lifecycleScope.launch {
             try {
-                val assignments = repository.getTeacherGradeItems(subjectId)
+                val assignments = repository.getTeacherGradeItems(subjectId, selectedSemesterId)
                 assignmentsAdapter.updateData(assignments)
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), "Ошибка загрузки заданий", Toast.LENGTH_SHORT).show()
@@ -222,49 +316,87 @@ class TeacherGradesDashboardFragment : Fragment() {
         }
     }
 
-    private fun setupPieChart() {
-        pieChart.apply {
-            description.isEnabled = false
-            isDrawHoleEnabled = true
-            setHoleColor(android.graphics.Color.TRANSPARENT)
-            legend.isEnabled = true
-        }
-    }
-
-    private fun setupBarChart() {
-        val labelColor = requireContext().getColorFromAttr(android.R.attr.textColorPrimary)
-        barChart.apply {
-            description.isEnabled = false
-            setDrawGridBackground(false)
-            setDrawBarShadow(false)
-            setFitBars(true)
-            
-            xAxis.apply {
-                position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
-                setDrawGridLines(false)
-                textColor = labelColor
-                labelRotationAngle = -45f
-            }
-            
-            axisLeft.apply {
-                axisMinimum = 0f
-                axisMaximum = 100f
-                textColor = labelColor
-            }
-            axisRight.isEnabled = false
-            legend.apply {
-                textColor = labelColor
-            }
-        }
-    }
-
     fun refreshData() {
-        loadGroupsAndData()
+        // Don't reload semesters/groups — just reload performance data
+        // with the currently selected semester and group
+        if (currentGroupId > 0) {
+            loadGroupPerformance(currentGroupId)
+        }
+        if (layoutAssignments.visibility == View.VISIBLE) {
+            loadAssignments()
+        }
+    }
+
+    private fun onSemesterSelected(semester: SemesterInfo) {
+        Log.d("SEMESTER_SWITCH", "=== SEMESTER CHANGED === to: ${semester.name} (id=${semester.id})")
+        selectedSemesterId = semester.id
+
+        // Immediately clear UI to show something is happening
+        adapter.updateData(emptyList())
+        gradebookAdapter.updateData(emptyList())
+        updateAnalyticsMetrics(emptyList())
+
+        // Reload data with the new semester
+        if (currentGroupId > 0) {
+            loadGroupPerformance(currentGroupId)
+        }
+        if (layoutAssignments.visibility == View.VISIBLE) {
+            loadAssignments()
+        }
     }
 
     private fun loadGroupsAndData() {
         lifecycleScope.launch {
             try {
+                // --- Load semesters (only set up listeners once) ---
+                val semRes = repository.getSemesters()
+                if (semRes is GenericResult.Success && semRes.data.isNotEmpty()) {
+                    availableSemesters = semRes.data
+                    val semNames = availableSemesters.map { it.name }
+
+                    if (!semesterListenersInitialized) {
+                        // First time: pick the current semester
+                        val curr = availableSemesters.find { it.is_current } ?: availableSemesters.first()
+                        selectedSemesterId = curr.id
+
+                        // Set up the adapter FIRST, then set text
+                        val semAdapter = object : ArrayAdapter<String>(
+                            requireContext(),
+                            android.R.layout.simple_dropdown_item_1line,
+                            semNames
+                        ) {
+                            private val noFilter = object : android.widget.Filter() {
+                                override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                    return FilterResults().apply {
+                                        values = semNames
+                                        count = semNames.size
+                                    }
+                                }
+                                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                    notifyDataSetChanged()
+                                }
+                            }
+                            override fun getFilter(): android.widget.Filter = noFilter
+                        }
+                        actvSemester.setAdapter(semAdapter)
+                        actvSemester.setText(curr.name, false)
+
+                        actvSemester.setOnItemClickListener { _, _, position, _ ->
+                            if (position in semNames.indices) {
+                                val selectedName = semNames[position]
+                                val sem = availableSemesters.find { it.name == selectedName }
+                                if (sem != null && sem.id != selectedSemesterId) {
+                                    Toast.makeText(requireContext(), "Семестр: ${sem.name}", Toast.LENGTH_SHORT).show()
+                                    onSemesterSelected(sem)
+                                }
+                            }
+                        }
+                        semesterListenersInitialized = true
+                    }
+                    // If listeners already initialized, don't touch them or selectedSemesterId
+                }
+
+                // --- Load groups ---
                 val subjects = repository.getTeacherSubjects()
                 val currentSubject = subjects.find { it.subject_id == subjectId }
                 
@@ -272,23 +404,60 @@ class TeacherGradesDashboardFragment : Fragment() {
                     val groups = currentSubject.groups
                     val groupNames = groups.map { it.name }
                     
-                    val spinnerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, groupNames)
-                    actvAnalyticsGroup.setAdapter(spinnerAdapter)
-                    actvAnalyticsGroup.setText(groupNames.firstOrNull(), false)
-
-                    actvAnalyticsGroup.setOnItemClickListener { _, _, _, _ ->
-                        val selectedName = actvAnalyticsGroup.text.toString()
-                        val group = groups.find { it.name == selectedName }
-                        group?.let { loadGroupPerformance(it.id) }
+                    val groupAdapter = object : ArrayAdapter<String>(
+                        requireContext(),
+                        android.R.layout.simple_dropdown_item_1line,
+                        groupNames
+                    ) {
+                        private val noFilter = object : android.widget.Filter() {
+                            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                return FilterResults().apply {
+                                    values = groupNames
+                                    count = groupNames.size
+                                }
+                            }
+                            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                notifyDataSetChanged()
+                            }
+                        }
+                        override fun getFilter(): android.widget.Filter = noFilter
                     }
 
-                    // Enable group switching for Gradebook too
-                    actvGradebookGrouping.setAdapter(spinnerAdapter)
+                    actvAnalyticsGroup.setAdapter(groupAdapter)
+                    actvAnalyticsGroup.setText(groupNames.firstOrNull(), false)
+                    actvAnalyticsGroup.setOnItemClickListener { _, _, position, _ ->
+                        if (position in groupNames.indices) {
+                            val group = groups.find { it.name == groupNames[position] }
+                            group?.let { loadGroupPerformance(it.id) }
+                        }
+                    }
+
+                    // Gradebook group selector shares same data
+                    val groupAdapter2 = object : ArrayAdapter<String>(
+                        requireContext(),
+                        android.R.layout.simple_dropdown_item_1line,
+                        groupNames
+                    ) {
+                        private val noFilter = object : android.widget.Filter() {
+                            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                return FilterResults().apply {
+                                    values = groupNames
+                                    count = groupNames.size
+                                }
+                            }
+                            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                notifyDataSetChanged()
+                            }
+                        }
+                        override fun getFilter(): android.widget.Filter = noFilter
+                    }
+                    actvGradebookGrouping.setAdapter(groupAdapter2)
                     actvGradebookGrouping.setText(groupNames.firstOrNull(), false)
-                    actvGradebookGrouping.setOnItemClickListener { _, _, _, _ ->
-                        val selectedName = actvGradebookGrouping.text.toString()
-                        val group = groups.find { it.name == selectedName }
-                        group?.let { loadGroupPerformance(it.id) }
+                    actvGradebookGrouping.setOnItemClickListener { _, _, position, _ ->
+                        if (position in groupNames.indices) {
+                            val group = groups.find { it.name == groupNames[position] }
+                            group?.let { loadGroupPerformance(it.id) }
+                        }
                     }
                     
                     loadGroupPerformance(groups[0].id)
@@ -296,32 +465,31 @@ class TeacherGradesDashboardFragment : Fragment() {
                     Toast.makeText(requireContext(), "Нет привязанных групп", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                Log.e("SEMESTER_SWITCH", "Error in loadGroupsAndData", e)
                 Toast.makeText(requireContext(), "Ошибка загрузки данных", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun loadGroupPerformance(groupId: Int) {
+        currentGroupId = groupId
         lifecycleScope.launch {
             try {
-                val data = repository.getTeacherGroupSubjectPerformance(groupId, subjectId)
+                Log.d("SEMESTER_SWITCH", "loadGroupPerformance groupId=$groupId, subjectId=$subjectId, semesterId=$selectedSemesterId")
+                val data = repository.getTeacherGroupSubjectPerformance(groupId, subjectId, selectedSemesterId)
+                Log.d("SEMESTER_SWITCH", "Got ${data.size} rows for semester $selectedSemesterId")
                 adapter.updateData(data)
                 gradebookAdapter.updateData(data)
-                updateAnalyticsDashboard(data)
+                updateAnalyticsMetrics(data)
             } catch (e: Exception) {
+                Log.e("SEMESTER_SWITCH", "loadGroupPerformance error", e)
                 Toast.makeText(requireContext(), "Ошибка загрузки успеваемости группы", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun updateAnalyticsDashboard(data: List<GroupSubjectPerformanceRow>) {
-        updatePieChart(data)
-        updateBarChartAndMetrics(data)
-    }
-
-    private fun updateBarChartAndMetrics(data: List<GroupSubjectPerformanceRow>) {
+    private fun updateAnalyticsMetrics(data: List<GroupSubjectPerformanceRow>) {
         if (data.isEmpty()) {
-            barChart.clear()
             tvAvgGrade.text = "0%"
             tvAvgAttendance.text = "0%"
             tvTotalStudents.text = "0"
@@ -330,23 +498,13 @@ class TeacherGradesDashboardFragment : Fragment() {
 
         var totalGradePct = 0
         var totalAttendancePct = 0.0
-        val gradeEntries = mutableListOf<com.github.mikephil.charting.data.BarEntry>()
-        val attendanceEntries = mutableListOf<com.github.mikephil.charting.data.BarEntry>()
-        val studentNames = mutableListOf<String>()
 
-        data.forEachIndexed { index, row ->
+        data.forEach { row ->
             val gradePct = row.percent
-            val attPct = if (row.total_sessions > 0) (row.attended_sessions.toDouble() * 100.0 / row.total_sessions.toDouble()) else 100.0
+            val attPct = if (row.total_sessions > 0) (row.attended_sessions.toDouble() * 100.0 / row.total_sessions.toDouble()) else 0.0
             
             totalGradePct += gradePct
             totalAttendancePct += attPct
-
-            gradeEntries.add(com.github.mikephil.charting.data.BarEntry(index.toFloat(), gradePct.toFloat()))
-            attendanceEntries.add(com.github.mikephil.charting.data.BarEntry(index.toFloat(), attPct.toFloat()))
-            
-            // Shorten name to just last name or first few chars
-            val shortName = row.student_name.split(" ").firstOrNull() ?: row.student_name
-            studentNames.add(shortName)
         }
 
         val avgGrade = totalGradePct / data.size
@@ -355,91 +513,5 @@ class TeacherGradesDashboardFragment : Fragment() {
         tvAvgGrade.text = "$avgGrade%"
         tvAvgAttendance.text = "$avgAtt%"
         tvTotalStudents.text = data.size.toString()
-
-        val gradeSet = com.github.mikephil.charting.data.BarDataSet(gradeEntries, "Успеваемость (%)").apply {
-            color = android.graphics.Color.parseColor("#4CAF50") // Green
-        }
-        val attendanceSet = com.github.mikephil.charting.data.BarDataSet(attendanceEntries, "Посещаемость (%)").apply {
-            color = android.graphics.Color.parseColor("#2196F3") // Blue
-        }
-
-        val barData = com.github.mikephil.charting.data.BarData(gradeSet, attendanceSet)
-        // Group bars
-        val groupSpace = 0.08f
-        val barSpace = 0.03f
-        val barWidth = 0.43f
-        barData.barWidth = barWidth
-        
-        // Use animation and values mapping for better UI
-        barChart.animateY(1000)
-        barChart.data = barData
-        barChart.groupBars(0f, groupSpace, barSpace)
-        barChart.setDrawValueAboveBar(true)
-        
-        barChart.xAxis.apply {
-            valueFormatter = com.github.mikephil.charting.formatter.IndexAxisValueFormatter(studentNames)
-            axisMinimum = 0f
-            axisMaximum = data.size.toFloat()
-            granularity = 1f
-            isGranularityEnabled = true
-        }
-
-        barChart.invalidate()
-    }
-
-    private fun updatePieChart(data: List<GroupSubjectPerformanceRow>) {
-        if (data.isEmpty()) {
-            pieChart.clear()
-            return
-        }
-
-        var excellent = 0
-        var good = 0
-        var ok = 0
-        var alarm = 0
-
-        for (student in data) {
-            val safeTotal = if (student.total_max > 0) student.total_max else 1
-            val calculatedPercent = (student.current_score * 100) / safeTotal
-
-            when {
-                calculatedPercent >= 80 -> excellent++
-                calculatedPercent >= 70 -> good++
-                calculatedPercent >= 50 -> ok++
-                else -> alarm++
-            }
-        }
-
-        val entries = mutableListOf<PieEntry>()
-        val colors = mutableListOf<Int>()
-
-        if (excellent > 0) {
-            entries.add(PieEntry(excellent.toFloat(), "Отлично (>=80%)"))
-            colors.add(GradeUtils.getGradeColor(85))
-        }
-        if (good > 0) {
-            entries.add(PieEntry(good.toFloat(), "Хорошо (70-79%)"))
-            colors.add(GradeUtils.getGradeColor(75))
-        }
-        if (ok > 0) {
-            entries.add(PieEntry(ok.toFloat(), "Удовл (50-69%)"))
-            colors.add(GradeUtils.getGradeColor(60))
-        }
-        if (alarm > 0) {
-            entries.add(PieEntry(alarm.toFloat(), "Тревога (<50%)"))
-            colors.add(GradeUtils.getGradeColor(40))
-        }
-
-        val dataSet = PieDataSet(entries, "Зоны успеваемости").apply {
-            this.colors = colors
-            valueTextSize = 16f
-            valueTextColor = android.graphics.Color.WHITE
-            sliceSpace = 2f
-            selectionShift = 8f
-        }
-
-        pieChart.data = PieData(dataSet)
-        pieChart.animateY(1200, com.github.mikephil.charting.animation.Easing.EaseInOutCubic)
-        pieChart.invalidate()
     }
 }

@@ -10,13 +10,15 @@ import com.example.kotlinroomdatabase.model.StudentGradePoint
 
 class StudentGradesInnerAdapter(
     private var grades: List<StudentGradePoint>,
-    private val onGradeClick: (StudentGradePoint) -> Unit
+    private val onGradeClick: (StudentGradePoint) -> Unit,
+    private val onDeleteGradeClick: ((StudentGradePoint) -> Unit)? = null
 ) : RecyclerView.Adapter<StudentGradesInnerAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvInnerGradeTitle: TextView = view.findViewById(R.id.tvInnerGradeTitle)
         val tvInnerGradeType: TextView = view.findViewById(R.id.tvInnerGradeType)
         val tvInnerGradeScore: TextView = view.findViewById(R.id.tvInnerGradeScore)
+        val ibDeleteGrade: android.widget.ImageButton = view.findViewById(R.id.ibDeleteGrade)
         val rootLayout: View = view
     }
 
@@ -34,6 +36,15 @@ class StudentGradesInnerAdapter(
 
         holder.rootLayout.setOnClickListener {
             onGradeClick(grade)
+        }
+
+        if (onDeleteGradeClick != null) {
+            holder.ibDeleteGrade.visibility = View.VISIBLE
+            holder.ibDeleteGrade.setOnClickListener {
+                onDeleteGradeClick.invoke(grade)
+            }
+        } else {
+            holder.ibDeleteGrade.visibility = View.GONE
         }
     }
 

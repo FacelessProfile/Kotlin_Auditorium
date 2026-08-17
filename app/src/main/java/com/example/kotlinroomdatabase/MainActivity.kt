@@ -11,6 +11,7 @@ import androidx.navigation.navOptions
 import androidx.navigation.ui.*
 import com.example.kotlinroomdatabase.databinding.ActivityMainBinding
 import com.example.kotlinroomdatabase.repository.StudentRepository
+import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,7 +22,7 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var studentRepository: StudentRepository
+    private lateinit var studentRepository: com.example.kotlinroomdatabase.repository.IStudentRepository
     private lateinit var appBarConfiguration: AppBarConfiguration
 
     private val logoutReceiver = object : android.content.BroadcastReceiver() {
@@ -97,7 +98,10 @@ class MainActivity : AppCompatActivity() {
                 R.id.lessonFragment,
                 R.id.profileFragment,
                 R.id.historyFragment,
-                R.id.settingsFragment
+                R.id.settingsFragment,
+                R.id.notificationsFragment,
+                R.id.gradesFragment,
+                R.id.totpFragment
             ),
             binding.drawerLayout
         )
@@ -110,8 +114,12 @@ class MainActivity : AppCompatActivity() {
 
         updateUIForRole()
 
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             studentRepository.testConnection()
+            if (studentId != -1) {
+                Log.d("MainActivity", "Starting auto-sync on launch for studentId=$studentId")
+                studentRepository.syncAllStudents()
+            }
         }
         if (studentId != -1) {
             val currentDest = navController.currentDestination?.id
@@ -126,6 +134,8 @@ class MainActivity : AppCompatActivity() {
                     popUpTo(R.id.my_nav) { inclusive = true }
                 })
             }
+            checkUserAgreement()
+            registerDeviceToken()
         }
 
         binding.navView.setNavigationItemSelectedListener { menuItem ->
@@ -144,9 +154,16 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 else -> {
-                    val handled = menuItem.onNavDestinationSelected(navController)
-                    if (handled) binding.drawerLayout.closeDrawers()
-                    handled
+                    val handled = androidx.navigation.ui.NavigationUI.onNavDestinationSelected(menuItem, navController)
+                    if (!handled) {
+                        try {
+                            navController.navigate(menuItem.itemId)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    binding.drawerLayout.closeDrawers()
+                    true
                 }
             }
         }
@@ -231,15 +248,19 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Handle relative URLs
-                val finalUrl = if (url.startsWith("http")) {
-                    url
-                } else {
-                    "http://109.172.114.128:9000${if (url.startsWith("/")) "" else "/"}$url"
+                val finalUrl = when {
+                    url.startsWith("http://localhost:9001") -> url.replace("http://localhost:9001", "https://127.0.0.1:9001")
+                    url.startsWith("http://109.172.114.128:9000") -> url.replace("http://109.172.114.128:9000", "https://127.0.0.1:9001")
+                    url.startsWith("http://109.172.114.128:9001") -> url.replace("http://109.172.114.128:9001", "https://127.0.0.1:9001")
+                    url.startsWith("https://192.168.0.56:9001") -> url.replace("https://192.168.0.56:9001", "https://127.0.0.1:9001")
+                    url.startsWith("https://lms.signal.qlabs.pro:9001") -> url.replace("https://lms.signal.qlabs.pro:9001", "https://127.0.0.1:9001")
+                    url.startsWith("https://") || url.startsWith("http://") -> url
+                    else -> "https://127.0.0.1:9001${if (url.startsWith("/")) "" else "/"}$url"
                 }
 
                 Log.d("MainActivity", "Loading avatar from: $finalUrl")
-                val client = okhttp3.OkHttpClient()
+                val repo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
+                val client = repo.getUnsafeOkHttpClient()
                 val request = okhttp3.Request.Builder().url(finalUrl).build()
                 val response = client.newCall(request).execute()
                 
@@ -277,4 +298,44 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkUserAgreement() {
+        val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val token = authPrefs.getString("auth_token", "") ?: ""
+        if (token.isNotEmpty()) {
+            lifecycleScope.launch {
+                val httpsRepo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
+                val result = httpsRepo.getUserAgreementCurrent()
+                if (result is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
+                    val status = result.data
+                    if (!status.accepted) {
+                        val dialog = com.example.kotlinroomdatabase.fragments.profile.UserAgreementDialogFragment.newInstance(status.version)
+                        dialog.show(supportFragmentManager, "UserAgreementDialogFragment")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun registerDeviceToken() {
+        val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val token = authPrefs.getString("auth_token", "") ?: ""
+        if (token.isNotEmpty()) {
+            lifecycleScope.launch {
+                val httpsRepo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
+                val dummyFcmToken = "fcm_device_" + android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+                httpsRepo.registerDeviceToken(dummyFcmToken, "android")
+            }
+        }
+        checkNotificationPermission()
+    }
+
+    private fun checkNotificationPermission() {
+        com.example.kotlinroomdatabase.util.LocalNotificationHelper.createNotificationChannel(this)
+        com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(this)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
+    }
 }

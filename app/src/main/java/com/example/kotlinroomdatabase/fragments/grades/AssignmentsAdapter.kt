@@ -10,13 +10,15 @@ import com.example.kotlinroomdatabase.model.GradeItem
 
 class AssignmentsAdapter(
     private var assignments: List<GradeItem>,
-    private val onClick: (GradeItem) -> Unit = {}
+    private val onClick: (GradeItem) -> Unit = {},
+    private val onDeleteClick: ((GradeItem) -> Unit)? = null
 ) : RecyclerView.Adapter<AssignmentsAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvAssignmentTitle: TextView = view.findViewById(R.id.tvAssignmentTitle)
         val tvAssignmentType: TextView = view.findViewById(R.id.tvAssignmentType)
         val tvAssignmentMaxScore: TextView = view.findViewById(R.id.tvAssignmentMaxScore)
+        val ibDeleteAssignment: android.widget.ImageButton = view.findViewById(R.id.ibDeleteAssignment)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -31,6 +33,13 @@ class AssignmentsAdapter(
         holder.tvAssignmentType.text = "Тип: ${item.item_type}"
         holder.tvAssignmentMaxScore.text = "Макс. балл: ${item.max_score}"
         holder.itemView.setOnClickListener { onClick(item) }
+
+        if (onDeleteClick != null) {
+            holder.ibDeleteAssignment.visibility = View.VISIBLE
+            holder.ibDeleteAssignment.setOnClickListener { onDeleteClick.invoke(item) }
+        } else {
+            holder.ibDeleteAssignment.visibility = View.GONE
+        }
     }
 
     override fun getItemCount() = assignments.size
