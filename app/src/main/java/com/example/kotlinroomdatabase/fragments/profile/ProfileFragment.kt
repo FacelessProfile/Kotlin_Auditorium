@@ -11,14 +11,20 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.example.kotlinroomdatabase.MainActivity
+import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.config.ServerConfig
 import com.example.kotlinroomdatabase.databinding.FragmentProfileBinding
 import com.example.kotlinroomdatabase.repository.AvatarResult
 import com.example.kotlinroomdatabase.settings.RepositoryHTTPS
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
@@ -34,20 +40,32 @@ class ProfileFragment : Fragment() {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val userRole = prefs.getString("user_role", "student")
+        val userRole = prefs.getString("user_role", "student") ?: "student"
+        val studentId = prefs.getInt("current_student_id", 1)
         val localizedRole = when(userRole) {
             "teacher" -> "Преподаватель"
             "admin" -> "Администратор"
             else -> "Студент"
         }
         
-        binding.profileName.text = prefs.getString("student_name", localizedRole)
+        val studentName = prefs.getString("student_name", localizedRole) ?: localizedRole
+        binding.profileName.text = studentName
         binding.profileRole.text = localizedRole
-        binding.profileGroup.text = if (userRole == "teacher") "Учитель" else prefs.getString("student_group", "Группа не указана")
-        binding.profileEmail.text = "${prefs.getString("student_name", "user")?.replace(" ", ".")?.lowercase()}@university.edu"
-        // Дата регистрации должна браться из БД!!!!!!!!!!!!!!!!
-        binding.profileRegDate.text = "01.09.2023"
+        
+        val groupRaw = prefs.getString("student_group", null)?.takeIf { it.isNotBlank() && it != "Unknown" } ?: "DEMO-101"
+        val groupName = if (userRole == "teacher") "Кафедра ПОВТ" else groupRaw
+        binding.profileGroupBadge.text = groupName
+        binding.profileGroup.text = if (userRole == "teacher") "Кафедра ПОВТ (СибГУТИ)" else "$groupName (СибГУТИ)"
 
+        val realEmail = prefs.getString("user_email", null)?.takeIf { it.isNotBlank() }
+            ?: requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("user_email", null)?.takeIf { it.isNotBlank() }
+            ?: if (userRole == "teacher") "teacher@sibsutis.ru" else "student@sibsutis.ru"
+        binding.profileEmail.text = realEmail
+
+        val studentCardNum = if (userRole == "teacher") "№ ТР-${1000 + studentId}" else "№ 2023-${groupRaw.take(4)}-${String.format(Locale.US, "%03d", studentId)}"
+        binding.profileRegDate.text = studentCardNum
+
+        // Avatar loading
         val avatarPath = prefs.getString("avatar_path", null)
         val avatarUrl = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("avatar_url", null)
 
@@ -67,16 +85,105 @@ class ProfileFragment : Fragment() {
             pickImage.launch("image/*")
         }
 
-        val appPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("button_color", "#C48E17")
-        primaryColorHex?.let {
-            val color = android.graphics.Color.parseColor(it)
-            binding.editProfileButton.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+        // Server text update
+        updateServerHostText()
+
+        // Quick navigation buttons
+        binding.btnQuickSchedule.setOnClickListener {
+            findNavController().navigate(R.id.scheduleFragment)
         }
 
-        setupActivityCalendar()
+        binding.btnQuickGrades.setOnClickListener {
+            findNavController().navigate(R.id.gradesFragment)
+        }
+
+        binding.btnQuickHistory.setOnClickListener {
+            findNavController().navigate(R.id.historyFragment)
+        }
+
+        binding.btnQuickServer.setOnClickListener {
+            ServerConfig.showServerSwitcherDialog(requireContext()) {
+                updateServerHostText()
+            }
+        }
+
+        binding.btnLogoutProfile.setOnClickListener {
+            showLogoutConfirmDialog()
+        }
+
+        // Load real attendance stats
+        loadAttendanceStats(userRole)
+
+        // Long click helpers for developers
+        binding.profileRole.setOnLongClickListener {
+            ServerConfig.showServerSwitcherDialog(requireContext()) { updateServerHostText() }
+            true
+        }
 
         return binding.root
+    }
+
+    private fun updateServerHostText() {
+        val baseUrl = ServerConfig.getBaseUrl(requireContext())
+        val host = baseUrl.removePrefix("https://").removePrefix("http://")
+        binding.tvCurrentServerHost.text = host
+    }
+
+    private fun loadAttendanceStats(userRole: String) {
+        val context = context ?: return
+        lifecycleScope.launch {
+            try {
+                val repository = RepositoryHTTPS.getStudentRepository(context)
+                if (userRole == "teacher" || userRole == "admin") {
+                    val lessons = repository.getAllLessons().first()
+                    val total = lessons.size
+                    withContext(Dispatchers.Main) {
+                        binding.tvProfileTotalCount.text = total.toString()
+                        binding.tvProfileOnTimeCount.text = total.toString()
+                        binding.tvProfileAttendanceRate.text = "100%"
+                        binding.tvAttendanceStatusBadge.text = "Преподаватель"
+                        binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#3B82F6"))
+                    }
+                } else {
+                    val history = repository.getStudentHistory(Calendar.getInstance().get(Calendar.YEAR))
+                    val total = history.items.size
+                    val onTime = history.items.count { it.status == "present" || it.status == "ontime" || (it.status == null && !it.is_late) }
+                    val attended = history.items.count { it.status == "present" || it.status == "late" || it.status == "ontime" || it.status == null }
+                    
+                    val rate = if (total > 0) (attended.toDouble() / total.toDouble()) * 100.0 else 100.0
+
+                    withContext(Dispatchers.Main) {
+                        binding.tvProfileTotalCount.text = total.toString()
+                        binding.tvProfileOnTimeCount.text = onTime.toString()
+                        binding.tvProfileAttendanceRate.text = String.format(Locale.US, "%.1f%%", rate)
+                        
+                        if (rate >= 80.0) {
+                            binding.tvAttendanceStatusBadge.text = "Зачетный допуск 👍"
+                            binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#10B981"))
+                        } else if (rate >= 60.0) {
+                            binding.tvAttendanceStatusBadge.text = "Нормальная явка ⚡"
+                            binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#F59E0B"))
+                        } else {
+                            binding.tvAttendanceStatusBadge.text = "Требуется отработка ⚠️"
+                            binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#EF4444"))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileFragment", "Error loading attendance stats", e)
+            }
+        }
+    }
+
+    private fun showLogoutConfirmDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Выход из аккаунта")
+            .setMessage("Вы действительно хотите выйти из своего профиля?")
+            .setPositiveButton("Выйти") { _, _ ->
+                (activity as? MainActivity)?.performLogout("Вы вышли из учетной записи")
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun saveAvatarLocally(uri: Uri) {
@@ -88,16 +195,14 @@ class ProfileFragment : Fragment() {
         binding.profileAvatar.setImageURI(Uri.fromFile(java.io.File(internalPath)))
         binding.profileAvatar.imageTintList = null
         
-        // Notify MainActivity to update header
-        (activity as? com.example.kotlinroomdatabase.MainActivity)?.updateNavHeader()
+        (activity as? MainActivity)?.updateNavHeader()
 
-        // Server request
         lifecycleScope.launch {
             try {
                 val repository = RepositoryHTTPS.getStudentRepository(requireContext())
                 val result = repository.uploadAvatar(internalPath)
                 if (result is AvatarResult.Success) {
-                    // Toast.makeText(requireContext(), "Аватарка загружена", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Аватар успешно обновлен", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Log.e("ProfileFragment", "Error uploading avatar", e)
@@ -125,24 +230,15 @@ class ProfileFragment : Fragment() {
 
     private fun loadAvatarFromUrl(url: String?) {
         if (url.isNullOrBlank() || url == "null") {
-            binding.profileAvatar.setImageResource(com.example.kotlinroomdatabase.R.drawable.ic_person)
+            binding.profileAvatar.setImageResource(R.drawable.ic_person)
             binding.profileAvatar.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.GRAY)
             return
         }
 
-        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val finalUrl = when {
-                    url.startsWith("http://localhost:9001") -> url.replace("http://localhost:9001", "https://127.0.0.1:9001")
-                    url.startsWith("http://109.172.114.128:9000") -> url.replace("http://109.172.114.128:9000", "https://127.0.0.1:9001")
-                    url.startsWith("http://109.172.114.128:9001") -> url.replace("http://109.172.114.128:9001", "https://127.0.0.1:9001")
-                    url.startsWith("https://192.168.0.56:9001") -> url.replace("https://192.168.0.56:9001", "https://127.0.0.1:9001")
-                    url.startsWith("https://lms.signal.qlabs.pro:9001") -> url.replace("https://lms.signal.qlabs.pro:9001", "https://127.0.0.1:9001")
-                    url.startsWith("https://") || url.startsWith("http://") -> url
-                    else -> "https://127.0.0.1:9001${if (url.startsWith("/")) "" else "/"}$url"
-                }
-
-                val repo = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(requireContext())
+                val finalUrl = ServerConfig.resolveMediaUrl(requireContext(), url)
+                val repo = RepositoryHTTPS.getStudentRepository(requireContext())
                 val client = repo.getUnsafeOkHttpClient()
                 val request = okhttp3.Request.Builder().url(finalUrl).build()
                 val response = client.newCall(request).execute()
@@ -150,14 +246,14 @@ class ProfileFragment : Fragment() {
                 if (response.isSuccessful) {
                     val bytes = response.body.bytes()
                     val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         binding.profileAvatar.setImageBitmap(bitmap)
                         binding.profileAvatar.imageTintList = null
                     }
                 }
             } catch (e: Exception) {
-                withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    binding.profileAvatar.setImageResource(com.example.kotlinroomdatabase.R.drawable.ic_person)
+                withContext(Dispatchers.Main) {
+                    binding.profileAvatar.setImageResource(R.drawable.ic_person)
                     binding.profileAvatar.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.GRAY)
                 }
             }
@@ -168,90 +264,4 @@ class ProfileFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-
-    private fun setupActivityCalendar() {
-        val calendarGrid = binding.activityCalendar
-        val context = requireContext()
-        val prefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val userRole = prefs.getString("user_role", "student")
-        
-        lifecycleScope.launch {
-            try {
-                val repository = RepositoryHTTPS.getStudentRepository(context)
-                val activityMap = mutableMapOf<String, Int>()
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                
-                if (userRole == "teacher") {
-                    repository.getAllLessons().first().forEach { lesson ->
-                        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(lesson.date))
-                        activityMap[dateKey] = (activityMap[dateKey] ?: 0) + 1
-                    }
-                } else {
-                    val history = repository.getStudentHistory(Calendar.getInstance().get(Calendar.YEAR))
-                    history.items.forEach { item ->
-                        // Assuming date is in dd.MM.yyyy or similar, try to parse it
-                        try {
-                            val parts = item.date.split(".")
-                            if (parts.size == 3) {
-                                val normalizedDate = "${parts[2]}-${parts[1]}-${parts[0]}"
-                                activityMap[normalizedDate] = (activityMap[normalizedDate] ?: 0) + 1
-                            }
-                        } catch (e: Exception) {}
-                    }
-                }
-
-                val activityData = mutableListOf<Int>()
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.DAY_OF_YEAR, -139) // Last 140 days
-                
-                for (i in 0 until 140) {
-                    val dateKey = dateFormat.format(cal.time)
-                    val count = activityMap[dateKey] ?: 0
-                    activityData.add(when {
-                        count >= 4 -> 4
-                        count == 3 -> 3
-                        count == 2 -> 2
-                        count == 1 -> 1
-                        else -> 0
-                    })
-                    cal.add(Calendar.DAY_OF_YEAR, 1)
-                }
-
-                withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    renderHeatmap(activityData)
-                }
-            } catch (e: Exception) {
-                Log.e("ProfileFragment", "Error loading heatmap data", e)
-            }
-        }
-    }
-
-    private fun renderHeatmap(activityData: List<Int>) {
-        val calendarGrid = binding.activityCalendar ?: return
-        val context = context ?: return
-        calendarGrid.removeAllViews()
-
-        for (i in activityData.indices) {
-            val cell = View(context)
-            val size = (12 * resources.displayMetrics.density).toInt()
-            val margin = (2 * resources.displayMetrics.density).toInt()
-            
-            val params = android.widget.GridLayout.LayoutParams()
-            params.width = size
-            params.height = size
-            params.setMargins(margin, margin, margin, margin)
-            cell.layoutParams = params
-
-            val color = when (activityData[i]) {
-                1 -> android.graphics.Color.parseColor("#9BE9A8")
-                2 -> android.graphics.Color.parseColor("#40C463")
-                3 -> android.graphics.Color.parseColor("#30A14E")
-                4 -> android.graphics.Color.parseColor("#216E39")
-                else -> android.graphics.Color.parseColor("#EBEDF0")
-            }
-            cell.setBackgroundColor(color)
-            calendarGrid.addView(cell)
-        }
-    }
-    
 }

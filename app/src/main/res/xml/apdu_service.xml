@@ -3,6 +3,10 @@
     android:description="@string/app_name"
     android:requireDeviceUnlock="false">
     <aid-group android:category="other" android:description="@string/app_name">
+        <aid-filter android:name="F0010203040506" />
         <aid-filter android:name="F14954574F58" />
+        <aid-filter android:name="F222222222" />
+        <aid-filter android:name="F000000001020304" />
+        <aid-filter android:name="A0000000041010" />
     </aid-group>
 </host-apdu-service>

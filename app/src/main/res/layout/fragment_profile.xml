@@ -1,191 +1,602 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="@color/bg_main"
+    android:fillViewport="true">
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/profileCard"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="36dp">
 
-        <LinearLayout
+        <!-- 1. Digital Student ID Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/profileCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp"
-            android:gravity="center">
+            android:layout_marginTop="4dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="1dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/card_stroke"
+            app:cardBackgroundColor="@color/card_surface">
 
-            <ImageView
-                android:id="@+id/profileAvatar"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                android:src="@drawable/ic_person"
-                app:tint="?attr/colorPrimary"
-                android:scaleType="centerCrop"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:id="@+id/profileName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Имя Студента"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:layout_marginTop="16dp" />
-
-            <TextView
-                android:id="@+id/profileRole"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Студент"
-                android:textColor="?android:attr/textColorSecondary" />
-
-            <View
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:attr/dividerVertical"
-                android:layout_marginVertical="16dp"/>
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <!-- Header Info Row (Avatar + Main Text) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Avatar with Change Photo Icon -->
+                    <FrameLayout
+                        android:layout_width="72dp"
+                        android:layout_height="72dp">
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/profileAvatar"
+                            android:layout_width="72dp"
+                            android:layout_height="72dp"
+                            android:src="@drawable/ic_person"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.MaterialComponents.MediumComponent"
+                            app:strokeWidth="2dp"
+                            app:strokeColor="@color/uni_blue_primary"
+                            android:scaleType="centerCrop"
+                            android:clickable="true"
+                            android:focusable="true"/>
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_gravity="bottom|end"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="@color/uni_blue_primary"
+                            android:src="@drawable/ic_person"
+                            app:tint="#FFFFFF"
+                            android:padding="4dp"/>
+                    </FrameLayout>
+
+                    <!-- Student Name & Role Badge -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp">
+
+                        <TextView
+                            android:id="@+id/profileName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Тестовый Студент"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"
+                            android:maxLines="2"
+                            android:ellipsize="end"/>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="5dp">
+
+                            <TextView
+                                android:id="@+id/profileRole"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Студент"
+                                android:textSize="11.5sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/uni_blue_primary"
+                                android:background="@drawable/bg_badge_type"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"/>
+
+                            <TextView
+                                android:id="@+id/profileGroupBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="DEMO-101"
+                                android:textSize="11.5sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/badge_time_text"
+                                android:background="@drawable/bg_badge_time"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:layout_marginStart="6dp"/>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider_color"
+                    android:layout_marginVertical="14dp"/>
+
+                <!-- Student Identity Details -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Email Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Корпоративная почта"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_muted"/>
+
+                        <TextView
+                            android:id="@+id/profileEmail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="student_test@sibsutis.ru"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+                    </LinearLayout>
+
+                    <!-- Group / Faculty Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Группа / Факультет"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_muted"/>
+
+                        <TextView
+                            android:id="@+id/profileGroup"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="DEMO-101 (СибГУТИ)"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+                    </LinearLayout>
+
+                    <!-- Registration Date Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Студенческий билет"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_muted"/>
+
+                        <TextView
+                            android:id="@+id/profileRegDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="№ 2023-ИВТ-042"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/uni_blue_primary"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 2. Attendance Stats Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="1dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/card_stroke"
+            app:cardBackgroundColor="@color/card_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="ПОСЕЩАЕМОСТЬ В СЕМЕСТРЕ"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_subtle"
+                        android:letterSpacing="0.06"/>
+
+                    <TextView
+                        android:id="@+id/tvAttendanceStatusBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Допуск получен 👍"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/badge_ontime_text"/>
+                </LinearLayout>
+
+                <!-- 3 Telemetry Numbers -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp">
+
+                    <!-- Rate -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="10dp"
+                        android:background="@drawable/bg_badge_time"
+                        android:layout_marginEnd="6dp">
+
+                        <TextView
+                            android:id="@+id/tvProfileAttendanceRate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="96.4%"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#10B981"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Процент"
+                            android:textSize="10.5sp"
+                            android:textColor="@color/text_muted"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <!-- On Time -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="10dp"
+                        android:background="@drawable/bg_badge_time"
+                        android:layout_marginEnd="6dp">
+
+                        <TextView
+                            android:id="@+id/tvProfileOnTimeCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="73"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/uni_blue_primary"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Вовремя"
+                            android:textSize="10.5sp"
+                            android:textColor="@color/text_muted"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <!-- Late / Total -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="10dp"
+                        android:background="@drawable/bg_badge_time">
+
+                        <TextView
+                            android:id="@+id/tvProfileTotalCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="77"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Всего пар"
+                            android:textSize="10.5sp"
+                            android:textColor="@color/text_muted"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 3. University Hub / Quick Action Links -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="1dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/card_stroke"
+            app:cardBackgroundColor="@color/card_surface">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Группа"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
-                <TextView
-                    android:id="@+id/profileGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ИКБО-01-20"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="12dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Email"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
-                <TextView
-                    android:id="@+id/profileEmail"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="student@university.edu"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="12dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Дата регистрации"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary" />
-                <TextView
-                    android:id="@+id/profileRegDate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="01.09.2020"
-                    android:textSize="16sp" />
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:attr/dividerVertical"
-                android:layout_marginVertical="16dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Активность (Посещаемость)"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
+                <!-- Link 1: Schedule -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingTop="14dp"
-                    android:layout_marginEnd="4dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="14dp" android:text="Mon" android:textSize="8sp" />
-                    <View android:layout_width="1dp" android:layout_height="14dp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="14dp" android:text="Wed" android:textSize="8sp" />
-                    <View android:layout_width="1dp" android:layout_height="14dp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="14dp" android:text="Fri" android:textSize="8sp" />
-                </LinearLayout>
-
-                <HorizontalScrollView
+                    android:id="@+id/btnQuickSchedule"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:scrollbars="none">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:background="?attr/selectableItemBackground">
 
-                    <GridLayout
-                        android:id="@+id/activityCalendar"
-                        android:layout_width="wrap_content"
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_schedule_clock"
+                        app:tint="@color/uni_blue_primary"
+                        android:layout_marginEnd="14dp"/>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:columnCount="20"
-                        android:rowCount="7"
-                        android:orientation="vertical"
-                        android:layout_gravity="start">
-                    </GridLayout>
-                </HorizontalScrollView>
-            </LinearLayout>
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp"
-                android:gravity="end">
-                <TextView
-                    android:layout_width="wrap_content"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Расписание занятий"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Просмотр расписания пар на день"
+                            android:textSize="11.5sp"
+                            android:textColor="@color/text_muted"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_subtle"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider_color"/>
+
+                <!-- Link 2: Grades -->
+                <LinearLayout
+                    android:id="@+id/btnQuickGrades"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Less"
-                    android:textSize="10sp"
-                    android:layout_marginEnd="4dp"/>
-                <View android:layout_width="10dp" android:layout_height="10dp" android:background="#EBEDF0" android:layout_margin="1dp"/>
-                <View android:layout_width="10dp" android:layout_height="10dp" android:background="#9BE9A8" android:layout_margin="1dp"/>
-                <View android:layout_width="10dp" android:layout_height="10dp" android:background="#40C463" android:layout_margin="1dp"/>
-                <View android:layout_width="10dp" android:layout_height="10dp" android:background="#30A14E" android:layout_margin="1dp"/>
-                <View android:layout_width="10dp" android:layout_height="10dp" android:background="#216E39" android:layout_margin="1dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_star"
+                        app:tint="#F59E0B"
+                        android:layout_marginEnd="14dp"/>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Электронная зачетка"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Оценки, баллы и зачеты по дисциплинам"
+                            android:textSize="11.5sp"
+                            android:textColor="@color/text_muted"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_subtle"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider_color"/>
+
+                <!-- Link 3: Attendance History -->
+                <LinearLayout
+                    android:id="@+id/btnQuickHistory"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="More"
-                    android:textSize="10sp"
-                    android:layout_marginStart="4dp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_history"
+                        app:tint="#10B981"
+                        android:layout_marginEnd="14dp"/>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="История посещений"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Журнал отметок и посещенных пар"
+                            android:textSize="11.5sp"
+                            android:textColor="@color/text_muted"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_subtle"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider_color"/>
+
+                <!-- Link 4: Server Selector -->
+                <LinearLayout
+                    android:id="@+id/btnQuickServer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_settings"
+                        app:tint="@color/text_muted"
+                        android:layout_marginEnd="14dp"/>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Сервер подключения"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_main"/>
+
+                        <TextView
+                            android:id="@+id/tvCurrentServerHost"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Выбрать сервер вуза"
+                            android:textSize="11.5sp"
+                            android:textColor="@color/uni_blue_primary"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_subtle"/>
+                </LinearLayout>
+
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <!-- 4. Logout Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogoutProfile"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Выйти из аккаунта"
+            android:textAllCaps="false"
+            android:textColor="#EF4444"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:strokeColor="#EF4444"
+            app:strokeWidth="1dp"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_logout"
+            app:iconTint="#EF4444"
+            app:iconGravity="textStart"
+            android:layout_marginTop="16dp"/>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/editProfileButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Редактировать профиль"
-        style="@style/Widget.MaterialComponents.Button"
-        android:layout_marginTop="24dp"
-        app:cornerRadius="8dp"
-        android:backgroundTint="?attr/colorPrimary"
-        android:textColor="?attr/colorOnPrimary"
-        app:layout_constraintTop_toBottomOf="@id/profileCard" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

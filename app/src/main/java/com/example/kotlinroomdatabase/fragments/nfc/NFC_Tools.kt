@@ -3,6 +3,7 @@ package com.example.kotlinroomdatabase.fragments.nfc
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -18,7 +19,7 @@ abstract class  NFC_Tools : Fragment() {
     protected var isInfiniteMode = false
     protected val nfcTimeoutHandler = Handler(Looper.getMainLooper())
     protected val NFC_READ_TIMEOUT = 15000L
-    private val SERVICE_AID = "F14954574F58"
+    private val SERVICE_AID = "F0010203040506"
 
     protected fun startNfcReadingMode(infiniteMode: Boolean = false) {
         if (nfcAdapter == null || isReadingMode) return
@@ -29,13 +30,18 @@ abstract class  NFC_Tools : Fragment() {
         val flags = NfcAdapter.FLAG_READER_NFC_A or
                 NfcAdapter.FLAG_READER_NFC_B or
                 NfcAdapter.FLAG_READER_NFC_F or
-                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
+                NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
+
+        val options = Bundle().apply {
+            putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 300)
+        }
 
         nfcAdapter?.enableReaderMode(
             requireActivity(),
             nfcReaderCallback,
             flags,
-            null
+            options
         )
 
         if (!infiniteMode) {
@@ -74,16 +80,17 @@ abstract class  NFC_Tools : Fragment() {
 
     // Callback при подносе метки
     protected val nfcReaderCallback = NfcAdapter.ReaderCallback { tag ->
-        // читаем как HCE устройство(смартфон)
+        val uid = tag.id?.joinToString("") { String.format("%02X", it) } ?: ""
+        val techs = tag.techList?.joinToString(", ") { it.substringAfterLast(".") } ?: "none"
+        Log.i("NFC_TOOLS", "Tag detected! UID: $uid, Techs: [$techs]")
+
         val hceData = readHcePayload(tag)
 
         val resultString = if (!hceData.isNullOrBlank()) {
-            Log.d("NFC_TOOLS", "HCE detected. Payload: $hceData")
+            Log.i("NFC_TOOLS", "HCE SUCCESS detected. Payload: $hceData")
             hceData
         } else {
-            // Если не HCE возвращаем физический UID
-            val uid = tag.id?.joinToString("") { String.format("%02X", it) } ?: ""
-            Log.d("NFC_TOOLS", "Standard Tag detected. UID: $uid")
+            Log.w("NFC_TOOLS", "Fallback to raw UID: $uid")
             uid
         }
         requireActivity().runOnUiThread {
@@ -91,28 +98,56 @@ abstract class  NFC_Tools : Fragment() {
         }
     }
 
+    private val CANDIDATE_AIDS = listOf("F0010203040506", "F14954574F58", "F222222222", "F000000001020304", "A0000000041010")
+
     private fun readHcePayload(tag: Tag): String? {
-        val isoDep = IsoDep.get(tag) ?: return null
+        val isoDep = IsoDep.get(tag)
+        if (isoDep == null) {
+            Log.w("NFC_TOOLS", "Tag is not IsoDep! Cannot read HCE.")
+            return null
+        }
 
         return try {
             isoDep.connect()
-            val aidBytes = hexStringToByteArray(SERVICE_AID)
-            val selectCommand = buildSelectApdu(aidBytes)
+            isoDep.timeout = 5000
 
-            Log.d("NFC_TOOLS", "Sending APDU: ${selectCommand.joinToString("") { "%02X".format(it) }}")
-            val response = isoDep.transceive(selectCommand)
+            for (aidStr in CANDIDATE_AIDS) {
+                val aidBytes = hexStringToByteArray(aidStr)
+                
+                val commands = listOf(
+                    byteArrayOf(0x00, 0xA4.toByte(), 0x04, 0x00, aidBytes.size.toByte()) + aidBytes + byteArrayOf(0x00),
+                    byteArrayOf(0x00, 0xA4.toByte(), 0x04, 0x00, aidBytes.size.toByte()) + aidBytes,
+                    byteArrayOf(0x00, 0xA4.toByte(), 0x04, 0x0C, aidBytes.size.toByte()) + aidBytes
+                )
 
-            Log.d("NFC_TOOLS", "Response received: ${response.joinToString("") { "%02X".format(it) }}")
-            val responseLength = response.size
-            if (responseLength >= 2 &&
-                response[responseLength - 2] == 0x90.toByte() &&
-                response[responseLength - 1] == 0x00.toByte()
-            ) {
-                val payloadBytes = response.copyOfRange(0, responseLength - 2)
-                String(payloadBytes, Charset.forName("UTF-8"))
-            } else {
-                null // Ошибка
+                for (cmd in commands) {
+                    val cmdHex = cmd.joinToString("") { "%02X".format(it) }
+                    Log.i("NFC_TOOLS", "Sending APDU: $cmdHex")
+                    val response = try {
+                        isoDep.transceive(cmd)
+                    } catch (e: Exception) {
+                        Log.w("NFC_TOOLS", "Transceive exception for cmd $cmdHex: ${e.message}")
+                        continue
+                    }
+
+                    val respHex = response.joinToString("") { "%02X".format(it) }
+                    Log.i("NFC_TOOLS", "Response for cmd $cmdHex: $respHex")
+
+                    val responseLength = response.size
+                    if (responseLength >= 2 &&
+                        response[responseLength - 2] == 0x90.toByte() &&
+                        response[responseLength - 1] == 0x00.toByte()
+                    ) {
+                        val payloadBytes = response.copyOfRange(0, responseLength - 2)
+                        val payloadStr = String(payloadBytes, Charset.forName("UTF-8")).trim()
+                        if (payloadStr.isNotEmpty()) {
+                            Log.i("NFC_TOOLS", "SUCCESS Parsed HCE Payload: $payloadStr")
+                            return payloadStr
+                        }
+                    }
+                }
             }
+            null
         } catch (e: IOException) {
             Log.e("NFC_TOOLS", "IsoDep connection failed: ${e.message}")
             null

@@ -18,6 +18,10 @@
             android:icon="@drawable/ic_person"
             android:title="Профиль" />
         <item
+            android:id="@+id/scheduleFragment"
+            android:icon="@drawable/ic_schedule_clock"
+            android:title="Расписание" />
+        <item
             android:id="@+id/historyFragment"
             android:icon="@drawable/ic_history"
             android:title="История посещений" />

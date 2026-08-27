@@ -13,5 +13,9 @@ data class HistoryItem(
     val date: String,
     val count: Int? = null,
     val lesson_name: String? = null,
-    val status: String? = null
+    val subject_name: String? = null,
+    val lesson_type: String? = null,
+    val time: String? = null,
+    val status: String? = null,
+    val is_late: Boolean = false
 )

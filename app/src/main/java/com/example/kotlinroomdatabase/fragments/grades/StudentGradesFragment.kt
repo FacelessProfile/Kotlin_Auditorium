@@ -147,13 +147,14 @@ class StudentGradesFragment : Fragment() {
                     else -> "Нет оценок"
                 }
 
-                val colorCode = when {
-                    percent >= 85 -> "#4CAF50"
-                    percent >= 70 -> "#FFEB3B"
-                    percent >= 50 -> "#FF9800"
-                    else -> "#F44336"
+                val colorRes = when {
+                    percent >= 85 -> R.color.grade_excellent
+                    percent >= 70 -> R.color.grade_good
+                    percent >= 50 -> R.color.grade_satisfactory
+                    else -> R.color.grade_poor
                 }
-                progressScore.setIndicatorColor(android.graphics.Color.parseColor(colorCode))
+                val indicatorColor = androidx.core.content.ContextCompat.getColor(requireContext(), colorRes)
+                progressScore.setIndicatorColor(indicatorColor)
 
             } catch (e: Exception) {
                 Log.e("SEMESTER_SWITCH", "Student loadData error", e)

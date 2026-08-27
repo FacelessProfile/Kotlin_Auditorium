@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- University Design System Tokens (Dark Theme) -->
+    <color name="uni_blue_primary">#3B82F6</color>
+    <color name="uni_blue_dark">#1D4ED8</color>
+    <color name="uni_blue_deep">#0F172A</color>
+    <color name="uni_blue_surface">#1E293B</color>
+    <color name="uni_blue_subtle">#334155</color>
+    <color name="uni_blue_accent">#60A5FA</color>
+    <color name="uni_blue_gradient_start">#0F172A</color>
+    <color name="uni_blue_gradient_end">#1E293B</color>
+
+    <!-- Soft Neutral Surfaces (Dark) -->
+    <color name="bg_main">#0B0F19</color>
+    <color name="card_surface">#131C2E</color>
+    <color name="card_stroke">#1E293B</color>
+    <color name="divider_color">#1E293B</color>
+    <color name="text_main">#F8FAFC</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="text_subtle">#64748B</color>
+
+    <!-- Attendance Status Badges (Dark) -->
+    <color name="badge_ontime_bg">#064E3B</color>
+    <color name="badge_ontime_text">#6EE7B7</color>
+    <color name="badge_ontime_icon">#34D399</color>
+    <color name="badge_ontime_border">#065F46</color>
+
+    <color name="badge_late_bg">#78350F</color>
+    <color name="badge_late_text">#FDE68A</color>
+    <color name="badge_late_icon">#FBBF24</color>
+    <color name="badge_late_border">#92400E</color>
+
+    <color name="badge_absent_bg">#7F1D1D</color>
+    <color name="badge_absent_text">#FCA5A5</color>
+    <color name="badge_absent_icon">#F87171</color>
+    <color name="badge_absent_border">#991B1B</color>
+
+    <color name="badge_type_bg">#1E3A8A</color>
+    <color name="badge_type_text">#93C5FD</color>
+    <color name="badge_time_bg">#1E293B</color>
+    <color name="badge_time_text">#CBD5E1</color>
+
+    <!-- Grade Progress Colors (Dark) -->
+    <color name="grade_excellent">#34D399</color>
+    <color name="grade_good">#60A5FA</color>
+    <color name="grade_satisfactory">#FBBF24</color>
+    <color name="grade_poor">#F87171</color>
+</resources>

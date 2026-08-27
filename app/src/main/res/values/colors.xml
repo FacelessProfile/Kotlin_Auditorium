@@ -24,4 +24,50 @@
     <color name="text_primary_light">#212121</color>
     <color name="text_secondary_light">#666666</color>
     <color name="surface_dark">#121212</color>
+
+    <!-- University Design System Tokens (Light Theme) -->
+    <color name="uni_blue_primary">#1A56DB</color>
+    <color name="uni_blue_dark">#1E40AF</color>
+    <color name="uni_blue_deep">#1E3A8A</color>
+    <color name="uni_blue_surface">#EFF6FF</color>
+    <color name="uni_blue_subtle">#DBEAFE</color>
+    <color name="uni_blue_accent">#3B82F6</color>
+    <color name="uni_blue_gradient_start">#1E3A8A</color>
+    <color name="uni_blue_gradient_end">#2563EB</color>
+
+    <!-- Soft Neutral Surfaces -->
+    <color name="bg_main">#F8FAFC</color>
+    <color name="card_surface">#FFFFFF</color>
+    <color name="card_stroke">#E2E8F0</color>
+    <color name="divider_color">#F1F5F9</color>
+    <color name="text_main">#0F172A</color>
+    <color name="text_muted">#64748B</color>
+    <color name="text_subtle">#94A3B8</color>
+
+    <!-- Attendance Status Badges (Light) -->
+    <color name="badge_ontime_bg">#ECFDF5</color>
+    <color name="badge_ontime_text">#047857</color>
+    <color name="badge_ontime_icon">#10B981</color>
+    <color name="badge_ontime_border">#A7F3D0</color>
+
+    <color name="badge_late_bg">#FFFBEB</color>
+    <color name="badge_late_text">#B45309</color>
+    <color name="badge_late_icon">#F59E0B</color>
+    <color name="badge_late_border">#FDE68A</color>
+
+    <color name="badge_absent_bg">#FEF2F2</color>
+    <color name="badge_absent_text">#B91C1C</color>
+    <color name="badge_absent_icon">#EF4444</color>
+    <color name="badge_absent_border">#FECACA</color>
+
+    <color name="badge_type_bg">#EFF6FF</color>
+    <color name="badge_type_text">#1D4ED8</color>
+    <color name="badge_time_bg">#F1F5F9</color>
+    <color name="badge_time_text">#475569</color>
+
+    <!-- Grade Progress Colors -->
+    <color name="grade_excellent">#10B981</color>
+    <color name="grade_good">#3B82F6</color>
+    <color name="grade_satisfactory">#F59E0B</color>
+    <color name="grade_poor">#EF4444</color>
 </resources>

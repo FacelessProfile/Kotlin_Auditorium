@@ -1,49 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    android:layout_marginBottom="8dp">
+    android:orientation="vertical"
+    android:layout_marginBottom="12dp">
 
+    <!-- Day Header (shown only on the first item of a date group) -->
     <LinearLayout
+        android:id="@+id/layoutDateHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:paddingVertical="8dp"
+        android:layout_marginBottom="4dp">
 
         <ImageView
-            android:id="@+id/ivStatus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_check" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="16dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tvDate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Date"
-                android:textStyle="bold"/>
-            <TextView
-                android:id="@+id/tvLesson"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Lesson Name"/>
-        </LinearLayout>
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_history"
+            app:tint="@color/uni_blue_primary"
+            android:layout_marginEnd="6dp"/>
 
         <TextView
-            android:id="@+id/tvCount"
+            android:id="@+id/tvDateGroup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Status"/>
+            android:text="23 августа 2026"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_muted"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider_color"
+            android:layout_marginStart="10dp"/>
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+
+    <!-- Main Attendance Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/card_stroke"
+        app:cardBackgroundColor="@color/card_surface">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Left Status Strip Indicator -->
+            <View
+                android:id="@+id/viewStatusStrip"
+                android:layout_width="4dp"
+                android:layout_height="match_parent"
+                android:background="@color/badge_ontime_icon"/>
+
+            <!-- Card Content Body -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Header Row: Subject Name + Status Badge -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tvSubjectName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Компьютерные сети"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_main"
+                        android:layout_marginEnd="8dp"/>
+
+                    <!-- Attendance Status Pill -->
+                    <LinearLayout
+                        android:id="@+id/layoutStatusBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_badge_ontime"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp">
+
+                        <ImageView
+                            android:id="@+id/ivStatusIcon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_check"
+                            app:tint="@color/badge_ontime_icon"
+                            android:layout_marginEnd="4dp"/>
+
+                        <TextView
+                            android:id="@+id/tvStatusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Вовремя"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/badge_ontime_text"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Lesson Topic / Description Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_book_topic"
+                        app:tint="@color/text_muted"
+                        android:layout_marginEnd="6dp"/>
+
+                    <TextView
+                        android:id="@+id/tvLessonTopic"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Тема: Архитектура микросервисов"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_muted"/>
+                </LinearLayout>
+
+                <!-- Bottom Tags Row: Lesson Type & Time -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <!-- Lesson Type Tag -->
+                    <TextView
+                        android:id="@+id/tvLessonType"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Практика"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/badge_type_text"
+                        android:background="@drawable/bg_badge_type"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"/>
+
+                    <!-- Time Tag -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_badge_time"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"
+                        android:layout_marginStart="8dp">
+
+                        <ImageView
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:src="@drawable/ic_schedule_clock"
+                            app:tint="@color/badge_time_text"
+                            android:layout_marginEnd="4dp"/>
+
+                        <TextView
+                            android:id="@+id/tvTimeSlot"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="08:46 - 10:16"
+                            android:textSize="11sp"
+                            android:textColor="@color/badge_time_text"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

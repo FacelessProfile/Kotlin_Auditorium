@@ -171,6 +171,24 @@ class SettingsFragment : Fragment() {
             updatePreview()
         }
 
+        // Lesson Reminder Settings
+        val currentReminderMinutes = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getReminderMinutes(requireContext())
+        binding.sliderReminderMinutes.value = currentReminderMinutes.toFloat()
+        binding.tvReminderMinutesLabel.text = "Предупреждать за: $currentReminderMinutes мин"
+
+        binding.sliderReminderMinutes.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                val mins = value.toInt()
+                binding.tvReminderMinutesLabel.text = "Предупреждать за: $mins мин"
+                com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.setReminderMinutes(requireContext(), mins)
+            }
+        }
+
+        binding.btnTestReminder.setOnClickListener {
+            com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.testReminderNow(requireContext())
+            Toast.makeText(requireContext(), "Тестовое напоминание и вибрация сработают через 1.5 сек", Toast.LENGTH_SHORT).show()
+        }
+
         binding.btnApplyTheme.setOnClickListener {
             Toast.makeText(context, "Тема применена", Toast.LENGTH_SHORT).show()
             requireActivity().recreate()

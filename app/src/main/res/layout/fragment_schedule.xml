@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_main">
+
+    <!-- Date Navigation Header Strip -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="10dp"
+        android:background="@color/card_surface"
+        android:elevation="2dp">
+
+        <!-- Previous Day Button -->
+        <ImageButton
+            android:id="@+id/btnPrevDay"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/circle_shape"
+            android:backgroundTint="@color/uni_blue_subtle"
+            android:src="@drawable/ic_chevron_left"
+            app:tint="@color/uni_blue_primary"
+            android:contentDescription="Предыдущий день"/>
+
+        <!-- Date Picker Center Button -->
+        <LinearLayout
+            android:id="@+id/layoutDatePicker"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:background="?attr/selectableItemBackground">
+
+            <TextView
+                android:id="@+id/tvSelectedDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="27 августа 2026"
+                android:textSize="15.5sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_main"/>
+
+            <TextView
+                android:id="@+id/tvSelectedWeekday"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Четверг • Нечётная неделя"
+                android:textSize="11.5sp"
+                android:textColor="@color/text_muted"
+                android:layout_marginTop="1dp"/>
+        </LinearLayout>
+
+        <!-- Next Day Button -->
+        <ImageButton
+            android:id="@+id/btnNextDay"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/circle_shape"
+            android:backgroundTint="@color/uni_blue_subtle"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="@color/uni_blue_primary"
+            android:contentDescription="Следующий день"
+            android:layout_marginEnd="6dp"/>
+
+        <!-- Today Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToday"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="34dp"
+            android:text="Сегодня"
+            android:textAllCaps="false"
+            android:textColor="@color/uni_blue_primary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/uni_blue_surface"
+            app:cornerRadius="17dp"
+            android:paddingHorizontal="10dp"/>
+    </LinearLayout>
+
+    <!-- Main Content Frame -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefreshSchedule"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvScheduleLessons"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp"
+                android:clipToPadding="false"/>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <!-- Empty State View -->
+        <LinearLayout
+            android:id="@+id/layoutEmptySchedule"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/ic_schedule_clock"
+                app:tint="@color/text_subtle"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="В этот день занятий нет"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_main"/>
+
+            <TextView
+                android:id="@+id/tvEmptySubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="В расписании на выбранный день не найдено запланированных пар"
+                android:textSize="12sp"
+                android:textColor="@color/text_muted"
+                android:gravity="center"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+    </FrameLayout>
+
+</LinearLayout>

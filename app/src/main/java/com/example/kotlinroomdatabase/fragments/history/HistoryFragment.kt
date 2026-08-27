@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,6 +22,11 @@ class HistoryFragment : Fragment() {
 
     private lateinit var repository: IStudentRepository
     private lateinit var adapter: HistoryAdapter
+    private lateinit var tvCountOnTime: TextView
+    private lateinit var tvCountLate: TextView
+    private lateinit var tvCountTotal: TextView
+    private lateinit var layoutEmptyHistory: LinearLayout
+    private lateinit var rvHistory: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,14 +39,18 @@ class HistoryFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_history, container, false)
-        val rvHistory = view.findViewById<RecyclerView>(R.id.rvHistory)
-        
+        rvHistory = view.findViewById(R.id.rvHistory)
+        tvCountOnTime = view.findViewById(R.id.tvCountOnTime)
+        tvCountLate = view.findViewById(R.id.tvCountLate)
+        tvCountTotal = view.findViewById(R.id.tvCountTotal)
+        layoutEmptyHistory = view.findViewById(R.id.layoutEmptyHistory)
+
         adapter = HistoryAdapter()
         rvHistory.adapter = adapter
         rvHistory.layoutManager = LinearLayoutManager(requireContext())
 
         loadHistory()
-        
+
         return view
     }
 
@@ -55,21 +66,55 @@ class HistoryFragment : Fragment() {
                 repository.getAllLessons().collect { lessons ->
                     val historyItems = lessons.map {
                         HistoryItem(
-                            date = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(it.date)),
-                            lesson_name = it.subject,
-                            status = it.groups,
-                            count = null
+                            date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it.date)),
+                            subject_name = it.subject,
+                            lesson_name = "Занятие с группами: ${it.groups}",
+                            lesson_type = "Практика",
+                            time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(it.date)),
+                            status = "present",
+                            is_late = false
                         )
                     }
-                    adapter.setData(historyItems)
+                    displayHistory(historyItems)
                 }
             } else if (studentId > 0 && subjectId > 0) {
                 val response = repository.getDetailedStudentHistory(studentId, subjectId)
-                adapter.setData(response)
+                displayHistory(response)
             } else {
-                val response = repository.getStudentHistory(2026)
-                adapter.setData(response.items)
+                val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                val response = repository.getStudentHistory(currentYear)
+                displayHistory(response.items)
             }
+        }
+    }
+
+    private fun displayHistory(items: List<HistoryItem>) {
+        adapter.setData(items)
+
+        if (items.isEmpty()) {
+            layoutEmptyHistory.visibility = View.VISIBLE
+            rvHistory.visibility = View.GONE
+            tvCountOnTime.text = "0"
+            tvCountLate.text = "0"
+            tvCountTotal.text = "0"
+        } else {
+            layoutEmptyHistory.visibility = View.GONE
+            rvHistory.visibility = View.VISIBLE
+
+            var onTime = 0
+            var late = 0
+
+            items.forEach {
+                if (it.is_late || it.status == "late") {
+                    late++
+                } else {
+                    onTime++
+                }
+            }
+
+            tvCountOnTime.text = onTime.toString()
+            tvCountLate.text = late.toString()
+            tvCountTotal.text = items.size.toString()
         }
     }
 }

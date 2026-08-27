@@ -67,6 +67,17 @@ class LessonFragment : NFC_Tools() {
     private lateinit var fabCreateLesson: ExtendedFloatingActionButton
     private lateinit var btnFinishLesson: Button
 
+    private lateinit var layoutNoLesson: View
+    private lateinit var layoutActiveLesson: View
+    private lateinit var btnCreateLessonHero: Button
+    private lateinit var cardAllStudentsShortcut: View
+    private lateinit var tvActiveSubjectTitle: TextView
+    private lateinit var tvActiveGroups: TextView
+    private lateinit var tvLivePresentCount: TextView
+    private lateinit var tvPresentCounterBadge: TextView
+    private lateinit var layoutEmptyAttendance: View
+    private lateinit var layoutNfcStatusPill: View
+
     private val LESSON_PREFS = "lesson_active_prefs"
     private val KEY_LESSON_ID = "lesson_id"
     private val KEY_SUBJECT = "subject"
@@ -106,6 +117,27 @@ class LessonFragment : NFC_Tools() {
         fabCreateLesson = view.findViewById(R.id.fabCreateLesson)
         btnFinishLesson = view.findViewById(R.id.btnFinishLesson)
 
+        layoutNoLesson = view.findViewById(R.id.layoutNoLesson)
+        layoutActiveLesson = view.findViewById(R.id.layoutActiveLesson)
+        btnCreateLessonHero = view.findViewById(R.id.btnCreateLessonHero)
+        cardAllStudentsShortcut = view.findViewById(R.id.cardAllStudentsShortcut)
+        tvActiveSubjectTitle = view.findViewById(R.id.tvActiveSubjectTitle)
+        tvActiveGroups = view.findViewById(R.id.tvActiveGroups)
+        tvLivePresentCount = view.findViewById(R.id.tvLivePresentCount)
+        tvPresentCounterBadge = view.findViewById(R.id.tvPresentCounterBadge)
+        layoutEmptyAttendance = view.findViewById(R.id.layoutEmptyAttendance)
+        layoutNfcStatusPill = view.findViewById(R.id.layoutNfcStatusPill)
+
+        btnCreateLessonHero.setOnClickListener { showCreateLessonSheet() }
+        cardAllStudentsShortcut.setOnClickListener {
+            findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
+        }
+
+        val btnNoLessonStudents = view.findViewById<Button?>(R.id.btnNoLessonAllStudents)
+        btnNoLessonStudents?.setOnClickListener {
+            findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
+        }
+
         val btnAllStudents = view.findViewById<Button>(R.id.btnViewAllStudents)
         btnAllStudents.setOnClickListener {
             findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
@@ -139,20 +171,35 @@ class LessonFragment : NFC_Tools() {
         return view
     }
 
+    private fun updateLivePresentCount(count: Int) {
+        tvLivePresentCount.text = "👥 $count"
+        tvPresentCounterBadge.text = count.toString()
+        if (count == 0) {
+            layoutEmptyAttendance.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+        } else {
+            layoutEmptyAttendance.visibility = View.GONE
+            recyclerView.visibility = View.VISIBLE
+        }
+    }
+
     @OptIn(InternalSerializationApi::class)
     private fun observeStudents() {
         lifecycleScope.launch {
             studentRepository.getAllStudents().collect { allStudents ->
                 Log.d("OBSERVE", "Got ${allStudents.size} students. isLessonActive=$isLessonActive")
                 if (isLessonActive) {
-                    val filtered = allStudents.filter { it.attendance && selectedGroups.contains(it.studentGroup) }
+                    val cleanSelectedGroups = selectedGroups.map { it.trim().uppercase() }.toSet()
+                    val filtered = allStudents.filter { 
+                        it.attendance && (cleanSelectedGroups.isEmpty() || cleanSelectedGroups.contains(it.studentGroup.trim().uppercase())) 
+                    }
                     Log.d("OBSERVE", "Filtered to ${filtered.size} students for groups: $selectedGroups")
                     
-                    if (attendedStudents.size != filtered.size || !attendedStudents.containsAll(filtered)) {
-                        attendedStudents.clear()
-                        attendedStudents.addAll(filtered.sortedByDescending { it.id })
-                        adapter.setData(attendedStudents)
-                    }
+                    attendedStudents.clear()
+                    attendedStudents.addAll(filtered.sortedByDescending { it.id })
+                    adapter.setData(attendedStudents)
+
+                    updateLivePresentCount(attendedStudents.size)
                 }
             }
         }
@@ -202,7 +249,33 @@ class LessonFragment : NFC_Tools() {
             
             updateUiOnLessonStart(subject, null)
         } else {
-            resetUiAfterLesson()
+            checkServerActiveSession()
+        }
+    }
+
+    private fun checkServerActiveSession() {
+        lifecycleScope.launch {
+            try {
+                val res = studentRepository.getTeacherActiveSession()
+                if (res is GenericResult.Success) {
+                    val info = res.data
+                    if (info.isActive) {
+                        currentLessonId = info.lessonId
+                        currentSubject = info.subjectName
+                        selectedGroups = info.groupNames.toMutableSet()
+                        isLessonActive = true
+
+                        saveLessonState(info.lessonId, info.subjectName, info.groupNames)
+                        updateUiOnLessonStart(info.subjectName, null)
+                        return@launch
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LessonFragment", "Error restoring active session from server", e)
+            }
+            if (!isLessonActive) {
+                resetUiAfterLesson()
+            }
         }
     }
 
@@ -243,6 +316,8 @@ class LessonFragment : NFC_Tools() {
             when (result) {
                 is FinishLessonResult.Success -> {
                     Toast.makeText(context, "Занятие завершено!", Toast.LENGTH_LONG).show()
+                    androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(requireContext())
+                        .sendBroadcast(Intent("LESSON_FINISHED_EVENT"))
                     stopNfcReadingMode()
                     pollingJob?.cancel()
                     clearSavedLessonState()
@@ -262,21 +337,21 @@ class LessonFragment : NFC_Tools() {
         currentLessonId = null
         attendedStudents.clear()
         adapter.setData(emptyList())
-        tvStatus.text = "Создайте занятие"
-        tvStatus.setTextColor(requireContext().getColorFromAttr(android.R.attr.textColorPrimary))
+
+        layoutNoLesson.visibility = View.VISIBLE
+        layoutActiveLesson.visibility = View.GONE
         btnFinishLesson.visibility = View.GONE
-        fabCreateLesson.show()
+        fabCreateLesson.visibility = View.GONE
 
         qrUpdateJob?.cancel()
         qrUpdateJob = null
 
-        ivQrCode.visibility = View.GONE
         ivQrCode.setImageBitmap(null)
-        statusIcon.visibility = View.VISIBLE
         statusIcon.setImageResource(R.drawable.ic_nfc)
         statusIcon.setColorFilter(null)
 
         adapter.setLessonState(false)
+        updateNfcStatusUI()
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -285,31 +360,48 @@ class LessonFragment : NFC_Tools() {
 
         val lessonId = currentLessonId
         if (lessonId == null) {
-            Log.e("NFC_DEBUG", "Ошибка сканирования")
+            Log.e("NFC_DEBUG", "Ошибка: нет активного занятия")
             return
         }
 
-        if (attendedStudents.any { it.studentNFC == nfcId }) {
-            Log.w("NFC_DEBUG", "студент уже в списке")
+        val cleanTag = nfcId.trim()
+        val parsedId = if (cleanTag.startsWith("STUDENT:")) {
+            cleanTag.split(":").getOrNull(1)?.toIntOrNull()
+        } else {
+            cleanTag.toIntOrNull()
+        }
+
+        if (parsedId != null && attendedStudents.any { it.id == parsedId }) {
+            Log.w("NFC_DEBUG", "студент с id=$parsedId уже в списке")
+            Toast.makeText(context, "Студент уже отмечен!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (attendedStudents.any { it.studentNFC.isNotBlank() && it.studentNFC.equals(cleanTag, ignoreCase = true) }) {
+            Log.w("NFC_DEBUG", "студент с nfc=$cleanTag уже в списке")
+            Toast.makeText(context, "Студент уже отмечен!", Toast.LENGTH_SHORT).show()
             return
         }
 
         lifecycleScope.launch {
-            Log.d("NFC_DEBUG", "Отправляю на сервер. LessonID: $lessonId, NFC: $nfcId")
-            val result = studentRepository.markAttendanceInLesson(lessonId, nfcId)
+            Log.d("NFC_DEBUG", "Отправляю на сервер. LessonID: $lessonId, NFC: $cleanTag")
+            val result = studentRepository.markAttendanceInLesson(lessonId, cleanTag)
 
             requireActivity().runOnUiThread {
                 when (result) {
                     is AttendanceResult.Success -> {
                         val student = result.student
-                        Log.d("NFC_DEBUG", "SUCCESS: ${student.studentName}!")
+                        Log.d("NFC_DEBUG", "SUCCESS: ${student.studentName} (ID: ${student.id})!")
+                        attendedStudents.removeAll { it.id == student.id }
                         attendedStudents.add(0, student)
                         adapter.setData(attendedStudents)
+                        updateLivePresentCount(attendedStudents.size)
 
                         if (statusIcon.visibility == View.VISIBLE) {
                             statusIcon.setColorFilter(Color.GREEN)
-                            statusIcon.postDelayed({ statusIcon.setColorFilter(null) }, 1000)
+                            statusIcon.postDelayed({ updateNfcStatusUI() }, 1000)
                         }
+                        Toast.makeText(context, "Отмечен: ${student.studentName}", Toast.LENGTH_SHORT).show()
                     }
                     is AttendanceResult.Error -> {
                         Log.e("NFC_DEBUG", "ERR: ${result.message}")
@@ -323,6 +415,8 @@ class LessonFragment : NFC_Tools() {
     @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n", "InflateParams")
     private fun showCreateLessonSheet() {
+        selectedGroups.clear()
+
         val bottomSheet = BottomSheetDialog(requireContext(), R.style.FullScreenBottomSheetDialog)
         val sheetView = layoutInflater.inflate(R.layout.lesson_dialog, null)
         bottomSheet.setContentView(sheetView)
@@ -339,10 +433,19 @@ class LessonFragment : NFC_Tools() {
             }
         }
 
+        val acLessonType = sheetView.findViewById<AutoCompleteTextView>(R.id.acLessonType)
         val acSubject = sheetView.findViewById<AutoCompleteTextView>(R.id.acSubject)
         val acGroupSearch = sheetView.findViewById<AutoCompleteTextView>(R.id.acGroupSearch)
         val chipGroup = sheetView.findViewById<ChipGroup>(R.id.chipGroupGroups)
         val btnStart = sheetView.findViewById<Button>(R.id.btnStartLesson)
+
+        val lessonTypes = listOf("Практика", "Лекция", "Лабораторная работа", "Факультатив")
+        acLessonType?.setAdapter(ArrayAdapter(requireContext(), R.layout.dropdown_item, lessonTypes))
+        acLessonType?.setText("Практика", false)
+        acLessonType?.setOnClickListener { acLessonType.showDropDown() }
+        acLessonType?.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) acLessonType.showDropDown()
+        }
 
         val groupAdapter = ContainsArrayAdapter(requireContext(), R.layout.dropdown_item)
         acGroupSearch.setAdapter(groupAdapter)
@@ -367,11 +470,47 @@ class LessonFragment : NFC_Tools() {
                 val allGroups = (teacherSubjects.flatMap { it.groups }.map { it.name } + localGroups).distinct().sorted()
                 groupAdapter.updateData(allGroups)
 
+                // Pre-populate with the first subject
+                val firstSubject = teacherSubjects.first()
+                acSubject.setText(firstSubject.subject_name, false)
+                val initialGroups = firstSubject.groups.map { it.name }.distinct().ifEmpty { allGroups.take(1) }
+                chipGroup.removeAllViews()
+                selectedGroups.clear()
+                initialGroups.forEach { group ->
+                    if (selectedGroups.add(group)) {
+                        val chip = Chip(requireContext()).apply {
+                            text = group
+                            isCloseIconVisible = true
+                            setOnCloseIconClickListener {
+                                chipGroup.removeView(this)
+                                selectedGroups.remove(group)
+                            }
+                        }
+                        chipGroup.addView(chip)
+                    }
+                }
+
                 acSubject.setOnItemClickListener { parent, _, position, _ ->
                     val selectedSubjectName = parent.getItemAtPosition(position).toString()
                     val selectedSubject = teacherSubjects.find { it.subject_name == selectedSubjectName }
                     val groupsForSubject = selectedSubject?.groups?.map { it.name }?.distinct() ?: emptyList()
                     
+                    chipGroup.removeAllViews()
+                    selectedGroups.clear()
+                    groupsForSubject.forEach { group ->
+                        if (selectedGroups.add(group)) {
+                            val chip = Chip(requireContext()).apply {
+                                text = group
+                                isCloseIconVisible = true
+                                setOnCloseIconClickListener {
+                                    chipGroup.removeView(this)
+                                    selectedGroups.remove(group)
+                                }
+                            }
+                            chipGroup.addView(chip)
+                        }
+                    }
+
                     if (groupsForSubject.isNotEmpty()) {
                         groupAdapter.updateData(groupsForSubject)
                     } else {
@@ -407,40 +546,28 @@ class LessonFragment : NFC_Tools() {
         }
 
         btnStart.setOnClickListener {
-            val subject = acSubject.text.toString()
+            val subject = acSubject.text.toString().trim()
+            val lessonType = acLessonType?.text?.toString()?.trim().takeUnless { it.isNullOrBlank() } ?: "Практика"
             if (subject.isEmpty() || selectedGroups.isEmpty()) {
                 Toast.makeText(context, "Заполните предмет и выберите группу", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 101)
-                return@setOnClickListener
-            }
-
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                val lat = location?.latitude ?: 0.0
-                val lon = location?.longitude ?: 0.0
-
+            val executeCreate = { lat: Double, lon: Double ->
                 val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                 val teacherId = prefs.getInt("current_student_id", 0)
 
                 lifecycleScope.launch {
                     try {
-                        @OptIn(InternalSerializationApi::class)
-                        val id = studentRepository.createLesson(subject, teacherId, selectedGroups.toList(), lat, lon)
+                        val id = studentRepository.createLesson(subject, teacherId, selectedGroups.toList(), lat, lon, lessonType)
                         if (id != null) {
                             currentLessonId = id
                             currentSubject = subject
                             saveLessonState(id, subject, selectedGroups.toList())
                             
-                            // Сохраняем координаты для NFC отметки
                             val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                             authPrefs.edit().putFloat("last_lat", lat.toFloat()).putFloat("last_lon", lon.toFloat()).apply()
 
-                            // Сбрасываем посещаемость всех студентов локально перед началом нового занятия
-                            @OptIn(InternalSerializationApi::class)
                             val students = studentRepository.getAllStudents().first()
                             students.forEach { student ->
                                 studentRepository.updateAttendance(student.id, false)
@@ -448,17 +575,36 @@ class LessonFragment : NFC_Tools() {
                             studentRepository.syncAllStudents()
                             updateUiOnLessonStart(subject, bottomSheet)
                         } else {
-                            Toast.makeText(context, "Ошибка создания", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Ошибка создания занятия", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
-                        Log.e("NFC_DEBUG", "Ошибка: ${e.message}")
+                        Log.e("NFC_DEBUG", "Ошибка создания: ${e.message}")
+                        Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
+
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+                    fusedLocationClient.lastLocation
+                        .addOnSuccessListener { location: Location? ->
+                            executeCreate(location?.latitude ?: 0.0, location?.longitude ?: 0.0)
+                        }
+                        .addOnFailureListener {
+                            executeCreate(0.0, 0.0)
+                        }
+                } catch (e: Exception) {
+                    executeCreate(0.0, 0.0)
+                }
+            } else {
+                executeCreate(0.0, 0.0)
             }
         }
         bottomSheet.show()
     }
 
+    @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n")
     private fun updateUiOnLessonStart(subject: String, dialog: BottomSheetDialog?) {
         isLessonActive = true
@@ -467,10 +613,15 @@ class LessonFragment : NFC_Tools() {
         startNfcReadingMode(infiniteMode = true)
         startAttendancePolling()
 
-        tvStatus.text = "Идет занятие: $subject"
-        tvStatus.setTextColor(Color.parseColor("#4CAF50"))
+        layoutNoLesson.visibility = View.GONE
+        layoutActiveLesson.visibility = View.VISIBLE
         btnFinishLesson.visibility = View.VISIBLE
-        fabCreateLesson.hide()
+        fabCreateLesson.visibility = View.GONE
+
+        tvActiveSubjectTitle.text = subject
+        tvActiveGroups.text = if (selectedGroups.isNotEmpty()) "Группы: ${selectedGroups.joinToString(", ")}" else "Все группы"
+        updateLivePresentCount(attendedStudents.size)
+        updateNfcStatusUI()
 
         dialog?.dismiss()
         if (dialog != null) Toast.makeText(context, "Занятие начато!", Toast.LENGTH_SHORT).show()
@@ -500,12 +651,8 @@ class LessonFragment : NFC_Tools() {
                         }
                         withContext(Dispatchers.Main) {
                             if (bitmap != null) {
-                                statusIcon.visibility = View.GONE
                                 ivQrCode.setImageBitmap(bitmap)
                                 ivQrCode.visibility = View.VISIBLE
-                                tvSubStatus.text = "Или отсканируйте QR-код"
-                            } else {
-                                Toast.makeText(context, "Ошибка генерации QR", Toast.LENGTH_SHORT).show()
                             }
                         }
                         
@@ -514,7 +661,7 @@ class LessonFragment : NFC_Tools() {
                 }
                 is AttendanceLinkResult.Error -> {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "NFC режим (${result.message})", Toast.LENGTH_SHORT).show()
+                        Log.d("NFC_DEBUG", "QR link error: ${result.message}")
                     }
                 }
             }
@@ -530,20 +677,15 @@ class LessonFragment : NFC_Tools() {
         val adapterNfc = NfcAdapter.getDefaultAdapter(requireContext())
 
         if (adapterNfc == null || !adapterNfc.isEnabled) {
-            tvStatus.text = "Не готов!"
-            tvStatus.setTextColor(Color.parseColor("#E53935"))
-            tvSubStatus.text = "Включите NFC"
+            tvStatus.text = "NFC выкл."
+            tvStatus.setTextColor(Color.parseColor("#DC2626"))
+            layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_absent)
+            statusIcon.setColorFilter(Color.parseColor("#DC2626"))
         } else {
-            tvStatus.text = "Готов!"
-            tvStatus.setTextColor(Color.parseColor("#4CAF50"))
-
-            if (ivQrCode.visibility == View.VISIBLE) {
-                tvSubStatus.text = "Или отсканируйте QR-код"
-            } else if (!isLessonActive) {
-                tvSubStatus.text = "Начните занятие"
-            } else {
-                tvSubStatus.text = "Приложите метку"
-            }
+            tvStatus.text = "NFC готов"
+            tvStatus.setTextColor(Color.parseColor("#047857"))
+            layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_ontime)
+            statusIcon.setColorFilter(Color.parseColor("#047857"))
         }
     }
 
@@ -561,6 +703,9 @@ class LessonFragment : NFC_Tools() {
     override fun onResume() {
         super.onResume()
         updateNfcStatusUI()
+        if (!isLessonActive) {
+            checkServerActiveSession()
+        }
     }
 
     override fun showNfcNotSupportedMessage() {

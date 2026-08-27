@@ -9,10 +9,8 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
-import com.example.kotlinroomdatabase.util.LocalNotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,7 +24,7 @@ class NotificationForegroundService : Service() {
     private var pollingJob: Job? = null
 
     companion object {
-        private const val CHANNEL_ID = "lms_bg_service_channel"
+        private const val CHANNEL_ID = "lms_bg_service_channel_silent"
         private const val NOTIFICATION_ID = 9999
 
         fun startService(context: Context) {
@@ -65,25 +63,37 @@ class NotificationForegroundService : Service() {
 
     private fun createServiceNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            try {
+                manager.deleteNotificationChannel("lms_bg_service_channel")
+            } catch (e: Exception) {}
+
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "LMS Background Service",
-                NotificationManager.IMPORTANCE_LOW
+                "Фоновая служба LMS",
+                NotificationManager.IMPORTANCE_MIN
             ).apply {
-                description = "Monitors 2FA and LMS notifications in background"
+                description = "Фоновая синхронизация данных"
                 setShowBadge(false)
+                enableVibration(false)
+                enableLights(false)
+                setSound(null, null)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_SECRET
             }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }
 
     private fun buildForegroundNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setContentTitle("LMS Служба уведомлений")
-        .setContentText("Мониторинг 2FA и системных сообщений...")
+        .setContentTitle("LMS")
+        .setContentText("Фоновая синхронизация активна")
         .setSmallIcon(android.R.drawable.ic_dialog_info)
-        .setPriority(NotificationCompat.PRIORITY_LOW)
+        .setPriority(NotificationCompat.PRIORITY_MIN)
+        .setCategory(NotificationCompat.CATEGORY_SERVICE)
         .setOngoing(true)
+        .setSilent(true)
+        .setShowWhen(false)
+        .setVisibility(NotificationCompat.VISIBILITY_SECRET)
         .build()
 
     private fun startPolling() {

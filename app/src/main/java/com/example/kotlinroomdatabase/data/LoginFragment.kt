@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.text.InputType
@@ -112,6 +113,11 @@ class LoginFragment : Fragment() {
             updateUI()
         }
 
+        tvTitle.setOnLongClickListener {
+            com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(requireContext())
+            true
+        }
+
         btnAction.setOnClickListener {
             handleAction()
         }
@@ -206,11 +212,8 @@ class LoginFragment : Fragment() {
                 putString("user_role", student.role)
                 putString("student_name", student.studentName)
                 putString("student_group", student.studentGroup)
-                if (student.role == "student" && token.isNotEmpty()) {
-                    putString("nfc_payload", token)
-                } else {
-                    putString("nfc_payload", student.studentNFC)
-                }
+                val tagForHce = if (student.role == "student") "STUDENT:${student.id}:${student.studentName}" else student.studentNFC
+                putString("nfc_payload", tagForHce)
                 apply()
             }
 
@@ -223,6 +226,15 @@ class LoginFragment : Fragment() {
                 if (student.role == "teacher") {
                     lifecycleScope.launch(Dispatchers.IO) {
                         studentRepository.syncAllStudents()
+                        try {
+                            val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                            val schedRes = studentRepository.getScheduleForDay(todayStr)
+                            if (schedRes is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
+                                com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(requireContext().applicationContext, schedRes.data)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("LoginFragment", "Error scheduling reminders on login", e)
+                        }
                         withContext(Dispatchers.Main) {
                             mainActivity?.updateNavHeader()
                             findNavController().navigate(R.id.action_loginFragment_to_lessonFragment, null, navOptions {
@@ -233,6 +245,15 @@ class LoginFragment : Fragment() {
                 } else {
                     lifecycleScope.launch(Dispatchers.IO) {
                         studentRepository.syncAllStudents()
+                        try {
+                            val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                            val schedRes = studentRepository.getScheduleForDay(todayStr)
+                            if (schedRes is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
+                                com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(requireContext().applicationContext, schedRes.data)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("LoginFragment", "Error scheduling reminders on login", e)
+                        }
                         withContext(Dispatchers.Main) {
                             mainActivity?.updateNavHeader()
                             findNavController().navigate(R.id.userHomeFragment, null, navOptions {
@@ -275,13 +296,11 @@ class LoginFragment : Fragment() {
     @OptIn(InternalSerializationApi::class)
     private fun enableHceForStudent(student: Student) {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val token = authPrefs.getString("auth_token", "") ?: ""
-        val tagForHce = if (student.role == "student" && token.isNotEmpty()) token else student.studentNFC
+        val tagForHce = if (student.role == "student") "STUDENT:${student.id}:${student.studentName}" else student.studentNFC
 
         if (!tagForHce.isNullOrBlank()) {
             prefs.edit().putString("nfc_payload", tagForHce).apply()
-            android.util.Log.d("DEBUG_NFC", "Saved tag: $tagForHce")
+            android.util.Log.d("DEBUG_NFC", "Saved HCE tag: $tagForHce")
         } else {
             android.util.Log.e("DEBUG_NFC", "Server sent EMPTY tag!")
         }

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
@@ -13,6 +15,7 @@ import com.example.kotlinroomdatabase.databinding.ActivityMainBinding
 import com.example.kotlinroomdatabase.repository.StudentRepository
 import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import com.example.kotlinroomdatabase.util.JwtUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,19 +31,8 @@ class MainActivity : AppCompatActivity() {
     private val logoutReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: android.content.Intent?) {
             if (intent?.action == "com.example.kotlinroomdatabase.LOGOUT") {
-                lifecycleScope.launch(Dispatchers.Main) {
-                    val prefsLogout = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                    prefsLogout.edit().clear().apply()
-                    val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                    authPrefs.edit().remove("avatar_url").apply()
-                    try {
-                        val navController = (supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment).navController
-                        navController.navigate(R.id.loginFragment, null, navOptions {
-                            popUpTo(R.id.my_nav) { inclusive = true }
-                        })
-                    } catch (e: Exception) { Log.e("LOGOUT", e.toString()) }
-                    binding.drawerLayout.closeDrawers()
-                }
+                val reason = intent.getStringExtra("reason") ?: "Сессия завершена"
+                performLogout(reason)
             }
         }
     }
@@ -53,11 +45,74 @@ class MainActivity : AppCompatActivity() {
         } else {
             registerReceiver(logoutReceiver, filter)
         }
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+            .registerReceiver(logoutReceiver, filter)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .unregisterReceiver(logoutReceiver)
+        } catch (e: Exception) {}
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(logoutReceiver)
+        try {
+            unregisterReceiver(logoutReceiver)
+        } catch (e: Exception) {}
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkSessionValidityOnResume()
+    }
+
+    private fun checkSessionValidityOnResume() {
+        try {
+            val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as? NavHostFragment
+            val navController = navHostFragment?.navController
+            val currentDest = navController?.currentDestination?.id
+
+            if (currentDest != null && currentDest != R.id.loginFragment) {
+                if (!JwtUtils.isUserSessionValid(this)) {
+                    performLogout("Срок действия сессии истёк. Пожалуйста, выполните вход повторно.")
+                } else {
+                    val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    val token = authPrefs.getString("auth_token", null)
+                    if (JwtUtils.needsRefresh(token)) {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity)
+                            val repo = StudentRepositoryHTTPS(this@MainActivity, db.studentDao())
+                            repo.refreshSessionToken()
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "checkSessionValidityOnResume error", e)
+        }
+    }
+
+    fun performLogout(message: String? = null) {
+        JwtUtils.clearAllSessionData(this)
+        lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as? NavHostFragment
+                val navController = navHostFragment?.navController
+                navController?.navigate(R.id.loginFragment, null, navOptions {
+                    popUpTo(R.id.my_nav) { inclusive = true }
+                })
+                binding.drawerLayout.closeDrawers()
+                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                if (!message.isNullOrBlank()) {
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "performLogout error", e)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +141,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Handle window insets for edge-to-edge / status bar / navigation bar
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.mainContent) { _, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            binding.appBarLayout.setPadding(0, systemBars.top, 0, 0)
+            findViewById<android.view.View>(R.id.fragment)?.setPadding(0, 0, 0, systemBars.bottom)
+            insets
+        }
+
         studentRepository = RepositoryZMQ.getStudentRepository(this)
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment
@@ -97,6 +160,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.listFragment,
                 R.id.lessonFragment,
                 R.id.profileFragment,
+                R.id.scheduleFragment,
                 R.id.historyFragment,
                 R.id.settingsFragment,
                 R.id.notificationsFragment,
@@ -108,20 +172,33 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
 
-        val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val userRole = prefs.getString("user_role", "student")
-        val studentId = prefs.getInt("current_student_id", -1)
+        val isSessionValid = JwtUtils.isUserSessionValid(this)
 
-        updateUIForRole()
+        if (isSessionValid) {
+            binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+            val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+            val userRole = prefs.getString("user_role", "student")
+            val studentId = prefs.getInt("current_student_id", -1)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            studentRepository.testConnection()
-            if (studentId != -1) {
-                Log.d("MainActivity", "Starting auto-sync on launch for studentId=$studentId")
-                studentRepository.syncAllStudents()
+            updateUIForRole()
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                studentRepository.testConnection()
+                if (studentId != -1) {
+                    Log.d("MainActivity", "Starting auto-sync on launch for studentId=$studentId")
+                    studentRepository.syncAllStudents()
+                }
+                try {
+                    val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                    val schedRes = studentRepository.getScheduleForDay(todayStr)
+                    if (schedRes is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
+                        com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(this@MainActivity, schedRes.data)
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error scheduling reminders on launch", e)
+                }
             }
-        }
-        if (studentId != -1) {
+
             val currentDest = navController.currentDestination?.id
             if (currentDest == R.id.loginFragment) {
                 val actionId = if (userRole == "admin" || userRole == "teacher") {
@@ -129,28 +206,21 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     R.id.action_login_to_userHome
                 }
-                // Очищаем историю переходов, чтобы нельзя было вернуться к логину
                 navController.navigate(actionId, null, navOptions {
                     popUpTo(R.id.my_nav) { inclusive = true }
                 })
             }
             checkUserAgreement()
             registerDeviceToken()
+        } else {
+            JwtUtils.clearAllSessionData(this)
+            binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
         }
 
         binding.navView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.logout -> {
-                    val prefsLogout = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                    prefsLogout.edit().clear().apply()
-                    val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                    authPrefs.edit().remove("avatar_url").apply()
-
-                    // Очищаем стек при выходе
-                    navController.navigate(R.id.loginFragment, null, navOptions {
-                        popUpTo(R.id.my_nav) { inclusive = true }
-                    })
-                    binding.drawerLayout.closeDrawers()
+                    performLogout("Вы вышли из учетной записи")
                     true
                 }
                 else -> {
@@ -170,16 +240,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment
-        val navController = navHostFragment.navController
+        val navController = findNavController(R.id.fragment)
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
     fun updateUIForRole() {
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val userRole = prefs.getString("user_role", "student")
-        
+        binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+
         val menu = binding.navView.menu
+        menu.findItem(R.id.scheduleFragment)?.isVisible = true
         if (userRole == "teacher" || userRole == "admin") {
             menu.findItem(R.id.userHomeFragment)?.isVisible = false
             menu.findItem(R.id.historyFragment)?.isVisible = true
@@ -195,7 +266,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updateNavHeader() {
-        val headerView = binding.navView.getHeaderView(0)
+        val headerView = binding.navView.getHeaderView(0) ?: return
         val tvName = headerView.findViewById<android.widget.TextView>(R.id.nav_header_name)
         val tvEmail = headerView.findViewById<android.widget.TextView>(R.id.nav_header_email)
         val ivAvatar = headerView.findViewById<android.widget.ImageView>(R.id.nav_header_avatar)
@@ -207,10 +278,32 @@ class MainActivity : AppCompatActivity() {
             "admin" -> "Администратор"
             else -> "Студент"
         }
-        val name = prefs.getString("student_name", localizedRole)
-        
+        val name = prefs.getString("student_name", localizedRole) ?: localizedRole
         tvName.text = name
-        tvEmail.text = if (userRole == "teacher") localizedRole else prefs.getString("student_group", "Студент")
+
+        tvName.setOnLongClickListener {
+            com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(this) {
+                updateNavHeader()
+            }
+            true
+        }
+        tvEmail.setOnLongClickListener {
+            com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(this) {
+                updateNavHeader()
+            }
+            true
+        }
+        ivAvatar.setOnLongClickListener {
+            com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(this) {
+                updateNavHeader()
+            }
+            true
+        }
+
+        val savedEmail = prefs.getString("user_email", null)?.takeIf { it.isNotBlank() }
+            ?: getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("user_email", null)?.takeIf { it.isNotBlank() }
+            ?: if (userRole == "teacher") "teacher@sibsutis.ru" else "student@sibsutis.ru"
+        tvEmail.text = savedEmail
 
         val avatarPath = prefs.getString("avatar_path", null)
         val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
@@ -248,15 +341,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val finalUrl = when {
-                    url.startsWith("http://localhost:9001") -> url.replace("http://localhost:9001", "https://127.0.0.1:9001")
-                    url.startsWith("http://109.172.114.128:9000") -> url.replace("http://109.172.114.128:9000", "https://127.0.0.1:9001")
-                    url.startsWith("http://109.172.114.128:9001") -> url.replace("http://109.172.114.128:9001", "https://127.0.0.1:9001")
-                    url.startsWith("https://192.168.0.56:9001") -> url.replace("https://192.168.0.56:9001", "https://127.0.0.1:9001")
-                    url.startsWith("https://lms.signal.qlabs.pro:9001") -> url.replace("https://lms.signal.qlabs.pro:9001", "https://127.0.0.1:9001")
-                    url.startsWith("https://") || url.startsWith("http://") -> url
-                    else -> "https://127.0.0.1:9001${if (url.startsWith("/")) "" else "/"}$url"
-                }
+                val finalUrl = com.example.kotlinroomdatabase.config.ServerConfig.resolveMediaUrl(this@MainActivity, url)
 
                 Log.d("MainActivity", "Loading avatar from: $finalUrl")
                 val repo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
@@ -265,7 +350,7 @@ class MainActivity : AppCompatActivity() {
                 val response = client.newCall(request).execute()
                 
                 if (response.isSuccessful) {
-                    val bytes = response.body.bytes()
+                    val bytes = response.body?.bytes() ?: return@launch
                     val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     withContext(Dispatchers.Main) {
                         imageView.setImageBitmap(bitmap)

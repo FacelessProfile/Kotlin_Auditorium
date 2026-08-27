@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="10dp"
+    android:paddingHorizontal="12dp"
+    android:gravity="center_vertical"
+    android:layout_marginBottom="4dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Assignment Info -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="12dp">
+
+        <TextView
+            android:id="@+id/tvInnerGradeTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Лабораторная работа №1"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_main"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvInnerGradeType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Лабораторная"
+                android:textSize="11sp"
+                android:textColor="@color/badge_type_text"
+                android:background="@drawable/bg_badge_type"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"/>
+
+            <TextView
+                android:id="@+id/tvInnerGradeDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="11sp"
+                android:textColor="@color/text_muted"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Score Badge (Pill) -->
+    <TextView
+        android:id="@+id/tvInnerGradeScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="10 / 10"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="@color/uni_blue_primary"
+        android:background="@drawable/bg_badge_type"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp"/>
+
+</LinearLayout>

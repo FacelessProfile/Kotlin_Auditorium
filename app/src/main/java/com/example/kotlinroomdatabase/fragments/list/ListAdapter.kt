@@ -42,49 +42,51 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
     @OptIn(InternalSerializationApi::class)
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-
         val student = studentList[position]
         val tvId = holder.itemView.findViewById<TextView>(R.id.id_txt)
         val tvFio = holder.itemView.findViewById<TextView>(R.id.FIO_txt)
+        val tvGroup = holder.itemView.findViewById<TextView?>(R.id.tvStudentGroupRow)
+        val tvAvatar = holder.itemView.findViewById<TextView?>(R.id.tvAvatarInitials)
         val tvAttendance = holder.itemView.findViewById<TextView>(R.id.attendance_txt)
-        val fullName = student.studentName.split(" ")
-        val fio = if (fullName.size >= 3) {
+        val layoutBadge = holder.itemView.findViewById<View?>(R.id.layoutBadgeStatus)
 
-            "${fullName[0]} ${fullName[1]} ${fullName[2][0]}."
-        } else {
-            student.studentName
+        val nameParts = student.studentName.trim().split("\\s+".toRegex())
+        val initials = when {
+            nameParts.size >= 2 -> "${nameParts[0].take(1)}${nameParts[1].take(1)}".uppercase()
+            nameParts.isNotEmpty() -> nameParts[0].take(2).uppercase()
+            else -> "С"
         }
-        tvId.text = (position + 1).toString()
-        tvFio.text = fio
-        tvAttendance.text = if (student.attendance) "+" else "-"
-        val context = holder.itemView.context
-        val textColor = if (isLessonActive) {
-            context.getColorFromAttr(android.R.attr.textColorPrimary)
-        } else {
-            context.getColorFromAttr(android.R.attr.textColorSecondary)
-        }
-        tvId.setTextColor(textColor)
-        tvFio.setTextColor(textColor)
-        tvAttendance.setTextColor(textColor)
+        tvAvatar?.text = initials
 
-        val rowLayout = holder.itemView.findViewById<ConstraintLayout>(R.id.rowLayout)
+        tvId?.text = (position + 1).toString()
+        tvFio.text = student.studentName
+        tvGroup?.text = "Группа: ${student.studentGroup.ifBlank { "—" }}"
+
+        if (student.attendance) {
+            tvAttendance.text = "✓ На паре"
+            tvAttendance.setTextColor(Color.parseColor("#047857"))
+            layoutBadge?.setBackgroundResource(R.drawable.bg_badge_ontime)
+        } else {
+            tvAttendance.text = "— Не отмечен"
+            tvAttendance.setTextColor(Color.parseColor("#B91C1C"))
+            layoutBadge?.setBackgroundResource(R.drawable.bg_badge_absent)
+        }
+
+        val rowCard = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView?>(R.id.rowLayout)
         if (student.isFraud) {
-            rowLayout.setBackgroundColor(Color.RED)
-            tvId.setTextColor(Color.WHITE)
-            tvFio.setTextColor(Color.WHITE)
-            tvAttendance.setTextColor(Color.WHITE)
+            rowCard?.setCardBackgroundColor(Color.parseColor("#FEE2E2"))
+            tvAttendance.text = "⚠ Подозрительно"
+            tvAttendance.setTextColor(Color.parseColor("#DC2626"))
         } else {
-            rowLayout.setBackgroundColor(Color.TRANSPARENT)
+            rowCard?.setCardBackgroundColor(holder.itemView.context.getColorFromAttr(com.google.android.material.R.attr.colorSurface))
         }
 
         if (isLessonActive) {
-            rowLayout.setOnClickListener(null)
-            rowLayout.isClickable = false
-            rowLayout.isFocusable = false
+            rowCard?.setOnClickListener(null)
+            rowCard?.isClickable = false
         } else {
-            rowLayout.isClickable = true
-            rowLayout.isFocusable = true
-            rowLayout.setOnClickListener {
+            rowCard?.isClickable = true
+            rowCard?.setOnClickListener {
                 onItemClick?.invoke(student)
             }
         }

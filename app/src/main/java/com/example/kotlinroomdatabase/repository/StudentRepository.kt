@@ -187,7 +187,10 @@ class StudentRepository(
         lat: Double,
         lon: Double,
         inviteToken: String?,
-        totpCode: String?
+        totpCode: String?,
+        ts: Long?,
+        nonce: String?,
+        biometricSignature: String?
     ): AttendanceResult {
         return try {
             val jsonRequest = JSONObject().apply {
@@ -198,6 +201,9 @@ class StudentRepository(
                     put("lat", lat)
                     put("lon", lon)
                     if (inviteToken != null) put("invite_token", inviteToken)
+                    if (ts != null && ts > 0) put("ts", ts)
+                    if (nonce != null) put("nonce", nonce)
+                    if (biometricSignature != null) put("biometric_signature", biometricSignature)
                 })
             }
             val response = zeroMQSender?.sendData(jsonRequest.toString()) ?: return AttendanceResult.Error("Сервер недоступен")
@@ -395,7 +401,14 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
-    override suspend fun createLesson(subject: String, teacherId: Int, groups: List<String>, lat: Double, lon: Double): Int? {
+    override suspend fun createLesson(
+        subject: String,
+        teacherId: Int,
+        groups: List<String>,
+        lat: Double,
+        lon: Double,
+        lessonType: String
+    ): Int? {
         return try {
             val newLesson = Lesson(
                 subject = subject,
@@ -409,6 +422,7 @@ class StudentRepository(
                     put("subject", subject)
                     put("teacher_id", teacherId)
                     put("groups", JSONArray(groups))
+                    put("lesson_type", lessonType)
                     put("local_id", localId)
                     put("lat", lat)
                     put("lon", lon)
@@ -471,6 +485,7 @@ class StudentRepository(
     override suspend fun getSessionMarkedCount(lessonId: Int): GenericResult<Int> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getSessionTimer(lessonId: Int): GenericResult<Int> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getStudentScheduleDay(date: String?): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getScheduleForDay(date: String): GenericResult<com.example.kotlinroomdatabase.model.DayScheduleResult> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun updateUserEmail(email: String): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
 
     override suspend fun getUserAgreementCurrent(): GenericResult<com.example.kotlinroomdatabase.model.UserAgreementStatus> = GenericResult.Error("Not supported in ZMQ")
@@ -487,4 +502,7 @@ class StudentRepository(
     override suspend fun downloadPerformanceReport(format: String, semesterId: Int?, outputFile: java.io.File): GenericResult<java.io.File> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun deleteTeacherGrade(gradeId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun deleteTeacherGradeItem(itemId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getActiveStudentLesson(): GenericResult<com.example.kotlinroomdatabase.model.ActiveStudentLessonInfo> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getTeacherActiveSession(): GenericResult<com.example.kotlinroomdatabase.model.ActiveSessionInfo> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun refreshSessionToken(): Boolean = false
 }
