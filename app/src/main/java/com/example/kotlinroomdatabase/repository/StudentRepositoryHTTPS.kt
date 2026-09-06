@@ -1567,13 +1567,21 @@ class StudentRepositoryHTTPS(
     @OptIn(InternalSerializationApi::class)
     override suspend fun registerByInvite(inviteCode: String, login: String, passwordRaw: String): LoginResult = withContext(Dispatchers.IO) {
         try {
-            val jsonRequest = JSONObject().apply { put("invite_code", inviteCode); put("login", login); put("password", passwordRaw) }
+            val jsonRequest = JSONObject().apply {
+                put("invite_code", inviteCode.trim())
+                put("login", login.trim())
+                put("password", passwordRaw)
+            }
             val request = Request.Builder().url("$BASE_URL/register/by-invite")
                 .post(jsonRequest.toString().toRequestBody(JSON_TYPE)).build()
             val response = client.newCall(request).execute()
             val responseStr = response.body?.string() ?: ""
 
-            if (!response.isSuccessful) return@withContext LoginResult.Error(JSONObject(responseStr).optString("error", "Registration Error"))
+            if (!response.isSuccessful) {
+                val errObj = try { JSONObject(responseStr) } catch (_: Exception) { null }
+                val rawErr = errObj?.optString("error") ?: "Registration Error"
+                return@withContext LoginResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(rawErr))
+            }
             
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
@@ -1581,20 +1589,37 @@ class StudentRepositoryHTTPS(
                 val token = result.optString("token")
                 saveToken(token)
 
-                val userIdStr = result.optString("user_id", "0")
+                val userIdStr = result.optString("user_id", result.optString("user_ID", "0"))
+                val displayName = result.optString("student_name").takeIf { it.isNotBlank() }
+                    ?: result.optString("teacher_name").takeIf { it.isNotBlank() }
+                    ?: result.optString("name").takeIf { it.isNotBlank() }
+                    ?: result.optString("login", login)
+                val groupName = result.optString("group_name").takeIf { it.isNotBlank() }
+                    ?: result.optString("group", "")
+                val role = result.optString("role", "student")
+
+                sharedPrefs.edit().apply {
+                    putString("student_name", displayName)
+                    putString("user_role", role)
+                    putString("group_name", groupName)
+                }.apply()
+
                 val s = Student(
                     id = userIdStr.hashCode(),
-                    studentName = result.optString("login", "Unknown"),
-                    studentGroup = result.optString("group_name", ""),
-                    studentNFC = "", attendance = false,
-                    role = result.optString("role", "student")
+                    studentName = displayName,
+                    studentGroup = groupName,
+                    studentNFC = "",
+                    attendance = false,
+                    role = role
                 )
                 studentDao.insertStudent(s)
                 LoginResult.Success(s)
             } else {
-                LoginResult.Error("Registration Failed")
+                LoginResult.Error("Не удалось зарегистрироваться")
             }
-        } catch (e: Exception) { LoginResult.Error("Network error") }
+        } catch (e: Exception) {
+            LoginResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
     }
 
     override suspend fun getStaffOverview(): GenericResult<String> = withContext(Dispatchers.IO) {
@@ -2301,6 +2326,11 @@ class StudentRepositoryHTTPS(
                         nfc_tag = res.optString("nfc_tag", ""),
                         total_cheat_attempts = res.optInt("total_cheat_attempts", 0)
                     )
+                    if (profile.avatar.isNotBlank()) {
+                        sharedPrefs.edit().putString("avatar_url", profile.avatar).apply()
+                    } else {
+                        sharedPrefs.edit().remove("avatar_url").apply()
+                    }
                     GenericResult.Success(profile)
                 } else {
                     GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(jsonObj.optString("error")))

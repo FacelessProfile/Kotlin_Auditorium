@@ -402,17 +402,22 @@ class MainActivity : AppCompatActivity() {
         val avatarPath = prefs.getString("avatar_path", null)
         val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val avatarUrl = authPrefs.getString("avatar_url", null)
+        val syncedUrl = prefs.getString("synced_avatar_url", null)
 
-        Log.d("MainActivity", "Updating header: path=$avatarPath, url=$avatarUrl")
+        Log.d("MainActivity", "Updating header: path=$avatarPath, url=$avatarUrl, synced=$syncedUrl")
 
         val defaultNavPad = (12 * resources.displayMetrics.density).toInt()
         if (avatarPath != null) {
             val file = java.io.File(avatarPath)
-            if (file.exists()) {
-                ivAvatar.setPadding(0, 0, 0, 0)
-                ivAvatar.setImageURI(null)
-                ivAvatar.setImageURI(android.net.Uri.fromFile(file))
-                ivAvatar.imageTintList = null
+            if (file.exists() && (avatarUrl == null || avatarUrl == syncedUrl)) {
+                val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
+                if (bitmap != null) {
+                    ivAvatar.setPadding(0, 0, 0, 0)
+                    ivAvatar.setImageBitmap(bitmap)
+                    ivAvatar.imageTintList = null
+                } else {
+                    loadAvatarFromUrl(avatarUrl, ivAvatar)
+                }
             } else {
                 loadAvatarFromUrl(avatarUrl, ivAvatar)
             }
@@ -437,13 +442,30 @@ class MainActivity : AppCompatActivity() {
                 Log.d("MainActivity", "Loading avatar from: $finalUrl")
                 val repo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
                 val client = repo.getUnsafeOkHttpClient()
-                val request = okhttp3.Request.Builder().url(finalUrl).build()
-                val response = client.newCall(request).execute()
+                val token = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("auth_token", "") ?: ""
+                val requestBuilder = okhttp3.Request.Builder()
+                    .url(finalUrl)
+                    .header("Cache-Control", "no-cache")
+                if (token.isNotBlank()) {
+                    requestBuilder.header("Authorization", "Bearer $token")
+                }
+                val response = client.newCall(requestBuilder.build()).execute()
                 
                 if (response.isSuccessful) {
                     val bytes = response.body?.bytes() ?: return@launch
+                    val file = java.io.File(filesDir, "current_avatar.jpg")
+                    try {
+                        java.io.FileOutputStream(file).use { it.write(bytes) }
+                        getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("avatar_path", file.absolutePath)
+                            .putString("synced_avatar_url", url)
+                            .apply()
+                    } catch (_: Exception) {}
+
                     val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     withContext(Dispatchers.Main) {
+                        imageView.setPadding(0, 0, 0, 0)
                         imageView.setImageBitmap(bitmap)
                         imageView.imageTintList = null
                         Log.d("MainActivity", "Avatar loaded successfully")

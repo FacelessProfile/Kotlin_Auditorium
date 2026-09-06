@@ -39,8 +39,16 @@ object ApiErrorMapper {
         return when {
             lower.contains("invalid credentials") || lower.contains("invalid username or password") || lower.contains("user not found") || lower.contains("wrong password") ->
                 "Неверный логин или пароль"
-            lower.contains("already exists") || lower.contains("user exists") ->
-                "Пользователь с таким именем уже существует"
+            lower.contains("invalid or used invite_code") || lower.contains("used invite_code") || lower.contains("invalid invite") ->
+                "Неверный или уже использованный инвайт-код"
+            lower.contains("already registered") || lower.contains("уже зарегистрирован") ->
+                "Профиль уже зарегистрирован. Для доступа используйте восстановление пароля"
+            lower.contains("invite_code is required") || lower.contains("invite code required") ->
+                "Пожалуйста, введите инвайт-код"
+            lower.contains("already exists") || lower.contains("user exists") || lower.contains("user exist") ->
+                "Пользователь с таким логином уже существует"
+            lower.contains("at least 8 characters") || lower.contains("password must be at least") ->
+                "Пароль должен содержать минимум 8 символов"
             lower.contains("failed to connect") || lower.contains("unable to resolve host") || lower.contains("connection refused") ->
                 "Нет подключения к серверу. Проверьте интернет"
             lower.contains("timeout") ->

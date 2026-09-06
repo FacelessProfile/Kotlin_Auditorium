@@ -137,9 +137,9 @@
                         android:textSize="15sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Group Input (Registration only) -->
+                <!-- Invite Code Input (Registration only) -->
                 <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/groupLayout"
+                    android:id="@+id/inviteCodeLayout"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -151,14 +151,14 @@
                     app:boxCornerRadiusTopStart="10dp"
                     app:boxStrokeColor="@color/sib_blue_primary"
                     app:hintTextColor="@color/sib_blue_primary"
-                    app:startIconDrawable="@drawable/ic_groups_badge"
+                    app:startIconDrawable="@drawable/ic_security_badge"
                     app:startIconTint="?attr/sib_text_secondary">
 
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etGroup"
+                        android:id="@+id/etInviteCode"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Группа (напр., ИКС-123)"
+                        android:hint="Инвайт-код"
                         android:imeOptions="actionNext"
                         android:inputType="textCapCharacters"
                         android:textColor="?attr/sib_text_primary"
@@ -225,6 +225,37 @@
                         android:textSize="15sp"
                         android:typeface="sans" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password Warning (Caps Lock / Russian Layout) -->
+                <LinearLayout
+                    android:id="@+id/layoutPasswordWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:background="@drawable/bg_badge_late"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Предупреждение"
+                        android:src="@drawable/ic_security_badge"
+                        app:tint="@color/sib_warning" />
+
+                    <TextView
+                        android:id="@+id/tvPasswordWarning"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/sib_warning"
+                        android:textSize="12sp"
+                        android:text="Внимание: в пароле обнаружены русские буквы" />
+                </LinearLayout>
 
                 <!-- Action CTA Button -->
                 <androidx.appcompat.widget.AppCompatButton

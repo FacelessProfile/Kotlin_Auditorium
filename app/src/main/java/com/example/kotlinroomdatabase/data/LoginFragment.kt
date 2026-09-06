@@ -89,16 +89,33 @@ class LoginFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 hideError()
+                checkPasswordLayout()
             }
             override fun afterTextChanged(s: Editable?) {}
         }
 
         binding.etName.addTextChangedListener(textWatcher)
         binding.etPassword.addTextChangedListener(textWatcher)
-        binding.etGroup.addTextChangedListener(textWatcher)
+        binding.etInviteCode.addTextChangedListener(textWatcher)
         binding.etPasswordConfirm.addTextChangedListener(textWatcher)
 
         updateUI()
+    }
+
+    private fun checkPasswordLayout() {
+        if (_binding == null) return
+        val passText = binding.etPassword.text?.toString() ?: ""
+        val confirmText = if (!isLoginMode) binding.etPasswordConfirm.text?.toString() ?: "" else ""
+
+        val hasCyrillic = passText.any { it in 'а'..'я' || it in 'А'..'Я' || it == 'ё' || it == 'Ё' } ||
+                confirmText.any { it in 'а'..'я' || it in 'А'..'Я' || it == 'ё' || it == 'Ё' }
+
+        if (hasCyrillic) {
+            binding.layoutPasswordWarning.visibility = View.VISIBLE
+            binding.tvPasswordWarning.text = "Внимание: в пароле обнаружены русские буквы (проверьте раскладку)"
+        } else {
+            binding.layoutPasswordWarning.visibility = View.GONE
+        }
     }
 
     override fun onResume() {
@@ -123,15 +140,18 @@ class LoginFragment : Fragment() {
             binding.tvTitle.text = "Вход в систему"
             binding.btnAction.text = "Войти"
             binding.tvToggleMode.text = "Нет аккаунта? Зарегистрироваться"
-            binding.groupLayout.isVisible = false
+            binding.nameLayout.hint = "Логин или email"
+            binding.inviteCodeLayout.isVisible = false
             binding.passwordConfirmLayout.isVisible = false
         } else {
-            binding.tvTitle.text = "Регистрация"
-            binding.btnAction.text = "Создать аккаунт"
+            binding.tvTitle.text = "Регистрация по инвайт-коду"
+            binding.btnAction.text = "Зарегистрироваться"
             binding.tvToggleMode.text = "Уже есть аккаунт? Войти"
-            binding.groupLayout.isVisible = true
+            binding.nameLayout.hint = "Придумайте логин"
+            binding.inviteCodeLayout.isVisible = true
             binding.passwordConfirmLayout.isVisible = true
         }
+        checkPasswordLayout()
     }
 
     private fun showError(message: String) {
@@ -149,7 +169,7 @@ class LoginFragment : Fragment() {
         binding.btnAction.alpha = if (loading) 0.7f else 1.0f
         binding.etName.isEnabled = !loading
         binding.etPassword.isEnabled = !loading
-        binding.etGroup.isEnabled = !loading
+        binding.etInviteCode.isEnabled = !loading
         binding.etPasswordConfirm.isEnabled = !loading
     }
 
@@ -179,17 +199,23 @@ class LoginFragment : Fragment() {
                 }
             }
         } else {
-            val group = binding.etGroup.text.toString().trim()
+            val inviteCode = binding.etInviteCode.text.toString().trim()
             val confirm = binding.etPasswordConfirm.text.toString().trim()
 
-            if (name.isBlank() || group.isBlank() || pass.isBlank()) {
-                showError("Пожалуйста, заполните все обязательные поля")
+            if (inviteCode.isBlank()) {
+                showError("Пожалуйста, введите инвайт-код")
                 return
             }
-
-            val passwordPattern = "^(?=.*[0-9]).{6,}$".toRegex()
-            if (!passwordPattern.matches(pass)) {
-                showError("Пароль должен содержать от 6 символов и минимум 1 цифру")
+            if (name.isBlank()) {
+                showError("Пожалуйста, придумайте логин")
+                return
+            }
+            if (pass.isBlank()) {
+                showError("Пожалуйста, введите пароль")
+                return
+            }
+            if (pass.length < 8) {
+                showError("Пароль должен содержать минимум 8 символов")
                 return
             }
             if (pass != confirm) {
@@ -199,7 +225,7 @@ class LoginFragment : Fragment() {
 
             setLoading(true)
             lifecycleScope.launch(Dispatchers.IO) {
-                val result = studentRepository.register(name, group, pass)
+                val result = studentRepository.registerByInvite(inviteCode, name, pass)
                 withContext(Dispatchers.Main) {
                     if (_binding == null) return@withContext
                     setLoading(false)

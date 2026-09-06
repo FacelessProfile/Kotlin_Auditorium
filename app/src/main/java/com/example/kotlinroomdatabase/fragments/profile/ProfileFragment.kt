@@ -1,6 +1,7 @@
 package com.example.kotlinroomdatabase.fragments.profile
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -63,7 +64,7 @@ class ProfileFragment : Fragment() {
         updateServerHostText()
 
         binding.swipeRefreshProfile.setOnRefreshListener {
-            loadFullProfile()
+            loadFullProfile(isSwipe = true)
         }
 
         binding.profileAvatar.setOnClickListener {
@@ -137,7 +138,7 @@ class ProfileFragment : Fragment() {
         loadAvatar()
     }
 
-    private fun loadFullProfile() {
+    private fun loadFullProfile(isSwipe: Boolean = false) {
         binding.swipeRefreshProfile.isRefreshing = true
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
@@ -151,6 +152,9 @@ class ProfileFragment : Fragment() {
                 if (result is GenericResult.Success) {
                     val profile = result.data
                     cachedProfile = profile
+
+                    // Immediately sync avatar from server if changed or on refresh
+                    syncAvatarFromServer(profile.avatar, forceRefresh = isSwipe)
 
                     binding.profileName.text = RoleUtils.formatShortName(profile.effectiveDisplayName)
                     binding.profileRoleBadge.text = RoleUtils.getRoleLabel(profile.effectiveRole)
@@ -307,19 +311,102 @@ class ProfileFragment : Fragment() {
     private fun loadAvatar() {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val avatarPath = prefs.getString("avatar_path", null)
+        val syncedUrl = prefs.getString("synced_avatar_url", null)
         val avatarUrl = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("avatar_url", null)
 
         if (avatarPath != null) {
             val file = File(avatarPath)
-            if (file.exists()) {
+            if (file.exists() && (avatarUrl == null || avatarUrl == syncedUrl)) {
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                if (bitmap != null) {
+                    binding.profileAvatar.setPadding(0, 0, 0, 0)
+                    binding.profileAvatar.setImageBitmap(bitmap)
+                    binding.profileAvatar.imageTintList = null
+                    return
+                }
+            }
+        }
+        loadAvatarFromUrl(avatarUrl)
+    }
+
+    private fun syncAvatarFromServer(avatarUrlFromBackend: String?, forceRefresh: Boolean = false) {
+        val ctx = context ?: return
+        val authPrefs = ctx.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val studentPrefs = ctx.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val localFile = File(ctx.filesDir, "current_avatar.jpg")
+
+        if (avatarUrlFromBackend.isNullOrBlank() || avatarUrlFromBackend == "null") {
+            // User has no avatar on server (e.g. removed on web)
+            if (localFile.exists()) {
+                try { localFile.delete() } catch (_: Exception) {}
+            }
+            studentPrefs.edit().remove("avatar_path").remove("synced_avatar_url").apply()
+            authPrefs.edit().remove("avatar_url").apply()
+            val defaultPadding = (20 * resources.displayMetrics.density).toInt()
+            binding.profileAvatar.setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
+            binding.profileAvatar.setImageResource(R.drawable.ic_person)
+            binding.profileAvatar.imageTintList = ContextCompat.getColorStateList(ctx, R.color.sib_text_secondary)
+            (activity as? MainActivity)?.updateNavHeader()
+            return
+        }
+
+        val lastSyncedUrl = studentPrefs.getString("synced_avatar_url", null)
+        val shouldDownload = forceRefresh || (avatarUrlFromBackend != lastSyncedUrl) || !localFile.exists()
+
+        if (!shouldDownload && localFile.exists()) {
+            val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+            if (bitmap != null) {
                 binding.profileAvatar.setPadding(0, 0, 0, 0)
-                binding.profileAvatar.setImageURI(null)
-                binding.profileAvatar.setImageURI(Uri.fromFile(file))
+                binding.profileAvatar.setImageBitmap(bitmap)
                 binding.profileAvatar.imageTintList = null
                 return
             }
         }
-        loadAvatarFromUrl(avatarUrl)
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val finalUrl = ServerConfig.resolveMediaUrl(ctx, avatarUrlFromBackend)
+                Log.d("ProfileFragment", "Syncing avatar from: $finalUrl (force=$forceRefresh, lastSynced=$lastSyncedUrl)")
+                val repo = StudentRepositoryHTTPS(ctx, StudentDatabase.getInstance(ctx).studentDao())
+                val client = repo.getUnsafeOkHttpClient()
+                val token = authPrefs.getString("auth_token", "") ?: ""
+                val requestBuilder = okhttp3.Request.Builder()
+                    .url(finalUrl)
+                    .header("Cache-Control", "no-cache")
+                if (token.isNotBlank()) {
+                    requestBuilder.header("Authorization", "Bearer $token")
+                }
+                val response = client.newCall(requestBuilder.build()).execute()
+
+                if (response.isSuccessful) {
+                    val bytes = response.body?.bytes()
+                    if (bytes != null && bytes.isNotEmpty()) {
+                        val file = File(ctx.filesDir, "current_avatar.jpg")
+                        FileOutputStream(file).use { it.write(bytes) }
+                        studentPrefs.edit()
+                            .putString("avatar_path", file.absolutePath)
+                            .putString("synced_avatar_url", avatarUrlFromBackend)
+                            .apply()
+                        authPrefs.edit().putString("avatar_url", avatarUrlFromBackend).apply()
+
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        withContext(Dispatchers.Main) {
+                            if (_binding == null || !isAdded) return@withContext
+                            if (bitmap != null) {
+                                binding.profileAvatar.setPadding(0, 0, 0, 0)
+                                binding.profileAvatar.setImageBitmap(bitmap)
+                                binding.profileAvatar.imageTintList = null
+                            }
+                            (activity as? MainActivity)?.updateNavHeader()
+                        }
+                    }
+                } else {
+                    Log.e("ProfileFragment", "Failed to download avatar: HTTP ${response.code}")
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileFragment", "Failed to sync avatar from backend", e)
+            }
+        }
     }
 
     private fun saveAvatarLocally(uri: Uri) {
@@ -334,7 +421,12 @@ class ProfileFragment : Fragment() {
 
         binding.profileAvatar.setPadding(0, 0, 0, 0)
         binding.profileAvatar.setImageURI(null)
-        binding.profileAvatar.setImageURI(Uri.fromFile(File(internalPath)))
+        val bitmap = BitmapFactory.decodeFile(internalPath)
+        if (bitmap != null) {
+            binding.profileAvatar.setImageBitmap(bitmap)
+        } else {
+            binding.profileAvatar.setImageURI(Uri.fromFile(File(internalPath)))
+        }
         binding.profileAvatar.imageTintList = null
 
         (activity as? MainActivity)?.updateNavHeader()
@@ -344,6 +436,12 @@ class ProfileFragment : Fragment() {
                 val result = repository.uploadAvatar(internalPath)
                 withContext(Dispatchers.Main) {
                     if (result is AvatarResult.Success) {
+                        requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("synced_avatar_url", result.avatarUrl)
+                            .apply()
+                        requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                            .edit().putString("avatar_url", result.avatarUrl).apply()
                         Toast.makeText(requireContext(), "Аватар успешно сохранен и обновлен", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -385,12 +483,25 @@ class ProfileFragment : Fragment() {
                 val finalUrl = ServerConfig.resolveMediaUrl(requireContext(), url)
                 val repo = StudentRepositoryHTTPS(requireContext(), StudentDatabase.getInstance(requireContext()).studentDao())
                 val client = repo.getUnsafeOkHttpClient()
-                val request = okhttp3.Request.Builder().url(finalUrl).build()
+                val request = okhttp3.Request.Builder()
+                    .url(finalUrl)
+                    .header("Cache-Control", "no-cache")
+                    .build()
                 val response = client.newCall(request).execute()
 
                 if (response.isSuccessful) {
                     val bytes = response.body?.bytes() ?: return@launch
-                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val file = File(requireContext().filesDir, "current_avatar.jpg")
+                    try {
+                        FileOutputStream(file).use { it.write(bytes) }
+                        requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("avatar_path", file.absolutePath)
+                            .putString("synced_avatar_url", url)
+                            .apply()
+                    } catch (_: Exception) {}
+
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     withContext(Dispatchers.Main) {
                         if (_binding == null) return@withContext
                         binding.profileAvatar.setPadding(0, 0, 0, 0)
