@@ -13,12 +13,13 @@ local.properties
 user_database
 
 # Parser and backend artifacts
-Backend/
-parser/
-data/
-backups/
+/Backend/
+/parser/
+/data/
+/backups/
 .env
 .env.*
 *.sql
 *.xlsx
 *.xls
+*.csv
