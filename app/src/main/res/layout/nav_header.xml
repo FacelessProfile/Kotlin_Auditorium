@@ -9,14 +9,24 @@
     android:padding="16dp"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
-    <ImageView
-        android:id="@+id/nav_header_avatar"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:src="@drawable/ic_person"
-        app:tint="?attr/colorOnPrimary"
-        android:scaleType="centerCrop"
-        android:contentDescription="User Avatar" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        app:cardBackgroundColor="?attr/colorPrimary"
+        app:cardCornerRadius="36dp"
+        app:cardElevation="3dp"
+        app:strokeColor="@color/white"
+        app:strokeWidth="2.5dp">
+
+        <ImageView
+            android:id="@+id/nav_header_avatar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="User Avatar"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_person"
+            app:tint="?attr/colorOnPrimary" />
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:id="@+id/nav_header_name"

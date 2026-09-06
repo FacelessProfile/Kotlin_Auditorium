@@ -220,13 +220,23 @@ class StudentRepositoryHTTPS(
 
                 val userIdStr = result.optString("user_ID", result.optString("user_id", "0"))
                 val parsedId = userIdStr.toIntOrNull() ?: userIdStr.hashCode()
+                val effectiveRole = result.optString("active_role", result.optString("role", result.optString("primary_role", "student"))).trim().lowercase()
+                val studentName = result.optString("teacher_name", result.optString("name", result.optString("login", "Пользователь")))
+
+                val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                studentPrefs.edit().apply {
+                    putString("user_role", effectiveRole)
+                    putString("student_name", studentName)
+                    putInt("current_student_id", parsedId)
+                }.apply()
+
                 val student = Student(
                     id = parsedId,
-                    studentName = result.optString("login", "Unknown"),
-                    studentGroup = "Unknown",
+                    studentName = studentName,
+                    studentGroup = result.optString("group_name", result.optString("group", "")),
                     studentNFC = result.optString("nfc_tag", ""),
                     attendance = false,
-                    role = result.optString("role", "student")
+                    role = effectiveRole
                 )
 
                 studentDao.insertStudent(student)
@@ -322,49 +332,58 @@ class StudentRepositoryHTTPS(
             if (profileResponse.isSuccessful && profileJson.optBoolean("ok")) {
                 val resultObj = profileJson.getJSONObject("result")
                 val avatarUrl = resultObj.optString("avatar", "")
-                val studentName = resultObj.optString("name", resultObj.optString("student_name", "Unknown"))
-                val studentGroup = resultObj.optString("group_name", resultObj.optString("group", "Unknown"))
-                val userIdStr = resultObj.optString("user_id", "0")
-                val role = resultObj.optString("role", "student")
+                val displayName = resultObj.optString("teacher_name", resultObj.optString("name", resultObj.optString("student_name", resultObj.optString("login", "Пользователь"))))
+                val studentGroup = resultObj.optString("group_name", resultObj.optString("group", ""))
+                val jobTitle = resultObj.optString("job_title", "")
+                val userIdStr = resultObj.optString("user_id", resultObj.optString("user_ID", "0"))
+                val activeRole = resultObj.optString("active_role", resultObj.optString("role", resultObj.optString("primary_role", "student"))).trim().lowercase()
+                val primaryRole = resultObj.optString("primary_role", "").trim().lowercase()
                 val nfcTag = resultObj.optString("nfc_tag", "")
                 val email = resultObj.optString("email", "")
-                if (email.isNotBlank()) {
-                    sharedPrefs.edit().putString("user_email", email).apply()
-                    context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                        .edit().putString("user_email", email).apply()
-                }
-                if (studentGroup.isNotBlank() && studentGroup != "Unknown") {
-                    sharedPrefs.edit().putString("student_group", studentGroup).apply()
-                    context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                        .edit().putString("student_group", studentGroup).apply()
-                }
-                if (studentName.isNotBlank() && studentName != "Unknown") {
-                    sharedPrefs.edit().putString("student_name", studentName).apply()
-                    context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                        .edit().putString("student_name", studentName).apply()
-                }
 
+                val rolesArr = resultObj.optJSONArray("roles")
+                val rolesList = mutableListOf<String>()
+                if (rolesArr != null) {
+                    for (i in 0 until rolesArr.length()) {
+                        rolesList.add(rolesArr.getString(i).trim().lowercase())
+                    }
+                }
+                if (rolesList.isEmpty()) rolesList.add(activeRole)
+
+                val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                 val parsedUserId = userIdStr.toIntOrNull() ?: userIdStr.hashCode()
-                sharedPrefs.edit().putInt("current_student_id", parsedUserId).apply()
-                context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                    .edit().putInt("current_student_id", parsedUserId).apply()
 
-                sharedPrefs.edit().putString("avatar_url", avatarUrl).apply()
+                sharedPrefs.edit().apply {
+                    if (email.isNotBlank()) putString("user_email", email)
+                    putString("avatar_url", avatarUrl)
+                }.apply()
+
+                studentPrefs.edit().apply {
+                    putInt("current_student_id", parsedUserId)
+                    putString("user_role", activeRole)
+                    putString("primary_role", primaryRole)
+                    putString("user_roles", rolesList.joinToString(","))
+                    putString("student_name", displayName)
+                    if (email.isNotBlank()) putString("user_email", email)
+                    putString("student_group", studentGroup)
+                    putString("job_title", jobTitle)
+                    if (resultObj.has("lectern_id")) putInt("lectern_id", resultObj.optInt("lectern_id"))
+                }.apply()
 
                 val profileStudent = Student(
                     id = parsedUserId,
-                    studentName = studentName,
-                    studentGroup = studentGroup,
+                    studentName = displayName,
+                    studentGroup = studentGroup.ifBlank { jobTitle },
                     studentNFC = nfcTag,
                     attendance = false,
-                    role = role
+                    role = activeRole
                 )
                 studentDao.insertStudent(profileStudent)
             }
 
             val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
             val currentRole = studentPrefs.getString("user_role", null) ?: "student"
-            if (currentRole != "teacher" && currentRole != "admin") {
+            if (!com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(currentRole) && currentRole != "admin") {
                 return@withContext SyncResult.Success(1, "Студент синхронизирован")
             }
 
@@ -2111,6 +2130,186 @@ class StudentRepositoryHTTPS(
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "getTeacherActiveSession error", e)
             GenericResult.Error("Network error: ${e.message}")
+        }
+    }
+
+    override suspend fun getAttendanceSessionRoster(lessonId: Int): GenericResult<com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isBlank()) return@withContext GenericResult.Error("Отсутствует токен авторизации")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/teaching/attendance/session/roster?lesson_id=$lessonId")
+                .get()
+                .header("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(responseBody)
+                if (jsonObj.optBoolean("ok")) {
+                    val res = jsonObj.getJSONObject("result")
+                    val studentsArr = res.optJSONArray("students")
+                    val studentsList = mutableListOf<com.example.kotlinroomdatabase.model.AttendanceRosterStudent>()
+                    if (studentsArr != null) {
+                        for (i in 0 until studentsArr.length()) {
+                            val s = studentsArr.getJSONObject(i)
+                            studentsList.add(com.example.kotlinroomdatabase.model.AttendanceRosterStudent(
+                                student_id = s.optInt("student_id"),
+                                student_name = s.optString("student_name"),
+                                group_id = s.optInt("group_id"),
+                                group_name = s.optString("group_name"),
+                                status = s.optString("status", "absent"),
+                                marked_by = s.optString("marked_by", ""),
+                                marked_at = if (s.has("marked_at") && !s.isNull("marked_at")) s.optString("marked_at") else null,
+                                is_fraud = s.optBoolean("is_fraud", false),
+                                fraud_reason = s.optString("fraud_reason", "")
+                            ))
+                        }
+                    }
+                    val rosterResult = com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult(
+                        lesson_id = res.optInt("lesson_id"),
+                        lesson_name = res.optString("lesson_name"),
+                        subject_id = res.optInt("subject_id"),
+                        server_time = res.optString("server_time"),
+                        timezone = res.optString("timezone", "Asia/Novosibirsk"),
+                        roster_size = res.optInt("roster_size", studentsList.size),
+                        marked_count = res.optInt("marked_count", 0),
+                        attendance_percent = res.optDouble("attendance_percent", 0.0),
+                        students = studentsList
+                    )
+                    GenericResult.Success(rosterResult)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(jsonObj.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun switchRole(role: String): GenericResult<com.example.kotlinroomdatabase.model.SwitchRoleResult> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isBlank()) return@withContext GenericResult.Error("Отсутствует токен авторизации")
+
+            val payload = JSONObject().apply {
+                put("role", role.trim().lowercase())
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/auth/switch-role")
+                .post(payload.toString().toRequestBody(JSON_TYPE))
+                .header("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(responseBody)
+                if (jsonObj.optBoolean("ok")) {
+                    val res = jsonObj.getJSONObject("result")
+                    val newToken = res.optString("token")
+                    val returnedRole = res.optString("active_role", res.optString("role", role)).trim().lowercase()
+                    val primaryRole = res.optString("primary_role", "")
+                    val rolesArr = res.optJSONArray("roles")
+                    val rolesList = mutableListOf<String>()
+                    if (rolesArr != null) {
+                        for (i in 0 until rolesArr.length()) {
+                            rolesList.add(rolesArr.getString(i))
+                        }
+                    }
+
+                    if (newToken.isNotBlank()) {
+                        sharedPrefs.edit().putString("auth_token", newToken).apply()
+                    }
+                    val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                    studentPrefs.edit().apply {
+                        putString("user_role", returnedRole)
+                        putString("primary_role", primaryRole)
+                        if (rolesList.isNotEmpty()) putString("user_roles", rolesList.joinToString(","))
+                    }.apply()
+
+                    clearLocalRoomData()
+                    syncAllStudents()
+
+                    GenericResult.Success(com.example.kotlinroomdatabase.model.SwitchRoleResult(
+                        token = newToken,
+                        role = returnedRole,
+                        active_role = returnedRole,
+                        primary_role = primaryRole,
+                        roles = rolesList,
+                        expires_at = res.optString("expires_at")
+                    ))
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(jsonObj.optString("error"), "Не удалось сменить роль"))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isBlank()) return@withContext GenericResult.Error("Отсутствует токен")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/profile")
+                .get()
+                .header("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(responseBody)
+                if (jsonObj.optBoolean("ok")) {
+                    val res = jsonObj.getJSONObject("result")
+                    val rolesArr = res.optJSONArray("roles")
+                    val rolesList = mutableListOf<String>()
+                    if (rolesArr != null) {
+                        for (i in 0 until rolesArr.length()) {
+                            rolesList.add(rolesArr.getString(i))
+                        }
+                    }
+                    val profile = com.example.kotlinroomdatabase.model.UserProfile(
+                        user_id = res.optInt("user_id", res.optInt("user_ID", 0)),
+                        login = res.optString("login", ""),
+                        name = res.optString("name", ""),
+                        student_name = res.optString("student_name", ""),
+                        teacher_name = res.optString("teacher_name", ""),
+                        role = res.optString("role", "student"),
+                        active_role = res.optString("active_role", ""),
+                        primary_role = res.optString("primary_role", ""),
+                        roles = rolesList,
+                        email = res.optString("email", ""),
+                        avatar = res.optString("avatar", ""),
+                        group_id = if (res.has("group_id")) res.optInt("group_id") else null,
+                        group_name = res.optString("group_name", ""),
+                        group = res.optString("group", ""),
+                        lectern_id = if (res.has("lectern_id")) res.optInt("lectern_id") else null,
+                        job_title = res.optString("job_title", ""),
+                        nfc_tag = res.optString("nfc_tag", ""),
+                        total_cheat_attempts = res.optInt("total_cheat_attempts", 0)
+                    )
+                    GenericResult.Success(profile)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(jsonObj.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code))
+            }
+        } catch (e: Exception) {
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
         }
     }
 

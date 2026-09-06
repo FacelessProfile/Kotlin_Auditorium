@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardNotification"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="3dp"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
     app:strokeWidth="1dp"
-    app:strokeColor="#1E293B">
+    app:strokeColor="?attr/sib_border_subtle"
+    app:cardBackgroundColor="?attr/sib_bg_card">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,18 +29,18 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="2FA Verification Code"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary" />
+                android:textColor="?attr/sib_text_primary"
+                tools:text="2FA Код подтверждения" />
 
             <View
                 android:id="@+id/vUnreadIndicator"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/unread_badge"
-                android:backgroundTint="#3B82F6" />
+                android:backgroundTint="@color/sib_blue_primary" />
 
             <ImageButton
                 android:id="@+id/btnDeleteNotification"
@@ -47,10 +49,10 @@
                 android:layout_marginStart="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Удалить"
-                android:padding="4dp"
+                android:padding="6dp"
                 android:src="@drawable/ic_delete"
                 android:visibility="visible"
-                app:tint="#EF4444" />
+                app:tint="@color/sib_error_vibrant" />
         </LinearLayout>
 
         <TextView
@@ -58,11 +60,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Your 2FA verification code is: 123456"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:maxLines="2"
             android:ellipsize="end"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:textColor="?attr/sib_text_secondary"
+            tools:text="Ваш код подтверждения для входа в систему: 492815" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -76,9 +78,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="2026-08-16 15:20"
-                android:textSize="12sp"
-                android:textColor="#94A3B8" />
+                android:textSize="11sp"
+                android:textColor="?attr/sib_text_muted"
+                tools:text="14:28 • 06.09.2026" />
 
             <TextView
                 android:id="@+id/tvExpandHint"
@@ -86,10 +88,8 @@
                 android:layout_height="wrap_content"
                 android:text="Нажмите, чтобы развернуть"
                 android:textSize="11sp"
-                android:textColor="#3B82F6"
-                android:textStyle="italic" />
+                android:textColor="@color/sib_blue_primary" />
         </LinearLayout>
 
     </LinearLayout>
-
 </com.google.android.material.card.MaterialCardView>

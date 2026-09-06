@@ -1,66 +1,260 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp">
-
-    <TextView
-        android:id="@+id/tvAgreementTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Пользовательское соглашение"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary" />
-
-    <TextView
-        android:id="@+id/tvAgreementVersion"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Версия: 2026-08-01"
-        android:textSize="12sp"
-        android:textColor="?android:attr/textColorSecondary" />
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="240dp"
-        android:layout_marginTop="16dp"
-        android:background="#121212"
-        android:padding="12dp">
-
-        <TextView
-            android:id="@+id/tvAgreementBody"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Настоящим соглашением подтверждается ваше согласие на обработку персональных данных, включая фиксацию присутствия на занятиях, данные геолокации и антифрод-верификацию в LMS Auditorium.\n\nВсе действия в системе логируются для обеспечения целостности учебного процесса."
-            android:textSize="14sp"
-            android:textColor="#E0E0E0"
-            android:lineSpacingExtra="4dp" />
-    </ScrollView>
+    app:cardBackgroundColor="?attr/sib_bg_card"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="8dp"
+    app:strokeColor="?attr/sib_border_subtle"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:orientation="horizontal"
-        android:gravity="end">
+        android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btnDecline"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
+        <!-- 1. Header Banner -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Отклонить"
-            android:textColor="#FF5252" />
+            android:background="@drawable/bg_hero_gradient"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="18dp">
 
-        <Button
-            android:id="@+id/btnAccept"
-            android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_security_badge"
+                    app:tint="@color/sib_text_white" />
+
+                <TextView
+                    android:id="@+id/tvAgreementTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:text="Пользовательское соглашение"
+                    android:textColor="@color/sib_text_white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="ФГБОУ ВО «СибГУТИ» • Система «Аудиториум»"
+                android:textColor="#D0E2FF"
+                android:textSize="12sp" />
+
+            <!-- Badges Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvAgreementVersion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_role_pill"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:text="Версия: 2026-08-01"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAgreementStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_badge_ontime"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:text="Загрузка статуса..."
+                    android:textColor="@color/sib_success"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 2. Agreement Body ScrollView -->
+        <ScrollView
+            android:id="@+id/scrollViewAgreement"
+            android:layout_width="match_parent"
+            android:layout_height="380dp"
+            android:fadeScrollbars="false"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="14dp"
+            android:scrollbarThumbVertical="@color/sib_blue_primary">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAgreementPreamble"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Настоящее Пользовательское соглашение и Согласие на обработку персональных данных (далее — «Соглашение») определяет порядок использования информационной системы «Электронный журнал и контроль аудиторной посещаемости Аудиториум» ФГБОУ ВО «Сибирский государственный университет телекоммуникаций и информатики» (СибГУТИ)."
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="13sp" />
+
+                <!-- Section 1 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="1. Предмет соглашения и цели обработки данных"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Обработка персональных данных осуществляется Университетом исключительно в рамках образовательного процесса в соответствии с Федеральным законом № 152-ФЗ «О персональных данных» и локальными нормативными актами СибГУТИ в целях:\n• Автоматизированного учёта посещаемости лекционных, практических и лабораторных занятий;\n• Ведения электронного журнала успеваемости и балльно-рейтинговой системы;\n• Обеспечения работы цифрового студенческого билета и эмуляции NFC-пропуска (HCE);\n• Анализа академической успеваемости и формирования ведомостей."
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
+
+                <!-- Section 2 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="2. Перечень обрабатываемых персональных данных"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Для функционирования сервиса обрабатываются следующие категории данных:\n• Фамилия, имя, отчество пользователя;\n• Академическая группа, кафедра, факультет/институт;\n• Номер зачётной книжки / студенческого билета или табельный номер преподавателя;\n• Адрес корпоративной электронной почты;\n• Данные об успеваемости, оценках и контрольных точках;\n• Электронные журналы посещений с фиксацией времени и статуса (присутствие, опоздание, уважительная причина)."
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
+
+                <!-- Section 3 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="3. Антифрод-верификация и геолокация"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="В целях противодействия недобросовестной фиксации присутствия («накрутка» посещаемости) при сканировании динамического QR-кода занятия система выполняет техническую валидацию:\n• Сопоставление координат устройства с географической зоной учебного корпуса / аудитории СибГУТИ в момент сканирования;\n• Проверку уникального криптографического токена и временной метки (TOTP-код преподавателя);\n• Постоянный сбор и непрерывное отслеживание геопозиции в фоновом режиме НЕ производится. Координаты запрашиваются однократно исключительно при нажатии кнопки фиксации посещения."
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
+
+                <!-- Section 4 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="4. Биометрическая аутентификация"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="При использовании биометрической аутентификации (сканер отпечатка пальца или распознавание лица) биометрические данные обрабатываются исключительно локальной защищённой средой (TEE / Keystore) устройства пользователя. Биометрические образцы и шаблоны на серверы Университета не передаются и в базах данных не сохраняются."
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
+
+                <!-- Section 5 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="5. Права пользователя и отзыв согласия"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Пользователь имеет право в любой момент дать или отозвать согласие на обработку персональных данных через данный интерфейс или веб-кабинет СибГУТИ.\n\nВАЖНО: При отказе от согласия сервис продолжит работать для базовых учебных целей, однако отображение ФИО пользователя в публичном сводном рейтинге успеваемости будет скрыто или обезличено."
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
+
+                <!-- Spacer -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/sib_border_subtle" />
+
+        <!-- 3. Actions Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Принять" />
+            android:gravity="end|center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCloseAgreement"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="Закрыть"
+                android:textAllCaps="false"
+                android:textColor="?attr/sib_text_secondary"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnToggleDecision"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:text="Дать согласие"
+                android:textAllCaps="false"
+                android:textColor="@color/sib_text_white"
+                android:textSize="13sp"
+                app:backgroundTint="@color/sib_blue_primary"
+                app:cornerRadius="10dp" />
+        </LinearLayout>
+
     </LinearLayout>
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -97,7 +97,7 @@ class StudentGradesFragment : Fragment() {
                         if (sem != null && sem.id != selectedSemesterId) {
                             selectedSemesterId = sem.id
                             Log.d("SEMESTER_SWITCH", "Student grades: semester changed to ${sem.name} (id=${sem.id})")
-                            Toast.makeText(requireContext(), "Семестр: ${sem.name}", Toast.LENGTH_SHORT).show()
+                            context?.let { Toast.makeText(it, "Семестр: ${sem.name}", Toast.LENGTH_SHORT).show() }
                             // Clear existing data immediately for visual feedback
                             adapter.updateData(emptyList())
                             progressScore.setProgressCompat(0, true)
@@ -116,11 +116,13 @@ class StudentGradesFragment : Fragment() {
 
     private fun loadData() {
         lifecycleScope.launch {
+            if (!isAdded) return@launch
             try {
                 Log.d("SEMESTER_SWITCH", "Student loadData with semesterId=$selectedSemesterId")
                 val listData = repository.getStudentGradesAll(selectedSemesterId)
                 Log.d("SEMESTER_SWITCH", "Student got ${listData?.size ?: 0} subjects for semester $selectedSemesterId")
 
+                if (!isAdded) return@launch
                 adapter.updateData(listData ?: emptyList())
 
                 var currentScore = 0
@@ -153,12 +155,15 @@ class StudentGradesFragment : Fragment() {
                     percent >= 50 -> R.color.grade_satisfactory
                     else -> R.color.grade_poor
                 }
-                val indicatorColor = androidx.core.content.ContextCompat.getColor(requireContext(), colorRes)
+                val ctx = context ?: return@launch
+                val indicatorColor = androidx.core.content.ContextCompat.getColor(ctx, colorRes)
                 progressScore.setIndicatorColor(indicatorColor)
 
             } catch (e: Exception) {
                 Log.e("SEMESTER_SWITCH", "Student loadData error", e)
-                Toast.makeText(requireContext(), "Ошибка загрузки оценок", Toast.LENGTH_SHORT).show()
+                context?.let {
+                    Toast.makeText(it, "Ошибка загрузки оценок", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

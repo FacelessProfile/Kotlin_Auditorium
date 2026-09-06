@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="?attr/sib_bg_card"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -13,13 +13,13 @@
         android:layout_height="4dp"
         android:layout_gravity="center"
         android:layout_marginBottom="16dp"
-        android:background="#CBD5E1" />
+        android:background="?attr/sib_border_subtle" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Создание занятия"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="?attr/sib_text_primary"
         android:textSize="22sp"
         android:textStyle="bold" />
 
@@ -29,7 +29,7 @@
         android:layout_marginTop="4dp"
         android:layout_marginBottom="20dp"
         android:text="Выберите дисциплину и группы для запуска отметки"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="?attr/sib_text_secondary"
         android:textSize="13sp" />
 
     <androidx.core.widget.NestedScrollView
@@ -54,10 +54,10 @@
                 app:boxCornerRadiusBottomStart="14dp"
                 app:boxCornerRadiusTopEnd="14dp"
                 app:boxCornerRadiusTopStart="14dp"
-                app:boxStrokeColor="#1D4ED8"
+                app:boxStrokeColor="@color/sib_blue_primary"
                 app:endIconMode="dropdown_menu"
                 app:startIconDrawable="@drawable/ic_schedule_clock"
-                app:startIconTint="#1D4ED8">
+                app:startIconTint="@color/sib_blue_primary">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/acLessonType"
@@ -67,7 +67,7 @@
                     android:inputType="none"
                     android:padding="16dp"
                     android:text="Практика"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="?attr/sib_text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -80,10 +80,10 @@
                 app:boxCornerRadiusBottomStart="14dp"
                 app:boxCornerRadiusTopEnd="14dp"
                 app:boxCornerRadiusTopStart="14dp"
-                app:boxStrokeColor="#1D4ED8"
+                app:boxStrokeColor="@color/sib_blue_primary"
                 app:endIconMode="dropdown_menu"
                 app:startIconDrawable="@drawable/ic_book_topic"
-                app:startIconTint="#1D4ED8">
+                app:startIconTint="@color/sib_blue_primary">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/acSubject"
@@ -92,7 +92,7 @@
                     android:completionThreshold="0"
                     android:inputType="text"
                     android:padding="16dp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="?attr/sib_text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -104,10 +104,10 @@
                 app:boxCornerRadiusBottomStart="14dp"
                 app:boxCornerRadiusTopEnd="14dp"
                 app:boxCornerRadiusTopStart="14dp"
-                app:boxStrokeColor="#1D4ED8"
+                app:boxStrokeColor="@color/sib_blue_primary"
                 app:endIconMode="dropdown_menu"
                 app:startIconDrawable="@drawable/ic_groups_badge"
-                app:startIconTint="#1D4ED8">
+                app:startIconTint="@color/sib_blue_primary">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/acGroupSearch"
@@ -116,7 +116,7 @@
                     android:completionThreshold="0"
                     android:inputType="text"
                     android:padding="16dp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="?attr/sib_text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
@@ -124,7 +124,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="Выбранные группы:"
-                android:textColor="?android:attr/textColorSecondary"
+                android:textColor="?attr/sib_text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -143,17 +143,17 @@
         android:id="@+id/btnStartLesson"
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="54dp"
         android:layout_marginTop="16dp"
         android:text="Запустить занятие"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/sib_text_white"
         android:textSize="15sp"
         android:textStyle="bold"
-        app:backgroundTint="#1D4ED8"
-        app:cornerRadius="16dp"
+        app:backgroundTint="@color/sib_blue_primary"
+        app:cornerRadius="14dp"
         app:elevation="2dp"
         app:icon="@drawable/ic_check"
         app:iconGravity="textStart"
-        app:iconTint="#FFFFFF" />
+        app:iconTint="@color/sib_text_white" />
 
 </LinearLayout>

@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:layout_marginBottom="12dp">
+    android:layout_marginBottom="8dp">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="2dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="0dp"
         app:strokeWidth="1dp"
-        app:strokeColor="@color/card_stroke"
-        app:cardBackgroundColor="@color/card_surface">
+        app:strokeColor="?attr/sib_border_subtle"
+        app:cardBackgroundColor="?attr/sib_bg_card">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -26,17 +27,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:padding="16dp"
+                android:padding="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground">
 
-                <!-- Subject Icon Accent -->
+                <!-- Subject Accent Bar -->
                 <View
                     android:layout_width="4dp"
                     android:layout_height="36dp"
-                    android:background="@drawable/bg_badge_type"
-                    android:backgroundTint="@color/uni_blue_primary"
-                    android:layout_marginEnd="12dp"/>
+                    android:background="@drawable/bg_stat_mini_card"
+                    android:backgroundTint="@color/sib_blue_primary"
+                    android:layout_marginEnd="12dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -48,19 +49,21 @@
                         android:id="@+id/tvSubjectName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Название предмета"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:textSize="15sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_main"/>
+                        android:textColor="?attr/sib_text_primary"
+                        tools:text="Компьютерные сети" />
 
                     <TextView
                         android:id="@+id/tvScore"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="3dp"
-                        android:text="Набрано: 45 / 50 баллов"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_muted"/>
+                        android:layout_marginTop="2dp"
+                        android:textSize="12sp"
+                        android:textColor="?attr/sib_text_secondary"
+                        tools:text="Набрано: 45 / 50 баллов" />
                 </LinearLayout>
 
                 <!-- Percentage Chip -->
@@ -68,29 +71,22 @@
                     android:id="@+id/tvPercent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="90%"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textStyle="bold"
-                    android:textColor="@color/uni_blue_primary"
-                    android:background="@drawable/bg_badge_type"
+                    android:textColor="@color/sib_blue_primary"
+                    android:background="@drawable/bg_stat_mini_card"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
-                    android:layout_marginEnd="10dp"/>
+                    android:layout_marginEnd="8dp"
+                    tools:text="90%" />
 
                 <!-- Expand Chevron -->
                 <ImageView
-                    android:id="@+id/ivExpand"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_baseline_delete_24"
-                    android:visibility="gone"/>
-
-                <ImageView
                     android:id="@+id/ivChevron"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@android:drawable/arrow_down_float"
-                    app:tint="@color/text_muted"/>
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="?attr/sib_text_muted" />
             </LinearLayout>
 
             <!-- Expandable Grades Container -->
@@ -100,20 +96,20 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="14dp"
                 android:paddingBottom="12dp">
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="@color/divider_color"
-                    android:layout_marginBottom="8dp"/>
+                    android:background="?attr/sib_border_subtle"
+                    android:layout_marginBottom="8dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvSubjectInnerGrades"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false"/>
+                    android:nestedScrollingEnabled="false" />
             </LinearLayout>
 
         </LinearLayout>

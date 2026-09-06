@@ -145,6 +145,9 @@ interface IStudentRepository {
     suspend fun deleteTeacherGradeItem(itemId: Long): GenericResult<Boolean>
     suspend fun getActiveStudentLesson(): GenericResult<com.example.kotlinroomdatabase.model.ActiveStudentLessonInfo>
     suspend fun getTeacherActiveSession(): GenericResult<com.example.kotlinroomdatabase.model.ActiveSessionInfo>
+    suspend fun getAttendanceSessionRoster(lessonId: Int): GenericResult<com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult>
+    suspend fun switchRole(role: String): GenericResult<com.example.kotlinroomdatabase.model.SwitchRoleResult>
+    suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile>
     suspend fun refreshSessionToken(): Boolean
     suspend fun testConnection(): Boolean
 }

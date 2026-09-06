@@ -504,5 +504,8 @@ class StudentRepository(
     override suspend fun deleteTeacherGradeItem(itemId: Long): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getActiveStudentLesson(): GenericResult<com.example.kotlinroomdatabase.model.ActiveStudentLessonInfo> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getTeacherActiveSession(): GenericResult<com.example.kotlinroomdatabase.model.ActiveSessionInfo> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getAttendanceSessionRoster(lessonId: Int): GenericResult<com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun switchRole(role: String): GenericResult<com.example.kotlinroomdatabase.model.SwitchRoleResult> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun refreshSessionToken(): Boolean = false
 }

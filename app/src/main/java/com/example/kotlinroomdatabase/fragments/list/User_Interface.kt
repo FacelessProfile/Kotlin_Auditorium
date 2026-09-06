@@ -1,65 +1,69 @@
 package com.example.kotlinroomdatabase.fragments.list
 
+import android.Manifest
+import android.app.DatePickerDialog
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
+import android.net.Uri
+import android.nfc.NfcAdapter
+import android.nfc.cardemulation.CardEmulation
 import android.os.Bundle
+import android.provider.Settings
+import android.util.Base64
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
-import android.provider.Settings
-import android.location.Location
-import android.Manifest
-import android.content.pm.PackageManager
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.LocationServices
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kotlinroomdatabase.R
-import com.example.kotlinroomdatabase.getColorFromAttr
 import com.example.kotlinroomdatabase.config.ServerConfig
+import com.example.kotlinroomdatabase.databinding.UserUiBinding
+import com.example.kotlinroomdatabase.fragments.schedule.ScheduleAdapter
+import com.example.kotlinroomdatabase.nfc.HCEservice
+import com.example.kotlinroomdatabase.qr.CustomScannerActivity
 import com.example.kotlinroomdatabase.repository.GenericResult
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.button.MaterialButton
+import com.example.kotlinroomdatabase.repository.IStudentRepository
+import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
+import com.example.kotlinroomdatabase.util.RoleUtils
+import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-//QR
-import android.net.Uri
-import android.util.Base64
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 import org.json.JSONObject
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-import android.nfc.NfcAdapter
-import android.nfc.cardemulation.CardEmulation
-import android.content.ComponentName
-import com.example.kotlinroomdatabase.nfc.HCEservice
-
 class User_Interface : Fragment() {
-    private lateinit var rootLayout: ConstraintLayout
-    private lateinit var statusIcon: ImageView
-    private lateinit var statusText: TextView
-    private lateinit var tvWelcome: TextView
-    private lateinit var attendedCard: MaterialCardView
-    private lateinit var tvActiveLessonName: TextView
-    private lateinit var tvActiveLessonDetails: TextView
-    private lateinit var btnCheckLessonStatus: MaterialButton
-    private lateinit var btnScan: MaterialButton
-    private lateinit var btnHistory: MaterialButton
-    private lateinit var btnSchedule: MaterialButton
+
+    private var _binding: UserUiBinding? = null
+    private val binding get() = _binding!!
+
+    private lateinit var repository: IStudentRepository
+    private lateinit var scheduleAdapter: ScheduleAdapter
     private lateinit var biometricHelper: com.example.kotlinroomdatabase.crypto.BiometricAuthHelper
+
+    private var currentCalendar: Calendar = Calendar.getInstance()
+    private var userRole: String = "student"
+    private var statusPollingJob: Job? = null
     private var isProcessing = false
 
     companion object {
@@ -73,85 +77,322 @@ class User_Interface : Fragment() {
         const val ACTION_LESSON_FINISHED = "LESSON_FINISHED_EVENT"
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val view = inflater.inflate(R.layout.user_ui, container, false)
-        rootLayout = view.findViewById(R.id.rootLayout)
-        statusIcon = view.findViewById(R.id.statusIcon)
-        statusText = view.findViewById(R.id.statusText)
-        tvWelcome = view.findViewById(R.id.tvWelcome)
-        attendedCard = view.findViewById(R.id.attendedCard)
-        tvActiveLessonName = view.findViewById(R.id.tvActiveLessonName)
-        tvActiveLessonDetails = view.findViewById(R.id.tvActiveLessonDetails)
-        btnCheckLessonStatus = view.findViewById(R.id.btnCheckLessonStatus)
-        btnScan = view.findViewById(R.id.btnScan)
-        btnHistory = view.findViewById(R.id.btnHistory)
-        btnSchedule = view.findViewById(R.id.btnSchedule)
-        return view
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = UserUiBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(requireContext())
+        repository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
         biometricHelper = com.example.kotlinroomdatabase.crypto.BiometricAuthHelper(this)
 
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val fullName = prefs.getString("student_name", "Студент")
-        var displayName = "Студент"
+        userRole = prefs.getString("user_role", "student") ?: "student"
+        val fullName = prefs.getString("student_name", "Студент") ?: "Студент"
+        val groupName = prefs.getString("student_group", "") ?: ""
 
-        if (!fullName.isNullOrBlank() && fullName != "Студент") {
-            val parts = fullName.trim().split(" ")
-            displayName = when {
-                parts.size >= 3 -> "${parts[1]} ${parts[2]}"
-                parts.size == 2 -> parts[1]
-                else -> parts[0]
+        val isTeacher = RoleUtils.isTeacherOrHead(userRole)
+
+        // 1. Setup Hero Section
+        binding.tvHeroRole.text = RoleUtils.getRoleHeroTitle(userRole)
+        binding.tvHeroName.text = RoleUtils.formatShortName(fullName)
+        binding.tvHeroGroup.text = if (isTeacher) {
+            "Кафедра • СибГУТИ"
+        } else if (groupName.isNotBlank()) {
+            "Группа $groupName"
+        } else {
+            "СибГУТИ"
+        }
+
+        // Navigate to Profile when clicking the avatar/icon or hero button
+        val openProfile = {
+            if (findNavController().currentDestination?.id != R.id.profileFragment) {
+                findNavController().navigate(R.id.profileFragment)
             }
         }
+        binding.btnHeroProfile.setOnClickListener { openProfile() }
+        binding.ivHeroIcon.setOnClickListener { openProfile() }
 
-        val sId = prefs.getInt("current_student_id", 0)
-        val sName = prefs.getString("student_name", "Student") ?: "Student"
-        if (sId > 0) {
-            prefs.edit().putString("nfc_payload", "STUDENT:$sId:$sName").apply()
-        }
+        loadHeroAvatar()
 
-        tvWelcome.text = "Добро пожаловать,\n$displayName"
-        tvWelcome.setOnLongClickListener {
-            com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(requireContext()) {
+        binding.cardHero.setOnLongClickListener {
+            ServerConfig.showServerSwitcherDialog(requireContext()) {
+                loadSchedule()
                 checkLessonStatusRemote(showToast = false)
             }
             true
         }
 
-        val appPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("button_color", "#C48E17")
-        primaryColorHex?.let {
-            val color = Color.parseColor(it)
-            btnScan.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
-            statusIcon.imageTintList = android.content.res.ColorStateList.valueOf(color)
+        // 2. Setup Quick Actions per Role
+        if (isTeacher) {
+            binding.layoutStudentActions.visibility = View.GONE
+            binding.layoutTeacherActions.visibility = View.VISIBLE
+
+            binding.cardTeacherStartLesson.setOnClickListener {
+                findNavController().navigate(R.id.lessonFragment)
+            }
+            binding.cardTeacherGrades.setOnClickListener {
+                findNavController().navigate(R.id.gradesFragment)
+            }
+            binding.cardTeacherStudents.setOnClickListener {
+                findNavController().navigate(R.id.listFragment)
+            }
+            binding.cardTeacherAnalytics.setOnClickListener {
+                findNavController().navigate(R.id.analyticsFragment)
+            }
+        } else {
+            binding.layoutStudentActions.visibility = View.VISIBLE
+            binding.layoutTeacherActions.visibility = View.GONE
+
+            binding.cardNfcPass.setOnClickListener {
+                showNfcPassDialog()
+            }
+            binding.cardScanQr.setOnClickListener {
+                startScanning()
+            }
+            binding.cardGrades.setOnClickListener {
+                findNavController().navigate(R.id.gradesFragment)
+            }
+            binding.cardHistory.setOnClickListener {
+                findNavController().navigate(R.id.historyFragment)
+            }
+
+            // Store student NFC payload if available
+            val sId = prefs.getInt("current_student_id", 0)
+            if (sId > 0) {
+                val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                val token = authPrefs.getString("auth_token", "") ?: ""
+                val payload = if (token.isNotEmpty()) token else "STUDENT:$sId:$fullName"
+                prefs.edit().putString("nfc_payload", payload).apply()
+            }
         }
 
-        btnScan.setOnClickListener {
-            startScanning()
-        }
-
-        btnHistory.setOnClickListener {
-            findNavController().navigate(R.id.action_userHome_to_history)
-        }
-
-        btnSchedule.setOnClickListener {
-            findNavController().navigate(R.id.action_userHome_to_schedule)
-        }
-
-        btnCheckLessonStatus.setOnClickListener {
+        // Active Lesson check status listener
+        binding.btnCheckLessonStatus.setOnClickListener {
             checkLessonStatusRemote(showToast = true)
+        }
+
+        // 3. Setup Integrated Schedule
+        scheduleAdapter = ScheduleAdapter(userRole)
+        binding.rvSchedule.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvSchedule.adapter = scheduleAdapter
+
+        binding.btnPrevDay.setOnClickListener {
+            currentCalendar.add(Calendar.DAY_OF_YEAR, -1)
+            loadSchedule()
+        }
+
+        binding.btnNextDay.setOnClickListener {
+            currentCalendar.add(Calendar.DAY_OF_YEAR, 1)
+            loadSchedule()
+        }
+
+        binding.btnToday.setOnClickListener {
+            currentCalendar = Calendar.getInstance()
+            loadSchedule()
+        }
+
+        binding.layoutDatePicker.setOnClickListener {
+            showDatePickerDialog()
+        }
+
+        setupWeekdayChips()
+
+        // 4. Setup Swipe Refresh
+        binding.swipeRefreshDashboard.setOnRefreshListener {
+            loadSchedule()
+            checkLessonStatusRemote(showToast = false)
         }
 
         checkAndUpdateLessonState()
         checkLessonStatusRemote(showToast = false)
+        loadSchedule()
     }
 
-    private var statusPollingJob: Job? = null
+    private fun showNfcPassDialog() {
+        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val studentName = prefs.getString("student_name", "Студент") ?: "Студент"
+        val group = prefs.getString("student_group", "СибГУТИ") ?: "СибГУТИ"
+        val nfcPayload = prefs.getString("nfc_payload", "Активен")
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Электронный пропуск СибГУТИ")
+            .setMessage("Владелец: $studentName\nГруппа: $group\n\nСтатус HCE: Эмуляция карты активна.\nПоднесите заднюю панель смартфона к турникету или валидатору аудитории.")
+            .setIcon(R.drawable.ic_nfc)
+            .setPositiveButton("Понятно", null)
+            .show()
+    }
+
+    private fun setupWeekdayChips() {
+        val chips = listOf(
+            binding.chipMon to Calendar.MONDAY,
+            binding.chipTue to Calendar.TUESDAY,
+            binding.chipWed to Calendar.WEDNESDAY,
+            binding.chipThu to Calendar.THURSDAY,
+            binding.chipFri to Calendar.FRIDAY,
+            binding.chipSat to Calendar.SATURDAY
+        )
+
+        for ((chip, targetDayOfWeek) in chips) {
+            chip.setOnClickListener {
+                setDayOfWeek(targetDayOfWeek)
+                loadSchedule()
+            }
+        }
+    }
+
+    private fun setDayOfWeek(dayOfWeek: Int) {
+        currentCalendar.set(Calendar.DAY_OF_WEEK, dayOfWeek)
+    }
+
+    private fun updateWeekdayStripSelection() {
+        if (_binding == null) return
+        val currentDow = currentCalendar.get(Calendar.DAY_OF_WEEK)
+
+        val chips = listOf(
+            binding.chipMon to Calendar.MONDAY,
+            binding.chipTue to Calendar.TUESDAY,
+            binding.chipWed to Calendar.WEDNESDAY,
+            binding.chipThu to Calendar.THURSDAY,
+            binding.chipFri to Calendar.FRIDAY,
+            binding.chipSat to Calendar.SATURDAY
+        )
+
+        for ((chip, dow) in chips) {
+            if (dow == currentDow) {
+                chip.setBackgroundResource(R.drawable.bg_weekday_chip_active)
+                chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_white))
+            } else {
+                chip.setBackgroundResource(R.drawable.bg_weekday_chip_inactive)
+                chip.setTextColor(requireContext().getColor(R.color.sib_text_primary))
+            }
+        }
+    }
+
+    private fun showDatePickerDialog() {
+        val year = currentCalendar.get(Calendar.YEAR)
+        val month = currentCalendar.get(Calendar.MONTH)
+        val day = currentCalendar.get(Calendar.DAY_OF_MONTH)
+
+        DatePickerDialog(
+            requireContext(),
+            { _, selectedYear, selectedMonth, selectedDay ->
+                currentCalendar.set(selectedYear, selectedMonth, selectedDay)
+                loadSchedule()
+            },
+            year,
+            month,
+            day
+        ).show()
+    }
+
+    private fun loadSchedule() {
+        if (_binding == null) return
+        val apiFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val dateQuery = apiFormat.format(currentCalendar.time)
+
+        updateDateHeader()
+        updateWeekdayStripSelection()
+        binding.progressSchedule.visibility = View.VISIBLE
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getScheduleForDay(dateQuery)
+                withContext(Dispatchers.Main) {
+                    if (_binding == null) return@withContext
+                    binding.swipeRefreshDashboard.isRefreshing = false
+                    binding.progressSchedule.visibility = View.GONE
+
+                    when (result) {
+                        is GenericResult.Success -> {
+                            val schedule = result.data
+                            val lessons = schedule.lessons
+
+                            if (lessons.isEmpty()) {
+                                binding.layoutEmptySchedule.visibility = View.VISIBLE
+                                binding.rvSchedule.visibility = View.GONE
+                            } else {
+                                binding.layoutEmptySchedule.visibility = View.GONE
+                                binding.rvSchedule.visibility = View.VISIBLE
+                                scheduleAdapter.setData(lessons)
+                            }
+
+                            val parityText = if (schedule.week_type % 2 == 1) "1 неделя • Нечётная" else "2 неделя • Чётная"
+                            binding.tvWeekParityBadge.text = parityText
+                        }
+                        is GenericResult.Error -> {
+                            binding.layoutEmptySchedule.visibility = View.VISIBLE
+                            binding.rvSchedule.visibility = View.GONE
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    if (_binding == null) return@withContext
+                    binding.swipeRefreshDashboard.isRefreshing = false
+                    binding.progressSchedule.visibility = View.GONE
+                    binding.layoutEmptySchedule.visibility = View.VISIBLE
+                    binding.rvSchedule.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun updateDateHeader() {
+        val dateDisplayFormat = SimpleDateFormat("d MMMM yyyy", Locale("ru"))
+        binding.tvScheduleDate.text = dateDisplayFormat.format(currentCalendar.time)
+        val weekdayRu = getRussianWeekday(currentCalendar.get(Calendar.DAY_OF_WEEK))
+        binding.tvScheduleWeekday.text = weekdayRu
+    }
+
+    private fun getRussianWeekday(dayOfWeek: Int): String {
+        return when (dayOfWeek) {
+            Calendar.MONDAY -> "Понедельник"
+            Calendar.TUESDAY -> "Вторник"
+            Calendar.WEDNESDAY -> "Среда"
+            Calendar.THURSDAY -> "Четверг"
+            Calendar.FRIDAY -> "Пятница"
+            Calendar.SATURDAY -> "Суббота"
+            Calendar.SUNDAY -> "Воскресенье"
+            else -> ""
+        }
+    }
+
+    private fun loadHeroAvatar() {
+        val prefs = context?.getSharedPreferences("student_prefs", Context.MODE_PRIVATE) ?: return
+        val avatarPath = prefs.getString("avatar_path", null)
+        val defaultPad = (10 * resources.displayMetrics.density).toInt()
+        if (avatarPath != null) {
+            val avatarFile = java.io.File(avatarPath)
+            if (avatarFile.exists()) {
+                try {
+                    binding.ivHeroIcon.setPadding(0, 0, 0, 0)
+                    binding.ivHeroIcon.setImageURI(null)
+                    binding.ivHeroIcon.setImageURI(android.net.Uri.fromFile(avatarFile))
+                    binding.ivHeroIcon.imageTintList = null
+                    return
+                } catch (_: Exception) {}
+            }
+        }
+        binding.ivHeroIcon.setPadding(defaultPad, defaultPad, defaultPad, defaultPad)
+        binding.ivHeroIcon.setImageResource(R.drawable.ic_person)
+        context?.let { ctx ->
+            binding.ivHeroIcon.imageTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(ctx, R.color.sib_blue_primary)
+            )
+        }
+    }
 
     override fun onResume() {
         super.onResume()
+        loadHeroAvatar()
         checkAndUpdateLessonState()
         checkLessonStatusRemote(showToast = false)
         startStatusPolling()
@@ -164,12 +405,11 @@ class User_Interface : Fragment() {
                 try {
                     cardEmulation.removeAidsForService(hceComponent, "payment")
                     cardEmulation.removeAidsForService(hceComponent, "other")
-                } catch (e: Exception) {}
-                val setPrefResult = cardEmulation.setPreferredService(requireActivity(), hceComponent)
-                android.util.Log.i("User_Interface", "setPreferredService result: $setPrefResult for HCEservice")
+                } catch (_: Exception) {}
+                cardEmulation.setPreferredService(requireActivity(), hceComponent)
             }
         } catch (e: Exception) {
-            android.util.Log.e("User_Interface", "Error setting preferred HCE service", e)
+            Log.e("User_Interface", "Error setting preferred HCE service", e)
         }
 
         val filter = IntentFilter().apply {
@@ -182,10 +422,10 @@ class User_Interface : Fragment() {
 
     private fun startStatusPolling() {
         statusPollingJob?.cancel()
-        statusPollingJob = lifecycleScope.launch(Dispatchers.Main) {
+        statusPollingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             while (isActive) {
                 checkLessonStatusRemote(showToast = false)
-                delay(3500)
+                delay(4000)
             }
         }
     }
@@ -199,26 +439,23 @@ class User_Interface : Fragment() {
                 val cardEmulation = CardEmulation.getInstance(nfcAdapter)
                 cardEmulation.unsetPreferredService(requireActivity())
             }
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
         try {
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(requireContext())
                 .unregisterReceiver(broadcastReceiver)
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
     private fun checkAndUpdateLessonState() {
-        if (!isAdded) return
-        val context = context ?: return
-        val attPrefs = context.getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
-        val currentServer = ServerConfig.getBaseUrl(context)
+        if (!isAdded || _binding == null) return
+        val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+        val currentServer = ServerConfig.getBaseUrl(requireContext())
         val savedServer = attPrefs.getString(KEY_SERVER_URL, null)
 
-        // If server changed, clear stale attendance state immediately
         if (savedServer != null && savedServer != currentServer) {
             clearActiveLessonState()
-            setNeutralState()
-            attendedCard.visibility = View.GONE
-            btnScan.visibility = View.VISIBLE
+            setNeutralNfcState()
+            binding.attendedCard.visibility = View.GONE
             return
         }
 
@@ -230,46 +467,37 @@ class User_Interface : Fragment() {
 
         if (isAttended && !lessonName.isNullOrBlank()) {
             if (expiresAt > 0 && now >= expiresAt) {
-                // Lesson expired automatically
                 clearActiveLessonState()
-                setNeutralState()
-                attendedCard.visibility = View.GONE
-                btnScan.visibility = View.VISIBLE
+                setNeutralNfcState()
+                binding.attendedCard.visibility = View.GONE
             } else {
-                // Student is currently in active lesson
-                attendedCard.visibility = View.VISIBLE
-                btnScan.visibility = View.GONE
-
-                tvActiveLessonName.text = lessonName
+                binding.attendedCard.visibility = View.VISIBLE
+                binding.tvActiveLessonName.text = lessonName
                 val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
                 val markedStr = if (attendedTime > 0) "Отметка зафиксирована в ${timeFormat.format(Date(attendedTime))}" else "Присутствие зафиксировано"
                 val remainingMin = if (expiresAt > now) ((expiresAt - now) / 60000).toInt() else 0
                 val timerStr = if (remainingMin > 0) "Занятие идет (осталось ~${remainingMin} мин)" else "Занятие сейчас идёт"
 
-                tvActiveLessonDetails.text = "$markedStr\n$timerStr"
+                binding.tvActiveLessonDetails.text = "$markedStr\n$timerStr"
 
-                statusIcon.setImageResource(R.drawable.ic_check)
-                statusIcon.setColorFilter(Color.parseColor("#10B981"))
-                statusText.text = "Вы присутствуете на паре"
-                statusText.setTextColor(Color.parseColor("#10B981"))
+                binding.statusIcon.setImageResource(R.drawable.ic_check)
+                binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
+                binding.statusText.text = "Присутствие подтверждено"
+                binding.statusText.setTextColor(Color.parseColor("#10B981"))
             }
         } else {
-            attendedCard.visibility = View.GONE
-            btnScan.visibility = View.VISIBLE
-            setNeutralState()
+            binding.attendedCard.visibility = View.GONE
+            setNeutralNfcState()
         }
     }
 
     private fun checkLessonStatusRemote(showToast: Boolean = false) {
         if (!isAdded) return
-        val context = context ?: return
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            val repository = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(context)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val result = repository.getActiveStudentLesson()
-
             withContext(Dispatchers.Main) {
-                if (!isAdded) return@withContext
+                if (!isAdded || _binding == null) return@withContext
                 when (result) {
                     is GenericResult.Success -> {
                         val info = result.data
@@ -280,7 +508,7 @@ class User_Interface : Fragment() {
                                     val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
                                     val parsed = sdf.parse(info.expires_at.substringBefore("Z").substringBefore("+"))?.time
                                     if (parsed != null && parsed > 0) expiresAtMillis = parsed
-                                } catch (e: Exception) {}
+                                } catch (_: Exception) {}
                             }
 
                             saveActiveLessonState(
@@ -291,26 +519,25 @@ class User_Interface : Fragment() {
                             checkAndUpdateLessonState()
                             if (showToast) {
                                 val remainingMin = ((expiresAtMillis - System.currentTimeMillis()) / 60000).toInt()
-                                Toast.makeText(context, "Занятие активно. Осталось ~${maxOf(0, remainingMin)} мин.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(requireContext(), "Занятие активно. Осталось ~${maxOf(0, remainingMin)} мин.", Toast.LENGTH_SHORT).show()
                             }
                         } else {
-                            // Server says no active lesson!
-                            val wasAttended = context.getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+                            val wasAttended = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
                                 .getBoolean(KEY_IS_ATTENDED, false)
                             clearActiveLessonState()
                             checkAndUpdateLessonState()
                             if (showToast) {
                                 if (wasAttended) {
-                                    Toast.makeText(context, "Занятие завершено. Сканер разблокирован!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(requireContext(), "Занятие завершено", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(context, "Нет активных занятий", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(requireContext(), "Нет активных занятий", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
                     }
                     is GenericResult.Error -> {
                         if (showToast) {
-                            Toast.makeText(context, "Не удалось связаться с сервером", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Не удалось связаться с сервером", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -319,15 +546,15 @@ class User_Interface : Fragment() {
     }
 
     private fun clearActiveLessonState() {
-        val context = context ?: return
-        val attPrefs = context.getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+        if (!isAdded) return
+        val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
         attPrefs.edit().clear().apply()
     }
 
     private fun saveActiveLessonState(lessonName: String, lessonId: Int, expiresAtMillis: Long) {
-        val context = context ?: return
-        val currentServer = ServerConfig.getBaseUrl(context)
-        val attPrefs = context.getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+        if (!isAdded) return
+        val currentServer = ServerConfig.getBaseUrl(requireContext())
+        val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
         attPrefs.edit().apply {
             putString(KEY_SERVER_URL, currentServer)
             putBoolean(KEY_IS_ATTENDED, true)
@@ -339,9 +566,12 @@ class User_Interface : Fragment() {
     }
 
     fun showSuccessCheck(lessonName: String? = null) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            setSuccessState()
-            statusText.text = "Присутствие зафиксировано"
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            if (_binding == null) return@launch
+            binding.statusIcon.setImageResource(R.drawable.ic_check)
+            binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
+            binding.statusText.setTextColor(Color.parseColor("#10B981"))
+            binding.statusText.text = "Присутствие зафиксировано"
             delay(1200)
             checkAndUpdateLessonState()
         }
@@ -353,7 +583,7 @@ class User_Interface : Fragment() {
                 "NFC_MARK_SUCCESS" -> {
                     if (!isProcessing) {
                         showSuccessCheck()
-                        lifecycleScope.launch {
+                        viewLifecycleOwner.lifecycleScope.launch {
                             delay(1200)
                             checkLessonStatusRemote(showToast = false)
                         }
@@ -368,25 +598,24 @@ class User_Interface : Fragment() {
         }
     }
 
-    private fun setSuccessState() {
-        statusIcon.setImageResource(R.drawable.ic_check)
-        statusIcon.setColorFilter(Color.parseColor("#10B981"))
-        statusText.setTextColor(Color.parseColor("#10B981"))
+    private fun setNeutralNfcState() {
+        if (_binding == null) return
+        binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+        binding.statusIcon.colorFilter = null
+        binding.statusText.text = "Поднесите к чекеру"
+        binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
     }
 
-    private fun setNeutralState() {
-        statusIcon.setImageResource(R.drawable.ic_nfc)
-        statusIcon.colorFilter = null
-        statusText.text = "Поднесите к чекеру"
-        statusText.setTextColor(requireContext().getColorFromAttr(android.R.attr.textColorPrimary))
-    }
-
-    private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
-        if (result.contents == null) {
-            Toast.makeText(requireContext(), "Сканирование отменено", Toast.LENGTH_SHORT).show()
+    private val barcodeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val scannedData = result.data?.getStringExtra(CustomScannerActivity.EXTRA_SCAN_RESULT)
+            if (!scannedData.isNullOrBlank()) {
+                handleScannedUrl(scannedData)
+            } else {
+                Toast.makeText(requireContext(), "Не удалось распознать QR-код", Toast.LENGTH_SHORT).show()
+            }
         } else {
-            val scannedData = result.contents
-            handleScannedUrl(scannedData)
+            Toast.makeText(requireContext(), "Сканирование отменено", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -400,7 +629,7 @@ class User_Interface : Fragment() {
             } else {
                 null
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -421,7 +650,6 @@ class User_Interface : Fragment() {
             tsStr = uri.getQueryParameter("ts")
             nonce = uri.getQueryParameter("nonce")
 
-            // If token was not in query params, inspect the URL fragment (e.g. #/attendance/join?token=eyJ...)
             val frag = uri.fragment
             if (frag != null) {
                 if (token.isNullOrBlank() && frag.contains("token=")) {
@@ -445,7 +673,6 @@ class User_Interface : Fragment() {
             if (raw.contains("ts=")) tsStr = raw.substringAfter("ts=").substringBefore("&").substringBefore("#")
             if (raw.contains("nonce=")) nonce = raw.substringAfter("nonce=").substringBefore("&").substringBefore("#")
         } else if (raw.length > 20 && !raw.contains(" ")) {
-            // Raw JWT invite token
             token = raw
         }
 
@@ -458,8 +685,8 @@ class User_Interface : Fragment() {
         val ts = tsStr?.toLongOrNull()
         if (ts != null && ts > 0L) {
             val nowSec = System.currentTimeMillis() / 1000L
-            if (Math.abs(nowSec - ts) > 8) {
-                Toast.makeText(requireContext(), "QR-код устарел! Наведите камеру на актуальный QR-код на экране", Toast.LENGTH_LONG).show()
+            if (Math.abs(nowSec - ts) > 15) {
+                Toast.makeText(requireContext(), "QR-код устарел. Наведите камеру на свежий QR-код", Toast.LENGTH_LONG).show()
                 return
             }
         }
@@ -469,26 +696,19 @@ class User_Interface : Fragment() {
                 val uri = Uri.parse(raw)
                 val portStr = if (uri.port != -1) ":${uri.port}" else ""
                 val scannedServerOrigin = "${uri.scheme}://${uri.host}$portStr"
-                val currentServer = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(requireContext())
+                val currentServer = ServerConfig.getBaseUrl(requireContext())
                 if (!currentServer.equals(scannedServerOrigin, ignoreCase = true)) {
-                    android.util.Log.d("User_Interface", "Auto-aligning server to QR origin: $scannedServerOrigin (was $currentServer)")
-                    com.example.kotlinroomdatabase.config.ServerConfig.setCustomServerUrl(requireContext(), scannedServerOrigin)
+                    ServerConfig.setCustomServerUrl(requireContext(), scannedServerOrigin)
                 }
             } catch (e: Exception) {
-                android.util.Log.w("User_Interface", "Failed to parse scanned origin: ${e.message}")
+                Log.w("User_Interface", "Failed to parse scanned origin: ${e.message}")
             }
         }
 
         if (!token.isNullOrBlank() || effectiveLessonId > 0) {
             markAttendance(effectiveLessonId, token, totpCode, ts, nonce)
-        } else if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true)) {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(raw)))
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show()
-            }
         } else {
-            Toast.makeText(requireContext(), "QR-код не содержит данных о посещаемости", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "QR-код не содержит данных о занятии", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -517,8 +737,7 @@ class User_Interface : Fragment() {
                     title = "Подтверждение присутствия",
                     subtitle = "Приложите палец для подтверждения отметки на занятии",
                     onSuccess = { biometricSig ->
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            val repository = com.example.kotlinroomdatabase.settings.RepositoryHTTPS.getStudentRepository(requireContext())
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                             val result = repository.markAttendanceViaQr(
                                 lessonId,
                                 deviceId,
@@ -532,6 +751,7 @@ class User_Interface : Fragment() {
                             )
 
                             withContext(Dispatchers.Main) {
+                                if (!isAdded || _binding == null) return@withContext
                                 when (result) {
                                     is com.example.kotlinroomdatabase.repository.AttendanceResult.Success -> {
                                         var detectedLessonName = result.lessonName
@@ -566,18 +786,24 @@ class User_Interface : Fragment() {
                     }
                 )
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             Toast.makeText(requireContext(), "Нет разрешения на геолокацию", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun startScanning() {
-        val options = ScanOptions()
-        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-        options.setPrompt("Наведите камеру на QR-код занятия")
-        options.setBeepEnabled(true)
-        options.setBarcodeImageEnabled(true)
-        options.setOrientationLocked(true)
-        barcodeLauncher.launch(options)
+        val intent = Intent(requireContext(), CustomScannerActivity::class.java).apply {
+            putExtra(CustomScannerActivity.EXTRA_PROMPT, "Наведите камеру на QR-код занятия")
+        }
+        barcodeLauncher.launch(intent)
+    }
+
+    fun scrollToTop() {
+        _binding?.scrollViewHome?.smoothScrollTo(0, 0)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

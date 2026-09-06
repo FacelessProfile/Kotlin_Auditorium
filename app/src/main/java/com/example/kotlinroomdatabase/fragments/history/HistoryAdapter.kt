@@ -64,22 +64,49 @@ class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
         holder.tvLessonType.text = inferredType
         holder.tvTimeSlot.text = item.time ?: "09:00 - 10:35"
 
-        // 4. Status Indicator (On-Time vs Late)
-        val isLate = item.is_late || item.status == "late"
-        if (isLate) {
-            holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.badge_late_icon))
-            holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_late)
-            holder.ivStatusIcon.setImageResource(R.drawable.ic_schedule_clock)
-            holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.badge_late_icon))
-            holder.tvStatusText.text = "Опоздание"
-            holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.badge_late_text))
-        } else {
-            holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.badge_ontime_icon))
-            holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_ontime)
-            holder.ivStatusIcon.setImageResource(R.drawable.ic_check)
-            holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.badge_ontime_icon))
-            holder.tvStatusText.text = "Вовремя"
-            holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.badge_ontime_text))
+        // 4. Status Indicator (On-Time, Late, Excused, Absent, Fraud)
+        val rawStatus = item.status?.lowercase() ?: if (item.is_late) "late" else "present"
+        when {
+            rawStatus == "fraud" -> {
+                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.sib_error_vibrant))
+                holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_absent)
+                holder.ivStatusIcon.setImageResource(R.drawable.ic_cross)
+                holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.sib_error_vibrant))
+                holder.tvStatusText.text = "Антифрод"
+                holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.sib_error_vibrant))
+            }
+            rawStatus == "absent" -> {
+                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.sib_error_vibrant))
+                holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_absent)
+                holder.ivStatusIcon.setImageResource(R.drawable.ic_cross)
+                holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.sib_error_vibrant))
+                holder.tvStatusText.text = "Пропуск"
+                holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.sib_error_vibrant))
+            }
+            rawStatus == "excused" -> {
+                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.sib_blue_primary))
+                holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_type)
+                holder.ivStatusIcon.setImageResource(R.drawable.ic_check)
+                holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.sib_blue_primary))
+                holder.tvStatusText.text = "Уважительная"
+                holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.sib_blue_primary))
+            }
+            rawStatus == "late" || item.is_late -> {
+                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.badge_late_icon))
+                holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_late)
+                holder.ivStatusIcon.setImageResource(R.drawable.ic_schedule_clock)
+                holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.badge_late_icon))
+                holder.tvStatusText.text = "Опоздание"
+                holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.badge_late_text))
+            }
+            else -> {
+                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.badge_ontime_icon))
+                holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_ontime)
+                holder.ivStatusIcon.setImageResource(R.drawable.ic_check)
+                holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.badge_ontime_icon))
+                holder.tvStatusText.text = "Присутствовал"
+                holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.badge_ontime_text))
+            }
         }
     }
 

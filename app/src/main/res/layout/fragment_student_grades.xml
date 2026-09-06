@@ -1,213 +1,229 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_main">
+    android:background="?attr/sib_bg_page">
 
-    <!-- University Header Banner -->
-    <LinearLayout
+    <!-- University Hero Header Banner -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="24dp"
-        android:background="@drawable/bg_header_gradient"
-        android:elevation="4dp">
+        android:layout_margin="16dp"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="2dp"
+        app:strokeWidth="0dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Успеваемость и баллы"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp"/>
-
-        <!-- Semester Selector Dropdown -->
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:boxBackgroundColor="#1AFFFFFF"
-            app:boxCornerRadiusTopStart="12dp"
-            app:boxCornerRadiusTopEnd="12dp"
-            app:boxCornerRadiusBottomStart="12dp"
-            app:boxCornerRadiusBottomEnd="12dp"
-            app:boxStrokeColor="#FFFFFF"
-            app:hintTextColor="#E2E8F0"
-            app:endIconTint="#FFFFFF"
-            android:hint="Учебный семестр">
-
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/actvSemester"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:focusable="false"
-                android:cursorVisible="false"
-                android:inputType="none"
-                android:singleLine="true"
-                android:ellipsize="end"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- KPI Metrics Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            android:baselineAligned="false">
+            android:background="@drawable/bg_hero_gradient"
+            android:orientation="vertical"
+            android:padding="20dp">
 
-            <!-- Progress Ring Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                app:cardBackgroundColor="@color/card_surface"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/card_stroke">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Успеваемость и баллы"
+                android:textColor="@color/sib_text_white"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
-                <LinearLayout
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Рейтинговая система и баллы за семестр"
+                android:textColor="#D0E2FF"
+                android:textSize="13sp" />
+
+            <!-- Semester Selector Dropdown -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                app:boxBackgroundColor="#1AFFFFFF"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="#FFFFFF"
+                app:hintTextColor="#E2E8F0"
+                app:endIconTint="#FFFFFF"
+                android:hint="Учебный семестр">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/actvSemester"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
+                    android:cursorVisible="false"
+                    android:ellipsize="end"
+                    android:focusable="false"
+                    android:inputType="none"
+                    android:padding="12dp"
+                    android:singleLine="true"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:id="@+id/progressScore"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:indicatorSize="60dp"
-                        app:trackThickness="6dp"
-                        app:indicatorColor="@color/uni_blue_primary"
-                        app:trackColor="@color/divider_color"
-                        app:trackCornerRadius="3dp"
-                        android:progress="0"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Общий прогресс"
-                        android:textSize="11sp"
-                        android:layout_marginTop="8dp"
-                        android:textColor="@color/text_muted"/>
-
-                    <TextView
-                        android:id="@+id/tvScoreValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="---"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_main"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Stat Cards Column -->
+            <!-- KPI Metrics Row -->
             <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:orientation="vertical">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
 
-                <!-- Total Points Card -->
+                <!-- Progress Ring Card -->
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
                     android:layout_weight="1"
-                    android:layout_marginBottom="8dp"
-                    app:cardBackgroundColor="@color/card_surface"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/card_stroke">
+                    app:cardBackgroundColor="?attr/sib_bg_card"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="?attr/sib_border_subtle"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:gravity="center"
                         android:orientation="vertical"
-                        android:layout_gravity="center_vertical"
                         android:padding="12dp">
 
-                        <TextView
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/progressScore"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Всего баллов"
-                            android:textSize="11sp"
-                            android:textColor="@color/text_muted"/>
+                            android:progress="0"
+                            app:indicatorColor="@color/sib_blue_primary"
+                            app:indicatorSize="52dp"
+                            app:trackColor="?attr/sib_border_subtle"
+                            app:trackCornerRadius="3dp"
+                            app:trackThickness="5dp" />
 
                         <TextView
-                            android:id="@+id/tvWorks"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="6dp"
+                            android:text="Прогресс"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:id="@+id/tvScoreValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="---"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/uni_blue_primary"/>
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Academic Status Card -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
+                <!-- Stat Cards Column -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    app:cardBackgroundColor="@color/card_surface"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/card_stroke">
+                    android:orientation="vertical">
 
-                    <LinearLayout
+                    <!-- Total Points Card -->
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_gravity="center_vertical"
-                        android:padding="12dp">
+                        android:layout_height="0dp"
+                        android:layout_marginBottom="6dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="?attr/sib_bg_card"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="?attr/sib_border_subtle"
+                        app:strokeWidth="1dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Статус"
-                            android:textSize="11sp"
-                            android:textColor="@color/text_muted"/>
+                            android:layout_gravity="center_vertical"
+                            android:orientation="vertical"
+                            android:padding="10dp">
 
-                        <TextView
-                            android:id="@+id/tvStatus"
-                            android:layout_width="wrap_content"
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Всего баллов"
+                                android:textColor="?attr/sib_text_secondary"
+                                android:textSize="10sp" />
+
+                            <TextView
+                                android:id="@+id/tvWorks"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="---"
+                                android:textColor="@color/sib_blue_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Academic Status Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="?attr/sib_bg_card"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="?attr/sib_border_subtle"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="---"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_main"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                            android:layout_gravity="center_vertical"
+                            android:orientation="vertical"
+                            android:padding="10dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Статус"
+                                android:textColor="?attr/sib_text_secondary"
+                                android:textSize="10sp" />
+
+                            <TextView
+                                android:id="@+id/tvStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="---"
+                                android:textColor="?attr/sib_text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Subjects List Header -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Предметы и балльно-рейтинговая система"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_muted"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="8dp"/>
+        android:paddingHorizontal="20dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="6dp"
+        android:text="Дисциплины и балльно-рейтинговая система"
+        android:textColor="?attr/sib_text_secondary"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 
     <!-- Subjects RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
@@ -215,7 +231,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipToPadding="false"
         android:paddingHorizontal="16dp"
-        android:paddingBottom="16dp"
-        android:clipToPadding="false"/>
+        android:paddingBottom="24dp" />
 </LinearLayout>

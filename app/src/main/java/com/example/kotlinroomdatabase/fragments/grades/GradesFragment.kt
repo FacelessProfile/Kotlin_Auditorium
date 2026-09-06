@@ -19,9 +19,10 @@ class GradesFragment : Fragment() {
 
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val role = prefs.getString("user_role", "student")
+        val isTeacher = com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(role)
 
         if (savedInstanceState == null) {
-            val fragment = if (role == "teacher") {
+            val fragment = if (isTeacher) {
                 TeacherSubjectsFragment()
             } else {
                 StudentGradesFragment()

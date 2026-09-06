@@ -1,54 +1,45 @@
 package com.example.kotlinroomdatabase.data
 
 import android.content.Context
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.MotionEvent
-import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navOptions
+import com.example.kotlinroomdatabase.MainActivity
 import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.config.ServerConfig
+import com.example.kotlinroomdatabase.databinding.FragmentLoginBinding
 import com.example.kotlinroomdatabase.model.Student
-import com.example.kotlinroomdatabase.repository.*
+import com.example.kotlinroomdatabase.repository.IStudentRepository
+import com.example.kotlinroomdatabase.repository.LoginResult
+import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
-import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.launch
+import com.example.kotlinroomdatabase.util.ApiErrorMapper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
 
 class LoginFragment : Fragment() {
+
+    private var _binding: FragmentLoginBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var studentRepository: IStudentRepository
     private var isLoginMode = true
 
-    private lateinit var etName: EditText
-    private lateinit var etGroup: EditText
-    private lateinit var etPassword: EditText
-    private lateinit var etPasswordConfirm: EditText
-    private lateinit var btnAction: Button
-    private lateinit var tvToggleMode: TextView
-    private lateinit var tvTitle: TextView
-
-    private lateinit var groupLayout: View
-    private lateinit var passwordConfirmLayout: View
-
-    private lateinit var nameLayout: TextInputLayout
-    private lateinit var passwordLayout: TextInputLayout
-
     override fun onAttach(context: Context) {
         super.onAttach(context)
-
-        val useHttp = true // MARK FALSE IF YOU USE ZMQ
-
+        val useHttp = true
         if (useHttp) {
             val db = StudentDatabase.getInstance(requireContext())
             studentRepository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
@@ -57,141 +48,164 @@ class LoginFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val view = inflater.inflate(R.layout.fragment_login, container, false)
-
-        etName = view.findViewById(R.id.etName)
-        etGroup = view.findViewById(R.id.etGroup)
-        etPassword = view.findViewById(R.id.etPassword)
-        etPasswordConfirm = view.findViewById(R.id.etPasswordConfirm)
-        btnAction = view.findViewById(R.id.btnAction)
-        tvToggleMode = view.findViewById(R.id.tvToggleMode)
-        tvTitle = view.findViewById(R.id.tvTitle)
-
-        nameLayout = view.findViewById(R.id.nameLayout)
-        groupLayout = view.findViewById(R.id.groupLayout)
-        passwordLayout = view.findViewById(R.id.passwordLayout)
-        passwordConfirmLayout = view.findViewById(R.id.passwordConfirmLayout)
-
-        applyTheme()
-
-        return view
-    }
-
-    private fun applyTheme() {
-        val prefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val btnColorHex = prefs.getString("button_color", "#673AB7") ?: "#673AB7"
-        val inputColorHex = prefs.getString("input_color", "#673AB7") ?: "#673AB7"
-        
-        try {
-            val btnColor = Color.parseColor(btnColorHex)
-            val inputColor = Color.parseColor(inputColorHex)
-            
-            val buttonStates = ColorStateList.valueOf(btnColor)
-            btnAction.backgroundTintList = buttonStates
-            tvToggleMode.setTextColor(btnColor)
-
-            val inputStates = ColorStateList.valueOf(inputColor)
-            val layouts = listOf(nameLayout, groupLayout as TextInputLayout, passwordLayout, passwordConfirmLayout as TextInputLayout)
-            layouts.forEach {
-                it.setBoxStrokeColor(inputColor)
-                it.setStartIconTintList(inputStates)
-                it.defaultHintTextColor = inputStates
-                it.setHintTextColor(inputStates)
-                it.boxStrokeColor = inputColor
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("Login", "Theme application error", e)
-        }
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentLoginBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        tvToggleMode.setOnClickListener {
+        updateServerFooter()
+
+        binding.tvToggleMode.setOnClickListener {
             isLoginMode = !isLoginMode
+            hideError()
             updateUI()
         }
 
-        tvTitle.setOnLongClickListener {
-            com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(requireContext())
-            true
-        }
-
-        btnAction.setOnClickListener {
+        binding.btnAction.setOnClickListener {
             handleAction()
         }
 
-        setupPasswordVisibility(etPassword)
+        binding.logoContainer.setOnLongClickListener {
+            ServerConfig.showServerSwitcherDialog(requireContext()) {
+                updateServerFooter()
+            }
+            true
+        }
+
+        binding.tvServerSwitcher.setOnClickListener {
+            ServerConfig.showServerSwitcherDialog(requireContext()) {
+                updateServerFooter()
+            }
+        }
+
+        val textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                hideError()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        }
+
+        binding.etName.addTextChangedListener(textWatcher)
+        binding.etPassword.addTextChangedListener(textWatcher)
+        binding.etGroup.addTextChangedListener(textWatcher)
+        binding.etPasswordConfirm.addTextChangedListener(textWatcher)
+
+        updateUI()
     }
 
     override fun onResume() {
         super.onResume()
-        isLoginMode = true
-        updateUI()
+        hideError()
+        updateServerFooter()
+    }
+
+    private fun updateServerFooter() {
+        if (_binding == null) return
+        val currentUrl = ServerConfig.getBaseUrl(requireContext())
+        val cleanHost = try {
+            java.net.URI(currentUrl).host ?: currentUrl
+        } catch (_: Exception) {
+            currentUrl
+        }
+        binding.tvServerSwitcher.text = "Сервер: $cleanHost (нажмите для смены)"
     }
 
     private fun updateUI() {
         if (isLoginMode) {
-            tvTitle.text = "Вход в систему"
-            btnAction.text = "Войти"
-            tvToggleMode.text = "Нет аккаунта? Зарегистрироваться"
-            groupLayout.isVisible = false
-            passwordConfirmLayout.isVisible = false
+            binding.tvTitle.text = "Вход в систему"
+            binding.btnAction.text = "Войти"
+            binding.tvToggleMode.text = "Нет аккаунта? Зарегистрироваться"
+            binding.groupLayout.isVisible = false
+            binding.passwordConfirmLayout.isVisible = false
         } else {
-            tvTitle.text = "Регистрация"
-            btnAction.text = "Создать аккаунт"
-            tvToggleMode.text = "Уже есть аккаунт? Войти"
-            groupLayout.isVisible = true
-            passwordConfirmLayout.isVisible = true
+            binding.tvTitle.text = "Регистрация"
+            binding.btnAction.text = "Создать аккаунт"
+            binding.tvToggleMode.text = "Уже есть аккаунт? Войти"
+            binding.groupLayout.isVisible = true
+            binding.passwordConfirmLayout.isVisible = true
         }
+    }
+
+    private fun showError(message: String) {
+        binding.tvError.text = ApiErrorMapper.getErrorMessage(message)
+        binding.layoutError.visibility = View.VISIBLE
+    }
+
+    private fun hideError() {
+        binding.layoutError.visibility = View.GONE
+    }
+
+    private fun setLoading(loading: Boolean) {
+        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+        binding.btnAction.isEnabled = !loading
+        binding.btnAction.alpha = if (loading) 0.7f else 1.0f
+        binding.etName.isEnabled = !loading
+        binding.etPassword.isEnabled = !loading
+        binding.etGroup.isEnabled = !loading
+        binding.etPasswordConfirm.isEnabled = !loading
     }
 
     @OptIn(InternalSerializationApi::class)
     private fun handleAction() {
-        val name = etName.text.toString().trim()
-        val pass = etPassword.text.toString().trim()
+        val name = binding.etName.text.toString().trim()
+        val pass = binding.etPassword.text.toString().trim()
+
+        hideError()
 
         if (isLoginMode) {
             if (name.isBlank() || pass.isBlank()) {
-                Toast.makeText(context, "Введите логин и пароль", Toast.LENGTH_SHORT).show()
+                showError("Пожалуйста, заполните логин и пароль")
                 return
             }
 
+            setLoading(true)
             lifecycleScope.launch(Dispatchers.IO) {
                 val result = studentRepository.login(name, pass)
                 withContext(Dispatchers.Main) {
+                    if (_binding == null) return@withContext
+                    setLoading(false)
                     when (result) {
                         is LoginResult.Success -> proceedToApp(result.student)
-                        is LoginResult.Error -> Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                        is LoginResult.Error -> showError(result.message)
                     }
                 }
             }
         } else {
-            val group = etGroup.text.toString().trim()
-            val confirm = etPasswordConfirm.text.toString().trim()
+            val group = binding.etGroup.text.toString().trim()
+            val confirm = binding.etPasswordConfirm.text.toString().trim()
 
             if (name.isBlank() || group.isBlank() || pass.isBlank()) {
-                Toast.makeText(context, "Заполните все поля!", Toast.LENGTH_SHORT).show()
+                showError("Пожалуйста, заполните все обязательные поля")
                 return
             }
 
             val passwordPattern = "^(?=.*[0-9]).{6,}$".toRegex()
             if (!passwordPattern.matches(pass)) {
-                etPassword.error = "Пароль от 6 символов и минимум одна цифра"
+                showError("Пароль должен содержать от 6 символов и минимум 1 цифру")
                 return
             }
             if (pass != confirm) {
-                etPasswordConfirm.error = "Пароли не совпадают"
+                showError("Введенные пароли не совпадают")
                 return
             }
 
+            setLoading(true)
             lifecycleScope.launch(Dispatchers.IO) {
                 val result = studentRepository.register(name, group, pass)
                 withContext(Dispatchers.Main) {
+                    if (_binding == null) return@withContext
+                    setLoading(false)
                     when (result) {
                         is LoginResult.Success -> proceedToApp(result.student)
-                        is LoginResult.Error -> Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                        is LoginResult.Error -> showError(result.message)
                     }
                 }
             }
@@ -206,103 +220,76 @@ class LoginFragment : Fragment() {
             studentRepository.clearLocalRoomData()
             val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
             val token = authPrefs.getString("auth_token", "") ?: ""
+
+            val tagForHce = if (student.role == "student") {
+                if (token.isNotEmpty()) token else "STUDENT:${student.id}:${student.studentName}"
+            } else {
+                student.studentNFC
+            }
+
             prefs.edit().apply {
                 clear()
                 putInt("current_student_id", student.id)
                 putString("user_role", student.role)
                 putString("student_name", student.studentName)
                 putString("student_group", student.studentGroup)
-                val tagForHce = if (student.role == "student") "STUDENT:${student.id}:${student.studentName}" else student.studentNFC
                 putString("nfc_payload", tagForHce)
                 apply()
             }
 
             enableHceForStudent(student)
 
-            withContext(Dispatchers.Main) {
-                val mainActivity = activity as? com.example.kotlinroomdatabase.MainActivity
-                mainActivity?.updateUIForRole()
-                
-                if (student.role == "teacher") {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        studentRepository.syncAllStudents()
-                        try {
-                            val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
-                            val schedRes = studentRepository.getScheduleForDay(todayStr)
-                            if (schedRes is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
-                                com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(requireContext().applicationContext, schedRes.data)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("LoginFragment", "Error scheduling reminders on login", e)
-                        }
-                        withContext(Dispatchers.Main) {
-                            mainActivity?.updateNavHeader()
-                            findNavController().navigate(R.id.action_loginFragment_to_lessonFragment, null, navOptions {
-                                popUpTo(R.id.my_nav) { inclusive = true }
-                            })
-                        }
-                    }
-                } else {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        studentRepository.syncAllStudents()
-                        try {
-                            val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
-                            val schedRes = studentRepository.getScheduleForDay(todayStr)
-                            if (schedRes is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
-                                com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(requireContext().applicationContext, schedRes.data)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("LoginFragment", "Error scheduling reminders on login", e)
-                        }
-                        withContext(Dispatchers.Main) {
-                            mainActivity?.updateNavHeader()
-                            findNavController().navigate(R.id.userHomeFragment, null, navOptions {
-                                popUpTo(R.id.my_nav) { inclusive = true }
-                            })
-                        }
-                    }
-                    Toast.makeText(context, "Режим пропуска активен!", Toast.LENGTH_SHORT).show()
+            // Auto-sync data in background
+            studentRepository.syncAllStudents()
+            try {
+                val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                val schedRes = studentRepository.getScheduleForDay(todayStr)
+                if (schedRes is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
+                    com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(
+                        requireContext().applicationContext,
+                        schedRes.data
+                    )
                 }
+            } catch (e: Exception) {
+                Log.e("LoginFragment", "Error scheduling reminders on login", e)
             }
-        }
-    }
 
-    @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun setupPasswordVisibility(editText: EditText) {
-        editText.setOnTouchListener { v, event ->
-            val DRAWABLE_RIGHT = 2
-            val drawable = editText.compoundDrawables[DRAWABLE_RIGHT]
-            if (drawable != null) {
-                val eyeIconArea = editText.right - drawable.bounds.width() - editText.paddingEnd
-                if (event.rawX >= eyeIconArea) {
-                    when (event.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            editText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                            return@setOnTouchListener true
-                        }
-                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                            editText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                            editText.setSelection(editText.text.length)
-                            v.performClick()
-                            return@setOnTouchListener true
-                        }
-                    }
-                }
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                val mainActivity = activity as? MainActivity
+                mainActivity?.updateUIForRole()
+                mainActivity?.refreshNotificationBadge()
+
+                // Navigate to userHomeFragment (Главная) for ALL roles
+                findNavController().navigate(R.id.action_login_to_userHome, null, navOptions {
+                    popUpTo(R.id.my_nav) { inclusive = true }
+                })
             }
-            false
         }
     }
 
     @OptIn(InternalSerializationApi::class)
     private fun enableHceForStudent(student: Student) {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val tagForHce = if (student.role == "student") "STUDENT:${student.id}:${student.studentName}" else student.studentNFC
+        val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val token = authPrefs.getString("auth_token", "") ?: ""
+
+        val tagForHce = if (student.role == "student") {
+            if (token.isNotEmpty()) token else "STUDENT:${student.id}:${student.studentName}"
+        } else {
+            student.studentNFC
+        }
 
         if (!tagForHce.isNullOrBlank()) {
             prefs.edit().putString("nfc_payload", tagForHce).apply()
-            android.util.Log.d("DEBUG_NFC", "Saved HCE tag: $tagForHce")
+            Log.d("DEBUG_NFC", "Saved HCE tag: $tagForHce")
         } else {
-            android.util.Log.e("DEBUG_NFC", "Server sent EMPTY tag!")
+            Log.e("DEBUG_NFC", "Server sent EMPTY tag!")
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

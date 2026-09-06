@@ -1,38 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:checkableBehavior="single">
-        <item
-            android:id="@+id/userHomeFragment"
-            android:icon="@drawable/ic_home"
-            android:title="Главная" />
-        <item
-            android:id="@+id/lessonFragment"
-            android:icon="@drawable/ic_qr_code"
-            android:title="Занятие" />
-        <item
-            android:id="@+id/listFragment"
-            android:icon="@drawable/ic_person"
-            android:title="Студенты" />
-        <item
-            android:id="@+id/profileFragment"
-            android:icon="@drawable/ic_person"
-            android:title="Профиль" />
+    <group android:id="@+id/drawer_main_group" android:checkableBehavior="single">
         <item
             android:id="@+id/scheduleFragment"
             android:icon="@drawable/ic_schedule_clock"
             android:title="Расписание" />
         <item
-            android:id="@+id/historyFragment"
-            android:icon="@drawable/ic_history"
-            android:title="История посещений" />
-        <item
-            android:id="@+id/gradesFragment"
-            android:icon="@drawable/ic_star"
-            android:title="Оценки" />
-        <item
-            android:id="@+id/settingsFragment"
-            android:icon="@drawable/ic_settings"
-            android:title="Настройки" />
+            android:id="@+id/listFragment"
+            android:icon="@drawable/ic_person"
+            android:title="Студенты" />
         <item
             android:id="@+id/notificationsFragment"
             android:icon="@drawable/ic_notifications"
@@ -40,7 +16,11 @@
         <item
             android:id="@+id/totpFragment"
             android:icon="@drawable/ic_qr_code"
-            android:title="Аутентификатор" />
+            android:title="2FA Аутентификатор" />
+        <item
+            android:id="@+id/settingsFragment"
+            android:icon="@drawable/ic_settings"
+            android:title="Настройки" />
     </group>
     <item android:title="Аккаунт">
         <menu>

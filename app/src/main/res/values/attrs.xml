@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="sib_bg_page" format="color|reference" />
+    <attr name="sib_bg_card" format="color|reference" />
+    <attr name="sib_border_subtle" format="color|reference" />
+    <attr name="sib_text_primary" format="color|reference" />
+    <attr name="sib_text_secondary" format="color|reference" />
+    <attr name="sib_text_muted" format="color|reference" />
+</resources>

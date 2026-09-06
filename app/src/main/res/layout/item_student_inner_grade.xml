@@ -25,7 +25,7 @@
             android:text="Лабораторная работа №1"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="@color/text_main"/>
+            android:textColor="?attr/sib_text_primary"/>
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -51,7 +51,7 @@
                 android:layout_height="wrap_content"
                 android:text=""
                 android:textSize="11sp"
-                android:textColor="@color/text_muted"
+                android:textColor="?attr/sib_text_muted"
                 android:layout_marginStart="8dp"
                 android:visibility="gone"/>
         </LinearLayout>
@@ -65,7 +65,7 @@
         android:text="10 / 10"
         android:textSize="13sp"
         android:textStyle="bold"
-        android:textColor="@color/uni_blue_primary"
+        android:textColor="@color/sib_blue_primary"
         android:background="@drawable/bg_badge_type"
         android:paddingHorizontal="10dp"
         android:paddingVertical="4dp"/>

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
+    android:background="?attr/sib_bg_page"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,306 +13,175 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Header Card with Blue Gradient -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Настройки темы"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="24dp"
-            android:textColor="?android:attr/textColorPrimary"/>
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
-        <!-- Theme Mode Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_hero_gradient"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Настройки"
+                    android:textColor="@color/sib_text_white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Оформление, безопасность и оповещения"
+                    android:textColor="#D0E2FF"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Theme Mode Card (System / Light / Dark) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            app:cardBackgroundColor="?attr/sib_bg_card"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/sib_border_subtle"
+            app:strokeWidth="1dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Режим оформления"
+                    android:text="Тема оформления"
+                    android:textColor="?attr/sib_text_primary"
                     android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:layout_marginBottom="4dp"/>
+                    android:textStyle="bold" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Светлая, темная или системная тема"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="14dp"
+                    android:text="Системная тема по умолчанию или принудительный режим"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
+
                 <RadioGroup
                     android:id="@+id/rgThemeMode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
+
                     <RadioButton
                         android:id="@+id/rbThemeSystem"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:text="Система"/>
+                        android:text="Системная"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="13sp" />
+
                     <RadioButton
                         android:id="@+id/rbThemeLight"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:text="Светлая"/>
+                        android:text="Светлая"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="13sp" />
+
                     <RadioButton
                         android:id="@+id/rbThemeDark"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:text="Темная"/>
+                        android:text="Тёмная"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="13sp" />
                 </RadioGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Navigation Category -->
+        <!-- Security & 2FA Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Панель навигации"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="AppBar, статусбар"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/navbarColorPresets"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:layout_marginEnd="8dp" android:tag="#673AB7"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#2196F3" android:layout_marginEnd="8dp" android:tag="#2196F3"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#009688" android:tag="#009688"/>
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            app:cardBackgroundColor="?attr/sib_bg_card"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/sib_border_subtle"
+            app:strokeWidth="1dp">
 
-        <!-- Buttons Category -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Кнопки и FAB"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Основные действия"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/buttonColorPresets"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:layout_marginEnd="8dp" android:tag="#673AB7"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#FF9800" android:layout_marginEnd="8dp" android:tag="#FF9800"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#4CAF50" android:tag="#4CAF50"/>
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Поля ввода"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Обводка, курсор, Label"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/inputColorPresets"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:layout_marginEnd="8dp" android:tag="#673AB7"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#2196F3" android:layout_marginEnd="8dp" android:tag="#2196F3"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#009688" android:tag="#009688"/>
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Переключатели"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Toggle, Checkbox, Radio"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/toggleColorPresets"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#E91E63" android:layout_marginEnd="8dp" android:tag="#E91E63"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#4CAF50" android:layout_marginEnd="8dp" android:tag="#4CAF50"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#FF9800" android:layout_marginEnd="8dp" android:tag="#FF9800"/>
-                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/circle_shape" android:backgroundTint="#673AB7" android:tag="#673AB7"/>
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
+                    android:orientation="horizontal">
+
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical">
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Безопасность"
+                            android:text="Безопасность (2FA)"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="?android:attr/textColorPrimary"/>
+                            android:textStyle="bold" />
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Двухфакторная аутентификация"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"/>
+                            android:layout_marginTop="2dp"
+                            android:text="Двухфакторная защита TOTP для входа"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="12sp" />
                     </LinearLayout>
+
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switch2FA"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnScan2FaQr"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="12dp"
                     android:text="Привязать 2FA (Сканировать QR)"
-                    android:icon="@drawable/ic_qr_code"
-                    app:cornerRadius="8dp"/>
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="13sp"
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_qr_code"
+                    app:iconTint="@color/sib_blue_primary"
+                    app:strokeColor="?attr/sib_border_subtle" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -318,10 +189,13 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="?attr/sib_bg_card"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/sib_border_subtle"
+            app:strokeWidth="1dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -331,25 +205,25 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Оповещения о парах и вибрация"
+                    android:text="Оповещения о парах"
+                    android:textColor="?attr/sib_text_primary"
                     android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="?android:attr/textColorPrimary"/>
+                    android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Вибрация и напоминание перед началом каждого занятия"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginTop="2dp"
+                    android:text="Вибрация и пуш-напоминание перед началом занятий"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:layout_marginTop="14dp"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="4dp">
+                    android:orientation="horizontal">
 
                     <TextView
                         android:id="@+id/tvReminderMinutesLabel"
@@ -357,96 +231,71 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Предупреждать за: 5 мин"
+                        android:textColor="@color/sib_blue_primary"
                         android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/uni_blue_primary"/>
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <com.google.android.material.slider.Slider
                     android:id="@+id/sliderReminderMinutes"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:valueFrom="1.0"
-                    android:valueTo="10.0"
                     android:stepSize="1.0"
                     android:value="5.0"
-                    app:thumbColor="@color/uni_blue_primary"
-                    app:trackColorActive="@color/uni_blue_primary"
-                    app:trackColorInactive="@color/divider_color"/>
+                    android:valueFrom="1.0"
+                    android:valueTo="15.0"
+                    app:thumbColor="@color/sib_blue_primary"
+                    app:trackColorActive="@color/sib_blue_primary"
+                    app:trackColorInactive="?attr/sib_border_subtle" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnTestReminder"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_marginTop="8dp"
                     android:text="🔔 Проверить вибрацию и уведомление"
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="13sp"
+                    app:cornerRadius="12dp"
                     app:icon="@drawable/ic_schedule_clock"
-                    app:cornerRadius="8dp"/>
+                    app:iconTint="@color/sib_blue_primary"
+                    app:strokeColor="?attr/sib_border_subtle" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- About App Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="?attr/sib_bg_card"
+            app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="#33888888"
-            app:cardBackgroundColor="#0D000000">
+            app:strokeColor="?attr/sib_border_subtle"
+            app:strokeWidth="1dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Предпросмотр (расширенная тема)"
-                    android:textSize="12sp"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:layout_marginBottom="8dp"/>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/previewInputLayout"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Поле ввода (активное)"
-                        android:enabled="true"/>
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Пуш-уведомления"
-                        android:textColor="?android:attr/textColorPrimary"/>
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/previewSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"/>
-                </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnApplyTheme"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:text="ПРИМЕНИТЬ ТЕМУ"
+                    android:text="О приложении"
+                    android:textColor="?attr/sib_text_primary"
                     android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="8dp"/>
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="СибГУТИ • Электронный журнал v2.0"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

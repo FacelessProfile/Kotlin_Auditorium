@@ -9,99 +9,88 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinroomdatabase.MainActivity
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.config.ServerConfig
+import com.example.kotlinroomdatabase.data.StudentDatabase
 import com.example.kotlinroomdatabase.databinding.FragmentProfileBinding
+import com.example.kotlinroomdatabase.model.UserProfile
 import com.example.kotlinroomdatabase.repository.AvatarResult
-import com.example.kotlinroomdatabase.settings.RepositoryHTTPS
+import com.example.kotlinroomdatabase.repository.GenericResult
+import com.example.kotlinroomdatabase.repository.IStudentRepository
+import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
+import com.example.kotlinroomdatabase.util.RoleUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Calendar
-import java.util.Locale
+import java.io.File
+import java.io.FileOutputStream
 
 class ProfileFragment : Fragment() {
+
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var repository: IStudentRepository
+    private var cachedProfile: UserProfile? = null
+
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            saveAvatarLocally(it)
-        }
+        uri?.let { openCropDialog(it) }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
-        
-        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val userRole = prefs.getString("user_role", "student") ?: "student"
-        val studentId = prefs.getInt("current_student_id", 1)
-        val localizedRole = when(userRole) {
-            "teacher" -> "Преподаватель"
-            "admin" -> "Администратор"
-            else -> "Студент"
-        }
-        
-        val studentName = prefs.getString("student_name", localizedRole) ?: localizedRole
-        binding.profileName.text = studentName
-        binding.profileRole.text = localizedRole
-        
-        val groupRaw = prefs.getString("student_group", null)?.takeIf { it.isNotBlank() && it != "Unknown" } ?: "DEMO-101"
-        val groupName = if (userRole == "teacher") "Кафедра ПОВТ" else groupRaw
-        binding.profileGroupBadge.text = groupName
-        binding.profileGroup.text = if (userRole == "teacher") "Кафедра ПОВТ (СибГУТИ)" else "$groupName (СибГУТИ)"
+        return binding.root
+    }
 
-        val realEmail = prefs.getString("user_email", null)?.takeIf { it.isNotBlank() }
-            ?: requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("user_email", null)?.takeIf { it.isNotBlank() }
-            ?: if (userRole == "teacher") "teacher@sibsutis.ru" else "student@sibsutis.ru"
-        binding.profileEmail.text = realEmail
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        val studentCardNum = if (userRole == "teacher") "№ ТР-${1000 + studentId}" else "№ 2023-${groupRaw.take(4)}-${String.format(Locale.US, "%03d", studentId)}"
-        binding.profileRegDate.text = studentCardNum
+        val db = StudentDatabase.getInstance(requireContext())
+        repository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
 
-        // Avatar loading
-        val avatarPath = prefs.getString("avatar_path", null)
-        val avatarUrl = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("avatar_url", null)
+        setupStaticData()
+        updateServerHostText()
 
-        if (avatarPath != null) {
-            val file = java.io.File(avatarPath)
-            if (file.exists()) {
-                binding.profileAvatar.setImageURI(Uri.fromFile(file))
-                binding.profileAvatar.imageTintList = null
-            } else {
-                loadAvatarFromUrl(avatarUrl)
-            }
-        } else {
-            loadAvatarFromUrl(avatarUrl)
+        binding.swipeRefreshProfile.setOnRefreshListener {
+            loadFullProfile()
         }
 
         binding.profileAvatar.setOnClickListener {
             pickImage.launch("image/*")
         }
 
-        // Server text update
-        updateServerHostText()
-
-        // Quick navigation buttons
-        binding.btnQuickSchedule.setOnClickListener {
-            findNavController().navigate(R.id.scheduleFragment)
+        binding.cardProfileAvatar.setOnClickListener {
+            pickImage.launch("image/*")
         }
 
-        binding.btnQuickGrades.setOnClickListener {
-            findNavController().navigate(R.id.gradesFragment)
+        binding.btnChangeAvatarBadge.setOnClickListener {
+            pickImage.launch("image/*")
         }
 
-        binding.btnQuickHistory.setOnClickListener {
-            findNavController().navigate(R.id.historyFragment)
+        binding.btnSwitchRole.setOnClickListener {
+            showRoleSwitcherDialog()
         }
 
-        binding.btnQuickServer.setOnClickListener {
+        binding.rowTotpSecurity.setOnClickListener {
+            findNavController().navigate(R.id.totpFragment)
+        }
+
+        binding.rowUserAgreement.setOnClickListener {
+            showUserAgreementDialog()
+        }
+
+        binding.rowServerSettings.setOnClickListener {
             ServerConfig.showServerSwitcherDialog(requireContext()) {
                 updateServerHostText()
             }
@@ -111,68 +100,189 @@ class ProfileFragment : Fragment() {
             showLogoutConfirmDialog()
         }
 
-        // Load real attendance stats
-        loadAttendanceStats(userRole)
+        loadFullProfile()
+    }
 
-        // Long click helpers for developers
-        binding.profileRole.setOnLongClickListener {
-            ServerConfig.showServerSwitcherDialog(requireContext()) { updateServerHostText() }
-            true
+    private fun setupStaticData() {
+        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val userRole = prefs.getString("user_role", "student") ?: "student"
+        val studentName = prefs.getString("student_name", "Студент") ?: "Студент"
+        val groupName = prefs.getString("student_group", "СибГУТИ") ?: "СибГУТИ"
+        val studentId = prefs.getInt("current_student_id", 1)
+        val email = prefs.getString("user_email", null) ?: "student@sibsutis.ru"
+
+        binding.profileName.text = RoleUtils.formatShortName(studentName)
+        binding.profileRoleBadge.text = RoleUtils.getRoleLabel(userRole)
+        binding.tvProfileEmail.text = email
+
+        val isTeacher = RoleUtils.isTeacherOrHead(userRole)
+        binding.tvLabelGroupOrDept.text = if (isTeacher) "Кафедра" else "Учебная группа"
+        binding.tvProfileGroup.text = if (isTeacher) "Кафедра ПОВТ / Инфокоммуникации" else groupName
+
+        binding.tvLabelIdNumber.text = if (isTeacher) "Табельный номер" else "Номер зачетной книжки"
+        binding.tvProfileIdNumber.text = if (isTeacher) "ID-T$studentId" else "№ 2023-${groupName.take(4)}-$studentId"
+
+        val storedRoles = try {
+            prefs.getString("user_roles", null)
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() }
+                ?.distinct()
+        } catch (_: Exception) {
+            null
+        }
+        val hasMultipleRoles = (storedRoles?.size ?: 0) > 1
+        binding.btnSwitchRole.visibility = if (hasMultipleRoles) View.VISIBLE else View.GONE
+
+        loadAvatar()
+    }
+
+    private fun loadFullProfile() {
+        binding.swipeRefreshProfile.isRefreshing = true
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val result = repository.getFullUserProfile()
+            val agreementResult = repository.getUserAgreementCurrent()
+
+            withContext(Dispatchers.Main) {
+                if (_binding == null || !isAdded) return@withContext
+                binding.swipeRefreshProfile.isRefreshing = false
+
+                if (result is GenericResult.Success) {
+                    val profile = result.data
+                    cachedProfile = profile
+
+                    binding.profileName.text = RoleUtils.formatShortName(profile.effectiveDisplayName)
+                    binding.profileRoleBadge.text = RoleUtils.getRoleLabel(profile.effectiveRole)
+                    if (profile.email.isNotBlank()) binding.tvProfileEmail.text = profile.email
+
+                    val isTeacher = RoleUtils.isTeacherOrHead(profile.effectiveRole)
+                    binding.tvLabelGroupOrDept.text = if (isTeacher) "Кафедра" else "Учебная группа"
+                    val groupOrDept = profile.effectiveGroupOrDepartment
+                    binding.tvProfileGroup.text = if (groupOrDept.isNotBlank()) {
+                        groupOrDept
+                    } else if (isTeacher) {
+                        "Кафедра ПОВТ"
+                    } else {
+                        "СибГУТИ"
+                    }
+
+                    val idVal = if (profile.user_id > 0) profile.user_id.toString() else "001"
+                    binding.tvProfileIdNumber.text = if (isTeacher) "ID-T$idVal" else "№ 2023-$idVal"
+
+                    // Available roles display & switch button visibility
+                    val distinctRoles = (profile.availableRoles + profile.roles).filter { it.isNotBlank() }.distinct()
+                    val rolesList = if (distinctRoles.isNotEmpty()) {
+                        distinctRoles.joinToString(", ") { RoleUtils.getRoleLabel(it) }
+                    } else {
+                        RoleUtils.getRoleLabel(profile.effectiveRole)
+                    }
+                    binding.tvProfileAllRoles.text = rolesList
+
+                    // Show switch button ONLY if user has more than 1 role
+                    binding.btnSwitchRole.visibility = if (distinctRoles.size > 1) View.VISIBLE else View.GONE
+                }
+
+                if (agreementResult is GenericResult.Success) {
+                    val isAccepted = agreementResult.data.accepted
+                    binding.tvAgreementStatus.text = if (isAccepted) "Статус: принято" else "Статус: требуется подтверждение"
+                    binding.tvAgreementStatus.setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            if (isAccepted) R.color.sib_success else R.color.sib_warning
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showRoleSwitcherDialog() {
+        val availableRoles = cachedProfile?.roles?.filter { it.isNotBlank() }?.distinct()
+            ?: cachedProfile?.availableRoles?.filter { it.isNotBlank() }?.distinct()
+            ?: emptyList()
+
+        if (availableRoles.size <= 1) {
+            Toast.makeText(requireContext(), "У вас только одна роль", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        return binding.root
+        val roleLabels = availableRoles.map { RoleUtils.getRoleLabel(it) }.toTypedArray()
+        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val currentRole = prefs.getString("user_role", "student") ?: "student"
+        val selectedIndex = availableRoles.indexOf(currentRole).coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Смена активной роли")
+            .setSingleChoiceItems(roleLabels, selectedIndex) { dialog, which ->
+                val newRole = availableRoles[which]
+                dialog.dismiss()
+                if (newRole != currentRole) {
+                    performSwitchRole(newRole)
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun performSwitchRole(targetRole: String) {
+        binding.swipeRefreshProfile.isRefreshing = true
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val result = repository.switchRole(targetRole)
+            withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
+                binding.swipeRefreshProfile.isRefreshing = false
+
+                when (result) {
+                    is GenericResult.Success -> {
+                        val switched = result.data
+                        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                        prefs.edit().putString("user_role", switched.active_role).apply()
+
+                        binding.profileRoleBadge.text = RoleUtils.getRoleLabel(switched.active_role)
+                        Toast.makeText(
+                            requireContext(),
+                            "Активная роль переключена на: ${RoleUtils.getRoleLabel(switched.active_role)}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        val mainActivity = activity as? MainActivity
+                        mainActivity?.updateUIForRole()
+
+                        loadFullProfile()
+                    }
+                    is GenericResult.Error -> {
+                        Toast.makeText(requireContext(), "Не удалось сменить роль: ${result.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showUserAgreementDialog() {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val result = repository.getUserAgreementCurrent()
+            withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
+                when (result) {
+                    is GenericResult.Success -> {
+                        val status = result.data
+                        val dialog = UserAgreementDialogFragment.newInstance(status.version)
+                        dialog.show(parentFragmentManager, "UserAgreementDialogFragment")
+                    }
+                    is GenericResult.Error -> {
+                        Toast.makeText(requireContext(), "Не удалось загрузить текст соглашения", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
     }
 
     private fun updateServerHostText() {
         val baseUrl = ServerConfig.getBaseUrl(requireContext())
         val host = baseUrl.removePrefix("https://").removePrefix("http://")
         binding.tvCurrentServerHost.text = host
-    }
-
-    private fun loadAttendanceStats(userRole: String) {
-        val context = context ?: return
-        lifecycleScope.launch {
-            try {
-                val repository = RepositoryHTTPS.getStudentRepository(context)
-                if (userRole == "teacher" || userRole == "admin") {
-                    val lessons = repository.getAllLessons().first()
-                    val total = lessons.size
-                    withContext(Dispatchers.Main) {
-                        binding.tvProfileTotalCount.text = total.toString()
-                        binding.tvProfileOnTimeCount.text = total.toString()
-                        binding.tvProfileAttendanceRate.text = "100%"
-                        binding.tvAttendanceStatusBadge.text = "Преподаватель"
-                        binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#3B82F6"))
-                    }
-                } else {
-                    val history = repository.getStudentHistory(Calendar.getInstance().get(Calendar.YEAR))
-                    val total = history.items.size
-                    val onTime = history.items.count { it.status == "present" || it.status == "ontime" || (it.status == null && !it.is_late) }
-                    val attended = history.items.count { it.status == "present" || it.status == "late" || it.status == "ontime" || it.status == null }
-                    
-                    val rate = if (total > 0) (attended.toDouble() / total.toDouble()) * 100.0 else 100.0
-
-                    withContext(Dispatchers.Main) {
-                        binding.tvProfileTotalCount.text = total.toString()
-                        binding.tvProfileOnTimeCount.text = onTime.toString()
-                        binding.tvProfileAttendanceRate.text = String.format(Locale.US, "%.1f%%", rate)
-                        
-                        if (rate >= 80.0) {
-                            binding.tvAttendanceStatusBadge.text = "Зачетный допуск 👍"
-                            binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                        } else if (rate >= 60.0) {
-                            binding.tvAttendanceStatusBadge.text = "Нормальная явка ⚡"
-                            binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#F59E0B"))
-                        } else {
-                            binding.tvAttendanceStatusBadge.text = "Требуется отработка ⚠️"
-                            binding.tvAttendanceStatusBadge.setTextColor(android.graphics.Color.parseColor("#EF4444"))
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ProfileFragment", "Error loading attendance stats", e)
-            }
-        }
     }
 
     private fun showLogoutConfirmDialog() {
@@ -186,23 +296,56 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
+    private fun openCropDialog(uri: Uri) {
+        val cropDialog = AvatarCropDialogFragment.newInstance(uri)
+        cropDialog.onCropConfirmed = { croppedUri ->
+            saveAvatarLocally(croppedUri)
+        }
+        cropDialog.show(parentFragmentManager, "AvatarCropDialog")
+    }
+
+    private fun loadAvatar() {
+        val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val avatarPath = prefs.getString("avatar_path", null)
+        val avatarUrl = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("avatar_url", null)
+
+        if (avatarPath != null) {
+            val file = File(avatarPath)
+            if (file.exists()) {
+                binding.profileAvatar.setPadding(0, 0, 0, 0)
+                binding.profileAvatar.setImageURI(null)
+                binding.profileAvatar.setImageURI(Uri.fromFile(file))
+                binding.profileAvatar.imageTintList = null
+                return
+            }
+        }
+        loadAvatarFromUrl(avatarUrl)
+    }
+
     private fun saveAvatarLocally(uri: Uri) {
-        val internalPath = copyUriToInternalStorage(uri) ?: return
-        
+        val internalPath = if (uri.scheme == "file" && uri.path?.contains(requireContext().filesDir.absolutePath) == true) {
+            uri.path!!
+        } else {
+            copyUriToInternalStorage(uri) ?: return
+        }
+
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("avatar_path", internalPath).apply()
-        
-        binding.profileAvatar.setImageURI(Uri.fromFile(java.io.File(internalPath)))
+
+        binding.profileAvatar.setPadding(0, 0, 0, 0)
+        binding.profileAvatar.setImageURI(null)
+        binding.profileAvatar.setImageURI(Uri.fromFile(File(internalPath)))
         binding.profileAvatar.imageTintList = null
-        
+
         (activity as? MainActivity)?.updateNavHeader()
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val repository = RepositoryHTTPS.getStudentRepository(requireContext())
                 val result = repository.uploadAvatar(internalPath)
-                if (result is AvatarResult.Success) {
-                    Toast.makeText(requireContext(), "Аватар успешно обновлен", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    if (result is AvatarResult.Success) {
+                        Toast.makeText(requireContext(), "Аватар успешно сохранен и обновлен", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("ProfileFragment", "Error uploading avatar", e)
@@ -214,8 +357,8 @@ class ProfileFragment : Fragment() {
         return try {
             val context = requireContext()
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val file = java.io.File(context.filesDir, "current_avatar.jpg")
-            val outputStream = java.io.FileOutputStream(file)
+            val file = File(context.filesDir, "current_avatar.jpg")
+            val outputStream = FileOutputStream(file)
             inputStream.use { input ->
                 outputStream.use { output ->
                     input.copyTo(output)
@@ -229,32 +372,38 @@ class ProfileFragment : Fragment() {
     }
 
     private fun loadAvatarFromUrl(url: String?) {
+        val defaultPadding = (20 * resources.displayMetrics.density).toInt()
         if (url.isNullOrBlank() || url == "null") {
+            binding.profileAvatar.setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
             binding.profileAvatar.setImageResource(R.drawable.ic_person)
-            binding.profileAvatar.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.GRAY)
+            binding.profileAvatar.imageTintList = ContextCompat.getColorStateList(requireContext(), R.color.sib_text_secondary)
             return
         }
 
-        lifecycleScope.launch(Dispatchers.IO) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val finalUrl = ServerConfig.resolveMediaUrl(requireContext(), url)
-                val repo = RepositoryHTTPS.getStudentRepository(requireContext())
+                val repo = StudentRepositoryHTTPS(requireContext(), StudentDatabase.getInstance(requireContext()).studentDao())
                 val client = repo.getUnsafeOkHttpClient()
                 val request = okhttp3.Request.Builder().url(finalUrl).build()
                 val response = client.newCall(request).execute()
-                
+
                 if (response.isSuccessful) {
-                    val bytes = response.body.bytes()
+                    val bytes = response.body?.bytes() ?: return@launch
                     val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     withContext(Dispatchers.Main) {
+                        if (_binding == null) return@withContext
+                        binding.profileAvatar.setPadding(0, 0, 0, 0)
                         binding.profileAvatar.setImageBitmap(bitmap)
                         binding.profileAvatar.imageTintList = null
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    if (_binding == null) return@withContext
+                    binding.profileAvatar.setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
                     binding.profileAvatar.setImageResource(R.drawable.ic_person)
-                    binding.profileAvatar.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.GRAY)
+                    binding.profileAvatar.imageTintList = ContextCompat.getColorStateList(requireContext(), R.color.sib_text_secondary)
                 }
             }
         }

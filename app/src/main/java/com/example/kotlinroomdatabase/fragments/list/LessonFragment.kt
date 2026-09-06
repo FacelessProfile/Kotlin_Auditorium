@@ -1,41 +1,50 @@
 package com.example.kotlinroomdatabase.fragments.list
 
-import android.app.AlertDialog
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
 import android.nfc.NfcAdapter
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.view.WindowManager
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.Button
+import android.widget.Filter
+import android.widget.ImageView
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinroomdatabase.R
-import com.example.kotlinroomdatabase.getColorFromAttr
 import com.example.kotlinroomdatabase.data.StudentDatabase
-import com.example.kotlinroomdatabase.settings.LessonsConfig
-import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
+import com.example.kotlinroomdatabase.databinding.FragmentLessonBinding
 import com.example.kotlinroomdatabase.fragments.QR.GenQR
-import com.example.kotlinroomdatabase.model.Student
-import com.example.kotlinroomdatabase.repository.*
+import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
+import com.example.kotlinroomdatabase.model.AttendanceRosterStudent
+import com.example.kotlinroomdatabase.repository.AttendanceLinkResult
+import com.example.kotlinroomdatabase.repository.AttendanceResult
+import com.example.kotlinroomdatabase.repository.FinishLessonResult
+import com.example.kotlinroomdatabase.repository.GenericResult
+import com.example.kotlinroomdatabase.repository.IStudentRepository
+import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
+import com.example.kotlinroomdatabase.settings.LessonsConfig
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-import com.google.android.gms.location.LocationServices
-import android.location.Location
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,37 +55,20 @@ import kotlinx.serialization.InternalSerializationApi
 
 class LessonFragment : NFC_Tools() {
 
+    private var _binding: FragmentLessonBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var studentRepository: IStudentRepository
-    private lateinit var adapter: ListAdapter
+    private lateinit var rosterAdapter: TeacherRosterAdapter
 
-    @OptIn(InternalSerializationApi::class)
-    private val attendedStudents = mutableListOf<Student>()
     private var selectedGroups = mutableSetOf<String>()
-
     private var currentLessonId: Int? = null
     private var isLessonActive = false
     private var currentSubject: String? = null
     private var pollingJob: Job? = null
     private var qrUpdateJob: Job? = null
 
-    private lateinit var tvStatus: TextView
-    private lateinit var tvSubStatus: TextView
-    private lateinit var statusIcon: ImageView
-    private lateinit var ivQrCode: ImageView
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var fabCreateLesson: ExtendedFloatingActionButton
-    private lateinit var btnFinishLesson: Button
-
-    private lateinit var layoutNoLesson: View
-    private lateinit var layoutActiveLesson: View
-    private lateinit var btnCreateLessonHero: Button
-    private lateinit var cardAllStudentsShortcut: View
-    private lateinit var tvActiveSubjectTitle: TextView
-    private lateinit var tvActiveGroups: TextView
-    private lateinit var tvLivePresentCount: TextView
-    private lateinit var tvPresentCounterBadge: TextView
-    private lateinit var layoutEmptyAttendance: View
-    private lateinit var layoutNfcStatusPill: View
+    private val currentRosterList = mutableListOf<AttendanceRosterStudent>()
 
     private val LESSON_PREFS = "lesson_active_prefs"
     private val KEY_LESSON_ID = "lesson_id"
@@ -86,11 +78,9 @@ class LessonFragment : NFC_Tools() {
     private val LESSON_DURATION_MS = 90 * 60 * 1000L // 1.5 hours
 
     @OptIn(InternalSerializationApi::class)
-    override fun onAttach(context: android.content.Context) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
-
         val useHttp = true
-
         if (useHttp) {
             val db = StudentDatabase.getInstance(requireContext())
             studentRepository = StudentRepositoryHTTPS(requireContext(), db.studentDao())
@@ -99,118 +89,176 @@ class LessonFragment : NFC_Tools() {
         }
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(context)
-        Log.d("NFC_DEBUG", "NFC Adapter initialized: ${nfcAdapter != null}")
     }
 
-    @OptIn(InternalSerializationApi::class)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        val view = inflater.inflate(R.layout.fragment_lesson, container, false)
-        tvStatus = view.findViewById(R.id.tvLessonStatus)
-        tvSubStatus = view.findViewById(R.id.tvLessonSubStatus)
-        statusIcon = view.findViewById(R.id.statusIcon)
-        ivQrCode = view.findViewById(R.id.ivQrCode)
-        recyclerView = view.findViewById(R.id.recyclerViewAttendance)
-        fabCreateLesson = view.findViewById(R.id.fabCreateLesson)
-        btnFinishLesson = view.findViewById(R.id.btnFinishLesson)
+    ): View {
+        _binding = FragmentLessonBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        layoutNoLesson = view.findViewById(R.id.layoutNoLesson)
-        layoutActiveLesson = view.findViewById(R.id.layoutActiveLesson)
-        btnCreateLessonHero = view.findViewById(R.id.btnCreateLessonHero)
-        cardAllStudentsShortcut = view.findViewById(R.id.cardAllStudentsShortcut)
-        tvActiveSubjectTitle = view.findViewById(R.id.tvActiveSubjectTitle)
-        tvActiveGroups = view.findViewById(R.id.tvActiveGroups)
-        tvLivePresentCount = view.findViewById(R.id.tvLivePresentCount)
-        tvPresentCounterBadge = view.findViewById(R.id.tvPresentCounterBadge)
-        layoutEmptyAttendance = view.findViewById(R.id.layoutEmptyAttendance)
-        layoutNfcStatusPill = view.findViewById(R.id.layoutNfcStatusPill)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        btnCreateLessonHero.setOnClickListener { showCreateLessonSheet() }
-        cardAllStudentsShortcut.setOnClickListener {
+        rosterAdapter = TeacherRosterAdapter(
+            onStatusChanged = { student, newStatus ->
+                handleManualStatusChange(student, newStatus)
+            },
+            onFraudClicked = { student ->
+                showFraudDialog(student)
+            }
+        )
+
+        binding.recyclerViewAttendance.adapter = rosterAdapter
+        binding.recyclerViewAttendance.layoutManager = LinearLayoutManager(requireContext())
+
+        binding.btnCreateLessonHero.setOnClickListener { showCreateLessonSheet() }
+        binding.btnNoLessonAllStudents.setOnClickListener {
+            findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
+        }
+        binding.btnViewAllStudents.setOnClickListener {
             findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
         }
 
-        val btnNoLessonStudents = view.findViewById<Button?>(R.id.btnNoLessonAllStudents)
-        btnNoLessonStudents?.setOnClickListener {
-            findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
-        }
-
-        val btnAllStudents = view.findViewById<Button>(R.id.btnViewAllStudents)
-        btnAllStudents.setOnClickListener {
-            findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
-        }
-
-        adapter = ListAdapter()
-        recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-
-        applyTheme(view)
-
-        adapter.setOnItemClickListener { student ->
-            val bundle = Bundle()
-            bundle.putInt("studentId", student.id)
-            findNavController().navigate(R.id.action_lessonFragment_to_history, bundle)
-        }
-
-        fabCreateLesson.setOnClickListener { showCreateLessonSheet() }
-        btnFinishLesson.setOnClickListener { 
+        binding.btnFinishLesson.setOnClickListener {
             AlertDialog.Builder(requireContext())
                 .setTitle("Завершить занятие?")
                 .setMessage("Вы действительно хотите завершить текущее занятие?")
-                .setPositiveButton("Да") { dialog, which -> finishCurrentLesson() }
+                .setPositiveButton("Да") { _, _ -> finishCurrentLesson() }
                 .setNegativeButton("Отмена", null)
                 .show()
         }
 
-        loadLessonState()
-        observeStudents()
-
-        return view
-    }
-
-    private fun updateLivePresentCount(count: Int) {
-        tvLivePresentCount.text = "👥 $count"
-        tvPresentCounterBadge.text = count.toString()
-        if (count == 0) {
-            layoutEmptyAttendance.visibility = View.VISIBLE
-            recyclerView.visibility = View.GONE
-        } else {
-            layoutEmptyAttendance.visibility = View.GONE
-            recyclerView.visibility = View.VISIBLE
+        // Tap on QR code to view enlarged dialog
+        binding.cardQrContainer.setOnClickListener {
+            showEnlargedQrDialog()
         }
+
+        loadLessonState()
     }
 
-    @OptIn(InternalSerializationApi::class)
-    private fun observeStudents() {
-        lifecycleScope.launch {
-            studentRepository.getAllStudents().collect { allStudents ->
-                Log.d("OBSERVE", "Got ${allStudents.size} students. isLessonActive=$isLessonActive")
-                if (isLessonActive) {
-                    val cleanSelectedGroups = selectedGroups.map { it.trim().uppercase() }.toSet()
-                    val filtered = allStudents.filter { 
-                        it.attendance && (cleanSelectedGroups.isEmpty() || cleanSelectedGroups.contains(it.studentGroup.trim().uppercase())) 
-                    }
-                    Log.d("OBSERVE", "Filtered to ${filtered.size} students for groups: $selectedGroups")
-                    
-                    attendedStudents.clear()
-                    attendedStudents.addAll(filtered.sortedByDescending { it.id })
-                    adapter.setData(attendedStudents)
+    override fun onDestroyView() {
+        super.onDestroyView()
+        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        _binding = null
+    }
 
-                    updateLivePresentCount(attendedStudents.size)
+    private fun handleManualStatusChange(student: AttendanceRosterStudent, newStatus: String) {
+        val lessonId = currentLessonId ?: return
+        val prevStatus = student.status
+
+        // Optimistic UI update
+        rosterAdapter.updateStudentStatus(student.student_id, newStatus)
+
+        val idx = currentRosterList.indexOfFirst { it.student_id == student.student_id }
+        if (idx != -1) {
+            currentRosterList[idx] = currentRosterList[idx].copy(status = newStatus)
+            updateRosterCounts(currentRosterList)
+        }
+
+        lifecycleScope.launch {
+            val res = studentRepository.teacherMarkAttendance(lessonId, student.student_id, newStatus)
+            if (res is GenericResult.Error) {
+                Toast.makeText(requireContext(), "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show()
+                // Rollback
+                rosterAdapter.updateStudentStatus(student.student_id, prevStatus)
+                if (idx != -1) {
+                    currentRosterList[idx] = currentRosterList[idx].copy(status = prevStatus)
+                    updateRosterCounts(currentRosterList)
                 }
             }
         }
     }
 
+    private fun showFraudDialog(student: AttendanceRosterStudent) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("⚠ Подозрение на антифрод")
+            .setMessage(
+                "Студент: ${student.student_name}\n" +
+                "Группа: ${student.group_name}\n" +
+                "Причина: ${student.fraud_reason.ifBlank { "Подозрительное устройство, повторный токен или несовпадение геолокации" }}"
+            )
+            .setPositiveButton("Понятно", null)
+            .show()
+    }
+
+    private fun showEnlargedQrDialog() {
+        val currentBitmap = (binding.ivQrCode.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+            ?: return
+
+        val dialog = AlertDialog.Builder(requireContext()).create()
+        val imageView = ImageView(requireContext()).apply {
+            setImageBitmap(currentBitmap)
+            adjustViewBounds = true
+            setPadding(32, 32, 32, 32)
+            setBackgroundColor(Color.WHITE)
+        }
+        dialog.setView(imageView)
+        dialog.show()
+    }
+
+    private fun updateRosterCounts(students: List<AttendanceRosterStudent>) {
+        if (_binding == null) return
+        val marked = students.count { it.status.lowercase() in listOf("present", "ontime", "late") }
+        val total = students.size
+        binding.tvLivePresentCount.text = "👥 $marked"
+        binding.tvPresentCounterBadge.text = if (total > 0) "$marked / $total" else "$marked"
+
+        if (students.isEmpty()) {
+            binding.layoutEmptyAttendance.visibility = View.VISIBLE
+            binding.recyclerViewAttendance.visibility = View.GONE
+        } else {
+            binding.layoutEmptyAttendance.visibility = View.GONE
+            binding.recyclerViewAttendance.visibility = View.VISIBLE
+        }
+    }
+
     private fun startAttendancePolling() {
         pollingJob?.cancel()
-        pollingJob = lifecycleScope.launch(Dispatchers.Main) { // Use Main to keep it simple or IO with careful observation
+        pollingJob = lifecycleScope.launch(Dispatchers.Main) {
             while (isLessonActive) {
+                val lessonId = currentLessonId ?: break
                 try {
-                    Log.d("POLLING", "Auto-syncing attendance for lesson $currentLessonId")
+                    // 1. Fetch live attendance roster from server
+                    val rosterResult = studentRepository.getAttendanceSessionRoster(lessonId)
+                    if (rosterResult is GenericResult.Success) {
+                        val rosterData = rosterResult.data
+                        currentRosterList.clear()
+                        currentRosterList.addAll(rosterData.students)
+                        rosterAdapter.setData(rosterData.students)
+
+                        val marked = rosterData.marked_count
+                        val total = rosterData.roster_size
+                        binding.tvLivePresentCount.text = "👥 $marked"
+                        binding.tvPresentCounterBadge.text = "$marked / $total"
+
+                        if (rosterData.students.isEmpty()) {
+                            binding.layoutEmptyAttendance.visibility = View.VISIBLE
+                            binding.recyclerViewAttendance.visibility = View.GONE
+                        } else {
+                            binding.layoutEmptyAttendance.visibility = View.GONE
+                            binding.recyclerViewAttendance.visibility = View.VISIBLE
+                        }
+                    }
+
+                    // 2. Fetch session timer
+                    val timerResult = studentRepository.getSessionTimer(lessonId)
+                    if (timerResult is GenericResult.Success) {
+                        val remainingSec = timerResult.data
+                        if (remainingSec > 0) {
+                            val mins = remainingSec / 60
+                            binding.tvSessionTimer.text = "⏳ $mins мин"
+                            binding.tvSessionTimer.visibility = View.VISIBLE
+                        } else {
+                            binding.tvSessionTimer.text = "⏳ Завершено"
+                            binding.tvSessionTimer.visibility = View.VISIBLE
+                        }
+                    }
+
+                    // 3. Local sync in background
                     withContext(Dispatchers.IO) {
                         studentRepository.syncAllStudents()
                     }
@@ -233,7 +281,6 @@ class LessonFragment : NFC_Tools() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     private fun loadLessonState() {
         val prefs = requireContext().getSharedPreferences(LESSON_PREFS, Context.MODE_PRIVATE)
         val id = prefs.getInt(KEY_LESSON_ID, -1)
@@ -245,8 +292,8 @@ class LessonFragment : NFC_Tools() {
             currentLessonId = id
             currentSubject = subject
             selectedGroups = groups?.toMutableSet() ?: mutableSetOf()
-            isLessonActive = true 
-            
+            isLessonActive = true
+
             updateUiOnLessonStart(subject, null)
         } else {
             checkServerActiveSession()
@@ -284,17 +331,6 @@ class LessonFragment : NFC_Tools() {
         prefs.edit().clear().apply()
     }
 
-    private fun applyTheme(view: View) {
-        val prefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val btnColor = Color.parseColor(prefs.getString("button_color", "#673AB7"))
-        
-        val buttonStates = android.content.res.ColorStateList.valueOf(btnColor)
-        fabCreateLesson.backgroundTintList = buttonStates
-        statusIcon.imageTintList = buttonStates
-        
-        view.findViewById<Button>(R.id.btnViewAllStudents).setTextColor(btnColor)
-    }
-
     private val nfcStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
@@ -307,7 +343,6 @@ class LessonFragment : NFC_Tools() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     private fun finishCurrentLesson() {
         val lessonId = currentLessonId ?: return
         lifecycleScope.launch {
@@ -330,34 +365,32 @@ class LessonFragment : NFC_Tools() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n")
     private fun resetUiAfterLesson() {
+        if (_binding == null) return
         isLessonActive = false
         currentLessonId = null
-        attendedStudents.clear()
-        adapter.setData(emptyList())
+        currentRosterList.clear()
+        rosterAdapter.setData(emptyList())
 
-        layoutNoLesson.visibility = View.VISIBLE
-        layoutActiveLesson.visibility = View.GONE
-        btnFinishLesson.visibility = View.GONE
-        fabCreateLesson.visibility = View.GONE
+        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        binding.layoutNoLesson.visibility = View.VISIBLE
+        binding.layoutActiveLesson.visibility = View.GONE
+        binding.tvSessionTimer.visibility = View.GONE
 
         qrUpdateJob?.cancel()
         qrUpdateJob = null
 
-        ivQrCode.setImageBitmap(null)
-        statusIcon.setImageResource(R.drawable.ic_nfc)
-        statusIcon.setColorFilter(null)
+        binding.ivQrCode.setImageBitmap(null)
+        binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+        binding.statusIcon.setColorFilter(null)
 
-        adapter.setLessonState(false)
         updateNfcStatusUI()
     }
 
     @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
-        Log.d("NFC_DEBUG", "найдена метка: $nfcId")
-
         val lessonId = currentLessonId
         if (lessonId == null) {
             Log.e("NFC_DEBUG", "Ошибка: нет активного занятия")
@@ -371,40 +404,42 @@ class LessonFragment : NFC_Tools() {
             cleanTag.toIntOrNull()
         }
 
-        if (parsedId != null && attendedStudents.any { it.id == parsedId }) {
-            Log.w("NFC_DEBUG", "студент с id=$parsedId уже в списке")
-            Toast.makeText(context, "Студент уже отмечен!", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (attendedStudents.any { it.studentNFC.isNotBlank() && it.studentNFC.equals(cleanTag, ignoreCase = true) }) {
-            Log.w("NFC_DEBUG", "студент с nfc=$cleanTag уже в списке")
+        if (parsedId != null && currentRosterList.any { it.student_id == parsedId && it.status.lowercase() in listOf("present", "ontime") }) {
             Toast.makeText(context, "Студент уже отмечен!", Toast.LENGTH_SHORT).show()
             return
         }
 
         lifecycleScope.launch {
-            Log.d("NFC_DEBUG", "Отправляю на сервер. LessonID: $lessonId, NFC: $cleanTag")
             val result = studentRepository.markAttendanceInLesson(lessonId, cleanTag)
 
             requireActivity().runOnUiThread {
                 when (result) {
                     is AttendanceResult.Success -> {
                         val student = result.student
-                        Log.d("NFC_DEBUG", "SUCCESS: ${student.studentName} (ID: ${student.id})!")
-                        attendedStudents.removeAll { it.id == student.id }
-                        attendedStudents.add(0, student)
-                        adapter.setData(attendedStudents)
-                        updateLivePresentCount(attendedStudents.size)
-
-                        if (statusIcon.visibility == View.VISIBLE) {
-                            statusIcon.setColorFilter(Color.GREEN)
-                            statusIcon.postDelayed({ updateNfcStatusUI() }, 1000)
-                        }
                         Toast.makeText(context, "Отмечен: ${student.studentName}", Toast.LENGTH_SHORT).show()
+
+                        binding.statusIcon.setColorFilter(Color.GREEN)
+                        binding.statusIcon.postDelayed({ updateNfcStatusUI() }, 1000)
+
+                        // Immediately refresh session roster
+                        val updatedStudent = AttendanceRosterStudent(
+                            student_id = student.id,
+                            student_name = student.studentName,
+                            group_name = student.studentGroup,
+                            status = "present",
+                            marked_by = "nfc",
+                            marked_at = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                        )
+                        val idx = currentRosterList.indexOfFirst { it.student_id == student.id }
+                        if (idx != -1) {
+                            currentRosterList[idx] = updatedStudent
+                        } else {
+                            currentRosterList.add(0, updatedStudent)
+                        }
+                        rosterAdapter.setData(currentRosterList)
+                        updateRosterCounts(currentRosterList)
                     }
                     is AttendanceResult.Error -> {
-                        Log.e("NFC_DEBUG", "ERR: ${result.message}")
                         Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -420,8 +455,8 @@ class LessonFragment : NFC_Tools() {
         val bottomSheet = BottomSheetDialog(requireContext(), R.style.FullScreenBottomSheetDialog)
         val sheetView = layoutInflater.inflate(R.layout.lesson_dialog, null)
         bottomSheet.setContentView(sheetView)
-        bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        
+        bottomSheet.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         bottomSheet.setOnShowListener { dialog ->
             val d = dialog as BottomSheetDialog
             val bottomSheetInternal = d.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
@@ -463,14 +498,13 @@ class LessonFragment : NFC_Tools() {
         lifecycleScope.launch {
             val teacherSubjects = studentRepository.getTeacherSubjects()
             val localGroups = studentRepository.getAllUniqueGroups()
-            
+
             if (teacherSubjects.isNotEmpty()) {
                 val subjectNames = teacherSubjects.map { it.subject_name }.distinct()
                 acSubject.setAdapter(ArrayAdapter(requireContext(), R.layout.dropdown_item, subjectNames))
                 val allGroups = (teacherSubjects.flatMap { it.groups }.map { it.name } + localGroups).distinct().sorted()
                 groupAdapter.updateData(allGroups)
 
-                // Pre-populate with the first subject
                 val firstSubject = teacherSubjects.first()
                 acSubject.setText(firstSubject.subject_name, false)
                 val initialGroups = firstSubject.groups.map { it.name }.distinct().ifEmpty { allGroups.take(1) }
@@ -494,7 +528,7 @@ class LessonFragment : NFC_Tools() {
                     val selectedSubjectName = parent.getItemAtPosition(position).toString()
                     val selectedSubject = teacherSubjects.find { it.subject_name == selectedSubjectName }
                     val groupsForSubject = selectedSubject?.groups?.map { it.name }?.distinct() ?: emptyList()
-                    
+
                     chipGroup.removeAllViews()
                     selectedGroups.clear()
                     groupsForSubject.forEach { group ->
@@ -541,7 +575,6 @@ class LessonFragment : NFC_Tools() {
             acGroupSearch.setText("")
             val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
             imm.hideSoftInputFromWindow(acGroupSearch.windowToken, 0)
-
             acGroupSearch.post { groupAdapter.filter.filter(null) }
         }
 
@@ -564,7 +597,7 @@ class LessonFragment : NFC_Tools() {
                             currentLessonId = id
                             currentSubject = subject
                             saveLessonState(id, subject, selectedGroups.toList())
-                            
+
                             val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                             authPrefs.edit().putFloat("last_lat", lat.toFloat()).putFloat("last_lon", lon.toFloat()).apply()
 
@@ -578,7 +611,6 @@ class LessonFragment : NFC_Tools() {
                             Toast.makeText(context, "Ошибка создания занятия", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
-                        Log.e("NFC_DEBUG", "Ошибка создания: ${e.message}")
                         Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -604,23 +636,23 @@ class LessonFragment : NFC_Tools() {
         bottomSheet.show()
     }
 
-    @OptIn(InternalSerializationApi::class)
     @SuppressLint("SetTextI18n")
     private fun updateUiOnLessonStart(subject: String, dialog: BottomSheetDialog?) {
+        if (_binding == null) return
         isLessonActive = true
-        adapter.setLessonState(true)
+
+        // Keep screen awake while presenting QR and tracking attendance
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         startNfcReadingMode(infiniteMode = true)
         startAttendancePolling()
 
-        layoutNoLesson.visibility = View.GONE
-        layoutActiveLesson.visibility = View.VISIBLE
-        btnFinishLesson.visibility = View.VISIBLE
-        fabCreateLesson.visibility = View.GONE
+        binding.layoutNoLesson.visibility = View.GONE
+        binding.layoutActiveLesson.visibility = View.VISIBLE
 
-        tvActiveSubjectTitle.text = subject
-        tvActiveGroups.text = if (selectedGroups.isNotEmpty()) "Группы: ${selectedGroups.joinToString(", ")}" else "Все группы"
-        updateLivePresentCount(attendedStudents.size)
+        binding.tvActiveSubjectTitle.text = subject
+        binding.tvActiveGroups.text = if (selectedGroups.isNotEmpty()) "Группы: ${selectedGroups.joinToString(", ")}" else "Все группы"
+
         updateNfcStatusUI()
 
         dialog?.dismiss()
@@ -641,7 +673,7 @@ class LessonFragment : NFC_Tools() {
                     while (isLessonActive) {
                         var totpSecret = prefs.getString("last_totp_secret", "") ?: ""
                         if (totpSecret.isBlank()) {
-                            totpSecret = "JBSWY3DPEHPK3PXP" // Fallback secret for testing/demo
+                            totpSecret = "JBSWY3DPEHPK3PXP"
                         }
                         val totpCode = com.example.kotlinroomdatabase.utils.TotpUtils.generateCurrentCode(totpSecret, 5, 6)
                         val currentUrl = if (baseUrl.contains("?")) "$baseUrl&totp_code=$totpCode" else "$baseUrl?totp_code=$totpCode"
@@ -650,19 +682,17 @@ class LessonFragment : NFC_Tools() {
                             GenQR.generateQrCode(currentUrl)
                         }
                         withContext(Dispatchers.Main) {
-                            if (bitmap != null) {
-                                ivQrCode.setImageBitmap(bitmap)
-                                ivQrCode.visibility = View.VISIBLE
+                            if (_binding != null && bitmap != null) {
+                                binding.ivQrCode.setImageBitmap(bitmap)
+                                binding.ivQrCode.visibility = View.VISIBLE
                             }
                         }
-                        
+
                         delay(5000)
                     }
                 }
                 is AttendanceLinkResult.Error -> {
-                    withContext(Dispatchers.Main) {
-                        Log.d("NFC_DEBUG", "QR link error: ${result.message}")
-                    }
+                    Log.e("QR_DEBUG", "QR link error: ${result.message}")
                 }
             }
         }
@@ -674,18 +704,19 @@ class LessonFragment : NFC_Tools() {
     }
 
     private fun updateNfcStatusUI() {
+        if (_binding == null) return
         val adapterNfc = NfcAdapter.getDefaultAdapter(requireContext())
 
         if (adapterNfc == null || !adapterNfc.isEnabled) {
-            tvStatus.text = "NFC выкл."
-            tvStatus.setTextColor(Color.parseColor("#DC2626"))
-            layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_absent)
-            statusIcon.setColorFilter(Color.parseColor("#DC2626"))
+            binding.tvLessonStatus.text = "NFC выкл."
+            binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_absent_text))
+            binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_absent)
+            binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_absent_icon))
         } else {
-            tvStatus.text = "NFC готов"
-            tvStatus.setTextColor(Color.parseColor("#047857"))
-            layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_ontime)
-            statusIcon.setColorFilter(Color.parseColor("#047857"))
+            binding.tvLessonStatus.text = "NFC готов"
+            binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_ontime_text))
+            binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_ontime)
+            binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_ontime_icon))
         }
     }
 

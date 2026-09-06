@@ -28,6 +28,7 @@ class NotificationsFragment : Fragment() {
 
     private lateinit var rvNotifications: RecyclerView
     private lateinit var progressBar: ProgressBar
+    private lateinit var layoutEmpty: View
     private lateinit var tvEmpty: TextView
     private lateinit var btnMarkAllRead: ImageButton
     private lateinit var btnRefresh: ImageButton
@@ -55,6 +56,7 @@ class NotificationsFragment : Fragment() {
 
         rvNotifications = view.findViewById(R.id.rvNotifications)
         progressBar = view.findViewById(R.id.progressBar)
+        layoutEmpty = view.findViewById(R.id.layoutEmpty)
         tvEmpty = view.findViewById(R.id.tvEmpty)
         btnMarkAllRead = view.findViewById(R.id.btnMarkAllRead)
         btnRefresh = view.findViewById(R.id.btnRefresh)
@@ -120,7 +122,7 @@ class NotificationsFragment : Fragment() {
                     }
                 }
                 is com.example.kotlinroomdatabase.repository.GenericResult.Error -> {
-                    tvEmpty.visibility = View.VISIBLE
+                    layoutEmpty.visibility = View.VISIBLE
                     tvEmpty.text = "Ошибка загрузки: ${result.message}"
                 }
             }
@@ -136,6 +138,8 @@ class NotificationsFragment : Fragment() {
 
         tabLayout.getTabAt(0)?.text = unreadLabel
         tabLayout.getTabAt(1)?.text = historyLabel
+
+        (activity as? com.example.kotlinroomdatabase.MainActivity)?.updateUnreadNotificationCount(unreadCount)
     }
 
     private fun updateDisplayedList() {
@@ -146,11 +150,11 @@ class NotificationsFragment : Fragment() {
         }
 
         if (filteredList.isEmpty()) {
-            tvEmpty.visibility = View.VISIBLE
+            layoutEmpty.visibility = View.VISIBLE
             tvEmpty.text = if (showingHistoryTab) "История уведомлений пуста" else "Нет новых уведомлений"
             rvNotifications.visibility = View.GONE
         } else {
-            tvEmpty.visibility = View.GONE
+            layoutEmpty.visibility = View.GONE
             rvNotifications.visibility = View.VISIBLE
             adapter.updateItems(filteredList, showDeleteButton = showingHistoryTab)
         }

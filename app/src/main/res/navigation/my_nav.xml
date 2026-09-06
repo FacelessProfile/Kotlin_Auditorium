@@ -148,4 +148,10 @@
         android:name="com.example.kotlinroomdatabase.fragments.schedule.ScheduleFragment"
         android:label="Расписание"
         tools:layout="@layout/fragment_schedule" />
+
+    <fragment
+        android:id="@+id/analyticsFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.analytics.AnalyticsFragment"
+        android:label="Аналитика"
+        tools:layout="@layout/fragment_analytics" />
 </navigation>

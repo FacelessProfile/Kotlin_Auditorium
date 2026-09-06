@@ -130,22 +130,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        val primaryColorHex = appPrefs.getString("navbar_color", "#C48E17")
-        primaryColorHex?.let {
-            try {
-                val color = android.graphics.Color.parseColor(it)
-                binding.toolbar.setBackgroundColor(color)
-                window.statusBarColor = color
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Invalid color hex: $it")
-            }
-        }
-
-        // Handle window insets for edge-to-edge / status bar / navigation bar
+        // Handle window insets for status bar
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.mainContent) { _, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             binding.appBarLayout.setPadding(0, systemBars.top, 0, 0)
-            findViewById<android.view.View>(R.id.fragment)?.setPadding(0, 0, 0, systemBars.bottom)
             insets
         }
 
@@ -157,14 +145,15 @@ class MainActivity : AppCompatActivity() {
         appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.userHomeFragment,
-                R.id.listFragment,
+                R.id.gradesFragment,
+                R.id.historyFragment,
                 R.id.lessonFragment,
+                R.id.analyticsFragment,
                 R.id.profileFragment,
                 R.id.scheduleFragment,
-                R.id.historyFragment,
+                R.id.listFragment,
                 R.id.settingsFragment,
                 R.id.notificationsFragment,
-                R.id.gradesFragment,
                 R.id.totpFragment
             ),
             binding.drawerLayout
@@ -172,15 +161,94 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
 
+        // Setup bottom navigation listener
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            if (item.itemId == R.id.userHomeFragment) {
+                // If user selected Home, pop everything back to userHomeFragment
+                val popped = navController.popBackStack(R.id.userHomeFragment, false)
+                if (!popped && navController.currentDestination?.id != R.id.userHomeFragment) {
+                    navController.navigate(R.id.userHomeFragment)
+                }
+                return@setOnItemSelectedListener true
+            }
+
+            val currentId = navController.currentDestination?.id
+            if (currentId != item.itemId) {
+                navController.navigate(item.itemId, null, navOptions {
+                    launchSingleTop = true
+                    restoreState = true
+                    popUpTo(R.id.userHomeFragment) {
+                        saveState = true
+                    }
+                })
+            }
+            true
+        }
+
+        binding.bottomNavigation.setOnItemReselectedListener { item ->
+            if (item.itemId == R.id.userHomeFragment) {
+                // Double tap on Home: pop back from any child screen (like Schedule) directly to Home
+                if (navController.currentDestination?.id != R.id.userHomeFragment) {
+                    val popped = navController.popBackStack(R.id.userHomeFragment, false)
+                    if (!popped) {
+                        navController.navigate(R.id.userHomeFragment)
+                    }
+                } else {
+                    // Already on Home: smooth scroll to top
+                    val currentFrag = navHostFragment.childFragmentManager.fragments.firstOrNull()
+                    if (currentFrag is com.example.kotlinroomdatabase.fragments.list.User_Interface) {
+                        currentFrag.scrollToTop()
+                    }
+                }
+            } else {
+                navController.popBackStack(item.itemId, false)
+            }
+        }
+
+        // Role badge & notification bell click handlers
+        binding.tvRoleBadge.setOnClickListener {
+            if (navController.currentDestination?.id != R.id.profileFragment) {
+                navController.navigate(R.id.profileFragment)
+            }
+        }
+
+        binding.frameNotifications.setOnClickListener {
+            if (navController.currentDestination?.id != R.id.notificationsFragment) {
+                navController.navigate(R.id.notificationsFragment)
+            }
+        }
+
+        // Show/hide toolbar and bottom navigation based on destination
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.loginFragment) {
+                binding.appBarLayout.visibility = android.view.View.GONE
+                binding.bottomNavigation.visibility = android.view.View.GONE
+                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+            } else {
+                binding.appBarLayout.visibility = android.view.View.VISIBLE
+                binding.bottomNavigation.visibility = android.view.View.VISIBLE
+                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                // Sync selected bottom nav item if destination matches
+                val bottomMenu = binding.bottomNavigation.menu
+                for (i in 0 until bottomMenu.size()) {
+                    val menuItem = bottomMenu.getItem(i)
+                    if (menuItem.itemId == destination.id) {
+                        menuItem.isChecked = true
+                        break
+                    }
+                }
+            }
+        }
+
         val isSessionValid = JwtUtils.isUserSessionValid(this)
 
         if (isSessionValid) {
             binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
             val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-            val userRole = prefs.getString("user_role", "student")
             val studentId = prefs.getInt("current_student_id", -1)
 
             updateUIForRole()
+            refreshNotificationBadge()
 
             lifecycleScope.launch(Dispatchers.IO) {
                 studentRepository.testConnection()
@@ -201,12 +269,7 @@ class MainActivity : AppCompatActivity() {
 
             val currentDest = navController.currentDestination?.id
             if (currentDest == R.id.loginFragment) {
-                val actionId = if (userRole == "admin" || userRole == "teacher") {
-                    R.id.action_loginFragment_to_lessonFragment
-                } else {
-                    R.id.action_login_to_userHome
-                }
-                navController.navigate(actionId, null, navOptions {
+                navController.navigate(R.id.action_login_to_userHome, null, navOptions {
                     popUpTo(R.id.my_nav) { inclusive = true }
                 })
             }
@@ -215,6 +278,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             JwtUtils.clearAllSessionData(this)
             binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+            binding.appBarLayout.visibility = android.view.View.GONE
+            binding.bottomNavigation.visibility = android.view.View.GONE
         }
 
         binding.navView.setNavigationItemSelectedListener { menuItem ->
@@ -244,24 +309,58 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
+    fun refreshNotificationBadge() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val res = studentRepository.getUnreadNotificationsCount()
+                if (res is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
+                    withContext(Dispatchers.Main) {
+                        updateUnreadNotificationCount(res.data)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun updateUnreadNotificationCount(count: Int) {
+        if (count > 0) {
+            binding.tvUnreadBadge.visibility = android.view.View.VISIBLE
+            binding.tvUnreadBadge.text = if (count > 99) "99+" else count.toString()
+        } else {
+            binding.tvUnreadBadge.visibility = android.view.View.GONE
+        }
+    }
+
     fun updateUIForRole() {
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val userRole = prefs.getString("user_role", "student")
+        val userRole = prefs.getString("user_role", "student") ?: "student"
+        val isTeacher = com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(userRole)
+
         binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+        binding.tvRoleBadge.text = com.example.kotlinroomdatabase.util.RoleUtils.getRoleLabel(userRole)
+
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment) as? NavHostFragment
+        val navController = navHostFragment?.navController
+
+        // Switch bottom navigation menu depending on role
+        val currentMenuRes = if (isTeacher) R.menu.bottom_nav_teacher else R.menu.bottom_nav_student
+        if (binding.bottomNavigation.tag != currentMenuRes) {
+            binding.bottomNavigation.menu.clear()
+            binding.bottomNavigation.inflateMenu(currentMenuRes)
+            binding.bottomNavigation.tag = currentMenuRes
+            if (navController != null) {
+                // Ensure active destination is checked in bottom nav
+                val currentDestId = navController.currentDestination?.id
+                if (currentDestId != null) {
+                    val item = binding.bottomNavigation.menu.findItem(currentDestId)
+                    item?.isChecked = true
+                }
+            }
+        }
 
         val menu = binding.navView.menu
         menu.findItem(R.id.scheduleFragment)?.isVisible = true
-        if (userRole == "teacher" || userRole == "admin") {
-            menu.findItem(R.id.userHomeFragment)?.isVisible = false
-            menu.findItem(R.id.historyFragment)?.isVisible = true
-            menu.findItem(R.id.lessonFragment)?.isVisible = true
-            menu.findItem(R.id.listFragment)?.isVisible = true
-        } else {
-            menu.findItem(R.id.userHomeFragment)?.isVisible = true
-            menu.findItem(R.id.historyFragment)?.isVisible = true
-            menu.findItem(R.id.lessonFragment)?.isVisible = false
-            menu.findItem(R.id.listFragment)?.isVisible = false
-        }
+        menu.findItem(R.id.listFragment)?.isVisible = isTeacher
         updateNavHeader()
     }
 
@@ -272,15 +371,10 @@ class MainActivity : AppCompatActivity() {
         val ivAvatar = headerView.findViewById<android.widget.ImageView>(R.id.nav_header_avatar)
         
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val userRole = prefs.getString("user_role", "student")
-        val localizedRole = when(userRole) {
-            "teacher" -> "Преподаватель"
-            "admin" -> "Администратор"
-            else -> "Студент"
-        }
-        val name = prefs.getString("student_name", localizedRole) ?: localizedRole
-        tvName.text = name
-
+        val userRole = prefs.getString("user_role", "student") ?: "student"
+        val localizedRole = com.example.kotlinroomdatabase.util.RoleUtils.getRoleLabel(userRole)
+        val rawName = prefs.getString("student_name", localizedRole) ?: localizedRole
+        tvName.text = com.example.kotlinroomdatabase.util.RoleUtils.formatShortName(rawName)
         tvName.setOnLongClickListener {
             com.example.kotlinroomdatabase.config.ServerConfig.showServerSwitcherDialog(this) {
                 updateNavHeader()
@@ -311,9 +405,12 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("MainActivity", "Updating header: path=$avatarPath, url=$avatarUrl")
 
+        val defaultNavPad = (12 * resources.displayMetrics.density).toInt()
         if (avatarPath != null) {
             val file = java.io.File(avatarPath)
             if (file.exists()) {
+                ivAvatar.setPadding(0, 0, 0, 0)
+                ivAvatar.setImageURI(null)
                 ivAvatar.setImageURI(android.net.Uri.fromFile(file))
                 ivAvatar.imageTintList = null
             } else {
@@ -322,18 +419,12 @@ class MainActivity : AppCompatActivity() {
         } else {
             loadAvatarFromUrl(avatarUrl, ivAvatar)
         }
-
-        val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val primaryColorHex = appPrefs.getString("navbar_color", "#C48E17")
-        primaryColorHex?.let {
-            try {
-                headerView.setBackgroundColor(android.graphics.Color.parseColor(it))
-            } catch (e: Exception) {}
-        }
     }
 
     private fun loadAvatarFromUrl(url: String?, imageView: android.widget.ImageView) {
+        val defaultNavPad = (12 * resources.displayMetrics.density).toInt()
         if (url.isNullOrBlank() || url == "null") {
+            imageView.setPadding(defaultNavPad, defaultNavPad, defaultNavPad, defaultNavPad)
             imageView.setImageResource(R.drawable.ic_person)
             imageView.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
             return

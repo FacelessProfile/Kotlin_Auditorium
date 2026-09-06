@@ -30,11 +30,13 @@
         xmlns:tools="http://schemas.android.com/tools"
         >
 
+
         <activity
-            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:name=".qr.CustomScannerActivity"
             android:screenOrientation="portrait"
-            tools:replace="android:screenOrientation"
-            android:stateNotNeeded="true" />
+            android:stateNotNeeded="true"
+            android:theme="@style/Theme.KotlinRoomDatabase"
+            android:windowSoftInputMode="stateAlwaysHidden" />
 
         <activity
             android:name=".MainActivity"

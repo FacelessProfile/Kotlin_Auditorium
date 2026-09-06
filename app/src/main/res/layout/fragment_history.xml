@@ -1,212 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/swipeRefreshHistory"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/bg_main">
+    android:background="?attr/sib_bg_page">
 
-    <!-- University Header Gradient Banner -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp"
-        android:background="@drawable/bg_header_gradient"
-        android:elevation="4dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <TextView
+        <!-- Top Header Card with Blue Gradient -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Журнал посещаемости"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:textStyle="bold"/>
+            android:layout_margin="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="История посещённых занятий по дням"
-            android:textColor="#CBD5E1"
-            android:textSize="13sp"
-            android:layout_marginTop="2dp"/>
-
-        <!-- Stat Metrics Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            android:baselineAligned="false">
-
-            <!-- On Time Stat -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                app:cardBackgroundColor="@color/card_surface"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/card_stroke">
+                android:background="@drawable/bg_hero_gradient"
+                android:orientation="vertical"
+                android:padding="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="10dp"
-                    android:gravity="center">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Журнал посещаемости"
+                            android:textColor="@color/sib_text_white"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="История и аналитика явок на пары"
+                            android:textColor="#D0E2FF"
+                            android:textSize="13sp" />
+                    </LinearLayout>
 
                     <TextView
-                        android:id="@+id/tvCountOnTime"
+                        android:id="@+id/tvOverallAttendanceRate"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/badge_ontime_icon"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Вовремя"
-                        android:textSize="11sp"
-                        android:textColor="@color/text_muted"
-                        android:layout_marginTop="2dp"/>
+                        android:background="@drawable/bg_badge_ontime"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:text="--%"
+                        android:textColor="@color/badge_ontime_text"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Late Stat -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="6dp"
-                app:cardBackgroundColor="@color/card_surface"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/card_stroke">
-
+                <!-- 4 Metrics Row in Summary Card -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="10dp"
-                    android:gravity="center">
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tvCountLate"
-                        android:layout_width="wrap_content"
+                    <!-- Present -->
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/badge_late_icon"/>
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_mini_card"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingVertical="8dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                        <TextView
+                            android:id="@+id/tvCountOnTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/sib_success"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Был"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Late -->
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Опоздания"
-                        android:textSize="11sp"
-                        android:textColor="@color/text_muted"
-                        android:layout_marginTop="2dp"/>
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_mini_card"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:id="@+id/tvCountLate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/badge_late_icon"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Опоздал"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Excused -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_mini_card"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:id="@+id/tvCountExcused"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/sib_blue_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Уваж."
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Absent -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_mini_card"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:id="@+id/tvCountAbsent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/sib_error_vibrant"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Пропуск"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Total Stat -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                app:cardBackgroundColor="@color/card_surface"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/card_stroke">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/tvCountTotal"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="10dp"
-                    android:gravity="center">
+                    android:layout_marginTop="10dp"
+                    android:text="Всего занятий в семестре: 0"
+                    android:textColor="#D0E2FF"
+                    android:textSize="12sp" />
 
-                    <TextView
-                        android:id="@+id/tvCountTotal"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/uni_blue_primary"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Всего занятий"
-                        android:textSize="11sp"
-                        android:textColor="@color/text_muted"
-                        android:layout_marginTop="2dp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-    </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <!-- History RecyclerView -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvHistory"
+        <!-- Main Body: RecyclerView or Empty State -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="16dp"
-            android:clipToPadding="false"/>
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
-        <!-- Empty State View -->
-        <LinearLayout
-            android:id="@+id/layoutEmptyHistory"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="32dp"
-            android:visibility="gone">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvHistory"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="24dp" />
 
-            <ImageView
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:src="@drawable/ic_history"
-                app:tint="@color/text_subtle"
-                android:layout_marginBottom="16dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="История занятий пуста"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_main"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Здесь будут отображаться посещённые вами лекции и практические занятия"
-                android:textSize="13sp"
-                android:textColor="@color/text_muted"
+            <LinearLayout
+                android:id="@+id/layoutEmptyHistory"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:gravity="center"
-                android:layout_marginTop="6dp"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:padding="32dp"
+                android:visibility="gone">
 
-    </FrameLayout>
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:src="@drawable/ic_history"
+                    app:tint="?attr/sib_text_muted" />
 
-</LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="История занятий пуста"
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:text="Здесь будут отображаться посещённые занятия и отметки"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+        </FrameLayout>
+    </LinearLayout>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

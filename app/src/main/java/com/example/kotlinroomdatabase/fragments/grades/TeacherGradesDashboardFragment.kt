@@ -203,11 +203,12 @@ class TeacherGradesDashboardFragment : Fragment() {
             .setPositiveButton("Удалить") { _, _ ->
                 lifecycleScope.launch {
                     val res = repository.deleteTeacherGrade(gradeId)
+                    if (!isAdded) return@launch
                     if (res is GenericResult.Success) {
-                        Toast.makeText(requireContext(), "Оценка удалена", Toast.LENGTH_SHORT).show()
+                        context?.let { Toast.makeText(it, "Оценка удалена", Toast.LENGTH_SHORT).show() }
                         refreshData()
                     } else if (res is GenericResult.Error) {
-                        Toast.makeText(requireContext(), "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show()
+                        context?.let { Toast.makeText(it, "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show() }
                     }
                 }
             }
@@ -222,12 +223,13 @@ class TeacherGradesDashboardFragment : Fragment() {
             .setPositiveButton("Удалить") { _, _ ->
                 lifecycleScope.launch {
                     val res = repository.deleteTeacherGradeItem(assignment.item_id.toLong())
+                    if (!isAdded) return@launch
                     if (res is GenericResult.Success) {
-                        Toast.makeText(requireContext(), "Задание удалено", Toast.LENGTH_SHORT).show()
+                        context?.let { Toast.makeText(it, "Задание удалено", Toast.LENGTH_SHORT).show() }
                         loadAssignments()
                         refreshData()
                     } else if (res is GenericResult.Error) {
-                        Toast.makeText(requireContext(), "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show()
+                        context?.let { Toast.makeText(it, "Ошибка: ${res.message}", Toast.LENGTH_SHORT).show() }
                     }
                 }
             }
@@ -237,15 +239,18 @@ class TeacherGradesDashboardFragment : Fragment() {
 
     private fun downloadReport(format: String) {
         lifecycleScope.launch {
-            Toast.makeText(requireContext(), "Скачивание отчета ($format)...", Toast.LENGTH_SHORT).show()
+            if (!isAdded) return@launch
+            context?.let { Toast.makeText(it, "Скачивание отчета ($format)...", Toast.LENGTH_SHORT).show() }
             val ext = if (format.lowercase().contains("pdf")) "pdf" else "xlsx"
-            val file = File(requireContext().getExternalFilesDir(null), "performance_report.$ext")
+            val targetDir = context?.getExternalFilesDir(null) ?: return@launch
+            val file = File(targetDir, "performance_report.$ext")
             val res = repository.downloadPerformanceReport(ext, selectedSemesterId, file)
+            if (!isAdded) return@launch
             if (res is GenericResult.Success) {
-                Toast.makeText(requireContext(), "Отчет сохранен: ${res.data.name}", Toast.LENGTH_LONG).show()
+                context?.let { Toast.makeText(it, "Отчет сохранен: ${res.data.name}", Toast.LENGTH_LONG).show() }
                 openReportFile(res.data, if (ext == "pdf") "application/pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             } else if (res is GenericResult.Error) {
-                Toast.makeText(requireContext(), "Ошибка экспорта: ${res.message}", Toast.LENGTH_SHORT).show()
+                context?.let { Toast.makeText(it, "Ошибка экспорта: ${res.message}", Toast.LENGTH_SHORT).show() }
             }
         }
     }
@@ -462,11 +467,11 @@ class TeacherGradesDashboardFragment : Fragment() {
                     
                     loadGroupPerformance(groups[0].id)
                 } else {
-                    Toast.makeText(requireContext(), "Нет привязанных групп", Toast.LENGTH_SHORT).show()
+                    context?.let { Toast.makeText(it, "Нет привязанных групп", Toast.LENGTH_SHORT).show() }
                 }
             } catch (e: Exception) {
                 Log.e("SEMESTER_SWITCH", "Error in loadGroupsAndData", e)
-                Toast.makeText(requireContext(), "Ошибка загрузки данных", Toast.LENGTH_SHORT).show()
+                context?.let { Toast.makeText(it, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show() }
             }
         }
     }
@@ -474,16 +479,18 @@ class TeacherGradesDashboardFragment : Fragment() {
     private fun loadGroupPerformance(groupId: Int) {
         currentGroupId = groupId
         lifecycleScope.launch {
+            if (!isAdded) return@launch
             try {
                 Log.d("SEMESTER_SWITCH", "loadGroupPerformance groupId=$groupId, subjectId=$subjectId, semesterId=$selectedSemesterId")
                 val data = repository.getTeacherGroupSubjectPerformance(groupId, subjectId, selectedSemesterId)
                 Log.d("SEMESTER_SWITCH", "Got ${data.size} rows for semester $selectedSemesterId")
+                if (!isAdded) return@launch
                 adapter.updateData(data)
                 gradebookAdapter.updateData(data)
                 updateAnalyticsMetrics(data)
             } catch (e: Exception) {
                 Log.e("SEMESTER_SWITCH", "loadGroupPerformance error", e)
-                Toast.makeText(requireContext(), "Ошибка загрузки успеваемости группы", Toast.LENGTH_SHORT).show()
+                context?.let { Toast.makeText(it, "Ошибка загрузки успеваемости группы", Toast.LENGTH_SHORT).show() }
             }
         }
     }

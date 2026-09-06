@@ -1,26 +1,40 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme (SibSUTIS Web Light Theme). -->
     <style name="Theme.KotlinRoomDatabase" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/yadro_light_button</item>
-        <item name="colorPrimaryVariant">@color/yadro_light_variant</item>
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/sib_blue_primary</item>
+        <item name="colorPrimaryVariant">@color/sib_blue_dark</item>
         <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/yadro_light_button</item>
-        <item name="colorSecondaryVariant">@color/yadro_light_button</item>
+        
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/sib_blue_vibrant</item>
+        <item name="colorSecondaryVariant">@color/sib_blue_dark</item>
         <item name="colorOnSecondary">@color/white</item>
+        
         <!-- Surface and Background colors -->
-        <item name="colorSurface">@color/white</item>
-        <item name="colorOnSurface">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
-        <!-- Background -->
-        <item name="android:windowBackground">@color/yadro_light_background</item>
+        <item name="colorSurface">@color/sib_card_surface</item>
+        <item name="colorOnSurface">@color/sib_text_primary</item>
+        <item name="android:windowBackground">@color/sib_bg_app</item>
+        
+        <!-- Status bar and navigation bar -->
+        <item name="android:statusBarColor">@color/sib_bg_app</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/sib_bg_app</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+
         <!-- Text Colors -->
-        <item name="android:textColorPrimary">@color/text_primary_light</item>
-        <item name="android:textColorSecondary">@color/text_secondary_light</item>
-        <!-- Customize your theme here. -->
+        <item name="android:textColorPrimary">@color/sib_text_primary</item>
+        <item name="android:textColorSecondary">@color/sib_text_secondary</item>
+
+        <!-- Semantic SibSUTIS Theme Attributes -->
+        <item name="sib_bg_page">@color/sib_bg_app</item>
+        <item name="sib_bg_card">@color/sib_card_surface</item>
+        <item name="sib_border_subtle">@color/sib_border_subtle</item>
+        <item name="sib_text_primary">@color/sib_text_primary</item>
+        <item name="sib_text_secondary">@color/sib_text_secondary</item>
+        <item name="sib_text_muted">@color/sib_text_muted</item>
     </style>
+
     <style name="FullScreenBottomSheetDialog" parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowSoftInputMode">adjustResize</item>
@@ -29,5 +43,9 @@
 
     <style name="CustomBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="ShapeAppearance.Circle" parent="">
+        <item name="cornerSize">50%</item>
     </style>
 </resources>

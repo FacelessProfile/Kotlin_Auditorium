@@ -1,115 +1,282 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="32dp"
-    android:gravity="center"
-    android:background="?android:attr/windowBackground">
+    android:background="?attr/sib_bg_page"
+    android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Аутентификация"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginBottom="40dp"/>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/nameLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:startIconDrawable="@android:drawable/ic_menu_edit">
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etName"
+        <!-- University Brand Logo / Badge -->
+        <FrameLayout
+            android:id="@+id/logoContainer"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_icon_container_blue"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_gravity="center"
+                android:contentDescription="Логотип СибГУТИ"
+                android:src="@drawable/ic_home"
+                app:tint="@color/sib_blue_primary" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvBrandTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="СибГУТИ"
+            android:textColor="?attr/sib_text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvBrandSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="24dp"
+            android:text="Электронный журнал и пропуск"
+            android:textColor="?attr/sib_text_secondary"
+            android:textSize="14sp" />
+
+        <!-- Centered Main Auth Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Логин (ФИО)"
-            android:inputType="textPersonName" />
-    </com.google.android.material.textfield.TextInputLayout>
+            app:cardBackgroundColor="?attr/sib_bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeColor="?attr/sib_border_subtle"
+            app:strokeWidth="1dp">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/groupLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone"
-        app:startIconDrawable="@android:drawable/ic_menu_sort_by_size">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etGroup"
-            android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:text="Вход в систему"
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <!-- Error Alert Box -->
+                <LinearLayout
+                    android:id="@+id/layoutError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/bg_badge_absent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="10dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Ошибка"
+                        android:src="@drawable/ic_cross"
+                        app:tint="@color/sib_error_vibrant" />
+
+                    <TextView
+                        android:id="@+id/tvError"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/sib_error_vibrant"
+                        android:textSize="13sp"
+                        tools:text="Неверный логин или пароль" />
+                </LinearLayout>
+
+                <!-- Name / Login / Email Input -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/nameLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="@color/sib_blue_primary"
+                    app:hintTextColor="@color/sib_blue_primary"
+                    app:startIconDrawable="@drawable/ic_person"
+                    app:startIconTint="?attr/sib_text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Логин или email"
+                        android:imeOptions="actionNext"
+                        android:inputType="textEmailAddress"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="15sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Group Input (Registration only) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/groupLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:visibility="gone"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="@color/sib_blue_primary"
+                    app:hintTextColor="@color/sib_blue_primary"
+                    app:startIconDrawable="@drawable/ic_groups_badge"
+                    app:startIconTint="?attr/sib_text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Группа (напр., ИКС-123)"
+                        android:imeOptions="actionNext"
+                        android:inputType="textCapCharacters"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="15sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password Input -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/passwordLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="@color/sib_blue_primary"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="?attr/sib_text_secondary"
+                    app:hintTextColor="@color/sib_blue_primary"
+                    app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+                    app:startIconTint="?attr/sib_text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Пароль"
+                        android:imeOptions="actionDone"
+                        android:inputType="textPassword"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="15sp"
+                        android:typeface="sans" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password Confirm Input (Registration only) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/passwordConfirmLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:visibility="gone"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="@color/sib_blue_primary"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="?attr/sib_text_secondary"
+                    app:hintTextColor="@color/sib_blue_primary"
+                    app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+                    app:startIconTint="?attr/sib_text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPasswordConfirm"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Подтвердите пароль"
+                        android:imeOptions="actionDone"
+                        android:inputType="textPassword"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="15sp"
+                        android:typeface="sans" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Action CTA Button -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnAction"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_button_gradient"
+                    android:elevation="2dp"
+                    android:stateListAnimator="@null"
+                    android:text="Войти"
+                    android:textAllCaps="false"
+                    android:textColor="@color/sib_text_white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Loading Indicator -->
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+
+                <!-- Mode Switch Link -->
+                <TextView
+                    android:id="@+id/tvToggleMode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="16dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="8dp"
+                    android:text="Нет аккаунта? Зарегистрироваться"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Subtle Server Switcher Footer -->
+        <TextView
+            android:id="@+id/tvServerSwitcher"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:hint="Группа (ИКС-123)"
-            android:inputType="textCapCharacters" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="24dp"
+            android:background="?attr/selectableItemBackground"
+            android:padding="8dp"
+            android:text="Сервер подключения (нажмите для смены)"
+            android:textColor="?attr/sib_text_muted"
+            android:textSize="12sp" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/passwordLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
-        app:passwordToggleEnabled="false">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etPassword"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Пароль"
-            android:inputType="textPassword"
-            android:drawableEnd="@drawable/ic_eye"
-            android:paddingEnd="12dp"
-            android:typeface="sans" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/passwordConfirmLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:visibility="gone"
-        app:startIconDrawable="@android:drawable/ic_lock_lock"
-        app:passwordToggleEnabled="false">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etPasswordConfirm"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Подтвердите пароль"
-            android:inputType="textPassword"
-            android:drawableEnd="@drawable/ic_eye"
-            android:paddingEnd="12dp"
-            android:typeface="sans" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <Button
-        android:id="@+id/btnAction"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="Войти"
-        android:textSize="16sp"
-        android:textAllCaps="false"
-        app:cornerRadius="8dp"/>
-
-    <TextView
-        android:id="@+id/tvToggleMode"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Нет аккаунта? Зарегистрироваться"
-        android:textColor="@color/design_default_color_primary"
-        android:layout_marginTop="20dp"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:padding="8dp"/>
-
-</LinearLayout>
+    </LinearLayout>
+</ScrollView>

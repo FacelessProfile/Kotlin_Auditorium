@@ -4,10 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
+    android:background="?attr/sib_bg_page">
 
-    <!-- Top Minimalist Bar -->
-    <!-- Top Bar with NFC status -->
+    <!-- Top Minimalist NFC Status Bar -->
     <LinearLayout
         android:id="@+id/layoutTopHeader"
         android:layout_width="match_parent"
@@ -19,7 +18,7 @@
         android:paddingBottom="6dp"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Minimalist NFC Status Pill -->
+        <!-- NFC Status Pill -->
         <LinearLayout
             android:id="@+id/layoutNfcStatusPill"
             android:layout_width="wrap_content"
@@ -41,7 +40,7 @@
                 android:id="@+id/tvLessonStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
+                android:layout_marginStart="6dp"
                 android:text="NFC готов"
                 android:textColor="@color/badge_ontime_text"
                 android:textSize="12sp"
@@ -50,7 +49,7 @@
     </LinearLayout>
 
     <!-- ============================================================= -->
-    <!-- STATE 1: NO ACTIVE LESSON (Light, clean, uncluttered)         -->
+    <!-- STATE 1: NO ACTIVE LESSON                                     -->
     <!-- ============================================================= -->
     <LinearLayout
         android:id="@+id/layoutNoLesson"
@@ -58,67 +57,90 @@
         android:layout_height="0dp"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingHorizontal="28dp"
+        android:paddingHorizontal="24dp"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/layoutTopHeader">
 
-        <FrameLayout
-            android:layout_width="84dp"
-            android:layout_height="84dp"
-            android:background="@drawable/bg_avatar_circle">
-
-            <ImageView
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_nfc"
-                app:tint="#1D4ED8" />
-        </FrameLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Нет активного занятия"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:text="Запустите пару, чтобы студенты могли отметиться через NFC или QR-код"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textSize="14sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCreateLessonHero"
-            style="@style/Widget.MaterialComponents.Button"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginTop="28dp"
-            android:text="Начать занятие"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:backgroundTint="#1D4ED8"
-            app:cornerRadius="16dp"
-            app:elevation="0dp"
-            app:icon="@drawable/ic_add"
-            app:iconGravity="textStart"
-            app:iconTint="#FFFFFF" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNoLessonAllStudents"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Список всех студентов"
-            android:textColor="#1D4ED8"
-            android:textSize="14sp" />
+            app:cardBackgroundColor="?attr/sib_bg_card"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="1dp"
+            app:strokeColor="?attr/sib_border_subtle"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="32dp">
+
+                <FrameLayout
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:background="@drawable/bg_icon_container_blue">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_schedule_clock"
+                        app:tint="@color/sib_blue_primary" />
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Нет активного занятия"
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="Запустите пару, чтобы студенты могли отметиться через динамический QR-код или NFC"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCreateLessonHero"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="24dp"
+                    android:text="Начать занятие"
+                    android:textColor="@color/sib_text_white"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/sib_blue_primary"
+                    app:cornerRadius="14dp"
+                    app:elevation="2dp"
+                    app:icon="@drawable/ic_add"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/sib_text_white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNoLessonAllStudents"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="Список всех студентов"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="13sp"
+                    app:cornerRadius="14dp"
+                    app:strokeColor="?attr/sib_border_subtle" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Hidden compat views -->
         <com.google.android.material.card.MaterialCardView
@@ -130,7 +152,7 @@
     </LinearLayout>
 
     <!-- ============================================================= -->
-    <!-- STATE 2: ACTIVE LESSON (Lightweight, focused, informative)    -->
+    <!-- STATE 2: ACTIVE LESSON                                        -->
     <!-- ============================================================= -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutActiveLesson"
@@ -146,12 +168,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
+            app:cardBackgroundColor="?attr/sib_bg_card"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="#E2E8F0"
+            app:strokeColor="?attr/sib_border_subtle"
             app:strokeWidth="1dp"
-            app:cardBackgroundColor="?attr/colorSurface"
             app:layout_constraintTop_toTopOf="parent">
 
             <LinearLayout
@@ -174,19 +196,41 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:maxLines="1"
-                        android:textColor="?android:attr/textColorPrimary"
+                        android:textColor="?attr/sib_text_primary"
                         android:textSize="17sp"
                         android:textStyle="bold"
-                        tools:text="Networks" />
+                        tools:text="Компьютерные сети" />
 
-                    <TextView
-                        android:id="@+id/tvActiveGroups"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:textSize="13sp"
-                        tools:text="Группа: TEST-GROUP-1" />
+                        android:layout_marginTop="3dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvActiveGroups"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="12sp"
+                            tools:text="Группы: ПИ-21" />
+
+                        <TextView
+                            android:id="@+id/tvSessionTimer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_stat_mini_card"
+                            android:paddingHorizontal="6dp"
+                            android:paddingVertical="2dp"
+                            android:textColor="@color/sib_blue_primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:visibility="gone"
+                            tools:text="⏳ 82 мин"
+                            tools:visibility="visible" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- Live Counter Badge -->
@@ -204,25 +248,25 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/badge_ontime_text"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
-                        tools:text="👥 1" />
+                        tools:text="👥 18" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Compact QR Code Card -->
+        <!-- Dynamic QR Code Card with Quiet Zone Margin -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardQrContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginTop="8dp"
+            app:cardBackgroundColor="?attr/sib_bg_card"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="#E2E8F0"
+            app:strokeColor="?attr/sib_border_subtle"
             app:strokeWidth="1dp"
-            app:cardBackgroundColor="?attr/colorSurface"
             app:layout_constraintTop_toBottomOf="@id/cardActiveBanner">
 
             <LinearLayout
@@ -230,34 +274,45 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:paddingVertical="10dp"
-                android:paddingHorizontal="12dp">
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="10dp">
 
-                <ImageView
-                    android:id="@+id/ivQrCode"
-                    android:layout_width="140dp"
-                    android:layout_height="140dp"
-                    android:layout_gravity="center"
-                    android:visibility="visible" />
+                <!-- Inner White Quiet Zone Container for Scanner Reliability -->
+                <FrameLayout
+                    android:id="@+id/layoutQrWhiteContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_stat_mini_card"
+                    android:backgroundTint="#FFFFFF"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/ivQrCode"
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="QR код для отметки"
+                        android:visibility="visible" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/tvLessonSubStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Приложите телефон или отсканируйте QR"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="12sp" />
+                    android:text="Приложите телефон или отсканируйте QR (обновление каждые 5с)"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="11sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Present Students Header -->
+        <!-- Live Attendance Roster Section Header -->
         <LinearLayout
             android:id="@+id/layoutPresentSectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             app:layout_constraintTop_toBottomOf="@id/cardQrContainer">
@@ -267,8 +322,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Присутствуют на паре"
-                android:textColor="?android:attr/textColorPrimary"
+                android:text="Явка студентов"
+                android:textColor="?attr/sib_text_primary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -282,7 +337,7 @@
                 android:textColor="@color/badge_ontime_text"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                tools:text="1" />
+                tools:text="18 / 25" />
         </LinearLayout>
 
         <!-- Present Students List -->
@@ -292,10 +347,10 @@
             android:layout_height="0dp"
             android:layout_marginTop="4dp"
             android:clipToPadding="false"
-            android:paddingBottom="84dp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:paddingBottom="72dp"
+            app:layout_constraintBottom_toTopOf="@id/layoutBottomBar"
             app:layout_constraintTop_toBottomOf="@id/layoutPresentSectionHeader"
-            tools:listitem="@layout/custom_row" />
+            tools:listitem="@layout/item_roster_student" />
 
         <!-- Empty State inside Active Lesson -->
         <LinearLayout
@@ -313,7 +368,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Ожидание отметок..."
-                android:textColor="?android:attr/textColorSecondary"
+                android:textColor="?attr/sib_text_muted"
                 android:textSize="14sp" />
         </LinearLayout>
 
@@ -332,31 +387,31 @@
                 android:id="@+id/btnViewAllStudents"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="50dp"
+                android:layout_height="48dp"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:text="Все студенты"
-                android:textColor="?android:attr/textColorPrimary"
+                android:textColor="?attr/sib_text_secondary"
                 android:textSize="13sp"
                 app:cornerRadius="14dp"
-                app:strokeColor="#CBD5E1" />
+                app:strokeColor="?attr/sib_border_subtle" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFinishLesson"
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="0dp"
-                android:layout_height="50dp"
+                android:layout_height="48dp"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1.2"
                 android:text="Завершить пару"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/sib_text_white"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                app:backgroundTint="#DC2626"
+                app:backgroundTint="@color/sib_error_vibrant"
                 app:cornerRadius="14dp"
                 app:elevation="0dp"
                 app:icon="@drawable/ic_stop_lesson"
-                app:iconTint="#FFFFFF" />
+                app:iconTint="@color/sib_text_white" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

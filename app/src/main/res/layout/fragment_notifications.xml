@@ -1,102 +1,191 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:background="?attr/sib_bg_page">
 
-    <!-- Top Toolbar Actions Bar (without redundant 'Уведомления' title) -->
-    <LinearLayout
+    <!-- Top Hero Banner Card -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical|end"
-        android:orientation="horizontal"
-        android:layout_marginBottom="12dp">
+        android:layout_margin="16dp"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="2dp"
+        app:strokeWidth="0dp">
 
-        <TextView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:background="@drawable/bg_hero_gradient"
+            android:orientation="vertical"
+            android:padding="20dp">
 
-        <!-- Refresh Button -->
-        <ImageButton
-            android:id="@+id/btnRefresh"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="6dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Обновить"
-            android:padding="8dp"
-            android:src="@drawable/ic_refresh"
-            app:tint="?android:attr/textColorPrimary" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-        <!-- Quick History Button -->
-        <ImageButton
-            android:id="@+id/btnHistory"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="6dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="История"
-            android:padding="8dp"
-            android:src="@drawable/ic_history"
-            app:tint="?android:attr/textColorPrimary" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-        <!-- Mark All Read Square Icon Button -->
-        <ImageButton
-            android:id="@+id/btnMarkAllRead"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Прочитать всё"
-            android:padding="8dp"
-            android:src="@drawable/ic_done_all"
-            app:tint="#3B82F6" />
-    </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Уведомления"
+                        android:textColor="@color/sib_text_white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Системные сообщения и коды безопасности"
+                        android:textColor="#D0E2FF"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <!-- Actions Container -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Refresh Button -->
+                    <ImageButton
+                        android:id="@+id/btnRefresh"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Обновить"
+                        android:padding="7dp"
+                        android:src="@drawable/ic_refresh"
+                        app:tint="@color/sib_text_white" />
+
+                    <!-- History Button (hidden alias/compat) -->
+                    <ImageButton
+                        android:id="@+id/btnHistory"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone"
+                        tools:ignore="ContentDescription" />
+
+                    <!-- Mark All Read -->
+                    <ImageButton
+                        android:id="@+id/btnMarkAllRead"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginStart="4dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Прочитать всё"
+                        android:padding="7dp"
+                        android:src="@drawable/ic_done_all"
+                        app:tint="@color/sib_text_white" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Filter Tab Bar (Новые | История) -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayoutNotifications"
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="12dp"
-        app:tabIndicatorFullWidth="true"
-        app:tabMode="fixed"
-        app:tabGravity="fill">
+        app:cardBackgroundColor="?attr/sib_bg_card"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="?attr/sib_border_subtle"
+        app:strokeWidth="1dp">
 
-        <com.google.android.material.tabs.TabItem
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayoutNotifications"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@android:color/transparent"
+            app:tabIndicatorColor="@color/sib_blue_primary"
+            app:tabIndicatorFullWidth="false"
+            app:tabIndicatorHeight="3dp"
+            app:tabMode="fixed"
+            app:tabGravity="fill"
+            app:tabSelectedTextColor="@color/sib_blue_primary"
+            app:tabTextColor="?attr/sib_text_secondary">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Новые" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="История" />
+        </com.google.android.material.tabs.TabLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Новые" />
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="История" />
+        <LinearLayout
+            android:id="@+id/layoutEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
 
-    </com.google.android.material.tabs.TabLayout>
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_notifications"
+                app:tint="?attr/sib_text_muted" />
 
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone" />
+            <TextView
+                android:id="@+id/tvEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Нет новых уведомлений"
+                android:textColor="?attr/sib_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:gravity="center"
-        android:text="Нет новых уведомлений"
-        android:textColor="?android:attr/textColorSecondary"
-        android:visibility="gone" />
+            <TextView
+                android:id="@+id/tvEmptySubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Все важные сообщения будут появляться здесь"
+                android:textColor="?attr/sib_text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvNotifications"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvNotifications"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp" />
+    </FrameLayout>
 
 </LinearLayout>

@@ -4,16 +4,25 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@drawable/bottom_sheet_bg">
+    android:padding="20dp"
+    android:background="?attr/sib_bg_card">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/sib_border_subtle" />
 
     <TextView
         android:id="@+id/tvStudentNameSheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Имя студента"
-        android:textSize="20sp"
+        android:textSize="18sp"
         android:textStyle="bold"
+        android:textColor="?attr/sib_text_primary"
         android:layout_marginBottom="16dp"/>
 
     <com.google.android.material.button.MaterialButtonToggleGroup
@@ -38,7 +47,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Поощрение / Наказание"/>
+            android:text="Поощрение / Штраф"/>
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <LinearLayout
@@ -51,14 +60,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Выберите задание:"
-            android:textSize="16sp"/>
+            android:textColor="?attr/sib_text_secondary"
+            android:textSize="13sp"
+            android:textStyle="bold"/>
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="14dp"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/sib_blue_primary">
 
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/actvGradeItems"
@@ -66,40 +82,64 @@
                 android:layout_height="wrap_content"
                 android:focusable="false"
                 android:cursorVisible="false"
+                android:padding="12dp"
+                android:textColor="?attr/sib_text_primary"
                 android:inputType="none"/>
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilScore"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxStrokeColor="@color/sib_blue_primary"
         android:hint="Балл">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etScore"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:textColor="?attr/sib_text_primary"
             android:inputType="numberSigned"/>
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilComment"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxStrokeColor="@color/sib_blue_primary"
         android:hint="Комментарий (опционально)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etComment"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:textColor="?attr/sib_text_primary"/>
     </com.google.android.material.textfield.TextInputLayout>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSaveGrade"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
         android:layout_marginTop="16dp"
-        android:text="Сохранить"/>
+        android:text="Сохранить"
+        android:textColor="@color/sib_text_white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/sib_blue_primary"
+        app:cornerRadius="12dp"/>
 </LinearLayout>

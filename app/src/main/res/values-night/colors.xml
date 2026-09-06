@@ -1,23 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- University Design System Tokens (Dark Theme) -->
+    <!-- Official SibSUTIS Web Design System Tokens (Dark Theme) -->
+    <color name="sib_text_white">#FFFFFF</color>
+    <color name="sib_bg_app">#080E1C</color>
+    <color name="sib_bg_page">#080E1C</color>
+    <color name="sib_card_surface">#121631</color>
+    <color name="sib_bg_card">#121631</color>
+    <color name="sib_card_surface_hover">#171D3D</color>
+    <color name="sib_text_primary">#EAF0FC</color>
+    <color name="sib_text_secondary">#7E93B3</color>
+    <color name="sib_text_muted">#5C718E</color>
+    <color name="sib_text_dark_blue">#A3BCE2</color>
+    <color name="sib_blue_primary">#3B82F6</color>
+    <color name="sib_blue_vibrant">#3B82F6</color>
+    <color name="sib_blue_dark">#1D4ED8</color>
+    <color name="sib_blue_active_bg">#1B2446</color>
+    <color name="sib_block_bg">#0F1626</color>
+    <color name="sib_border">#223948</color>
+    <color name="sib_border_subtle">#1F3242</color>
+    <color name="sib_success">#34D399</color>
+    <color name="sib_success_bg">#064E3B</color>
+    <color name="sib_success_border">#065F46</color>
+    <color name="sib_error">#F87171</color>
+    <color name="sib_error_vibrant">#EF4444</color>
+    <color name="sib_danger">#EF4444</color>
+    <color name="sib_error_bg">#7F1D1D</color>
+    <color name="sib_error_border">#991B1B</color>
+    <color name="sib_warning">#FBBF24</color>
+    <color name="sib_warning_bg">#78350F</color>
+    <color name="sib_warning_border">#92400E</color>
+
+    <!-- Hero Gradient Tokens (Dark) -->
+    <color name="sib_hero_gradient_start">#115EE8</color>
+    <color name="sib_hero_gradient_mid">#0B43BD</color>
+    <color name="sib_hero_gradient_end">#082C91</color>
+
+    <!-- Legacy Compatibility Aliases (re-routed to SibSUTIS blue dark tokens) -->
+    <color name="photo_dark_background">#080E1C</color>
+    <color name="photo_primary_green">#3B82F6</color>
+    <color name="photo_ivory_text">#EAF0FC</color>
+    <color name="photo_grey_text">#7E93B3</color>
+    <color name="yadro_dark_background">#080E1C</color>
+    <color name="yadro_dark_button">#3B82F6</color>
+    <color name="yadro_dark_variant">#1D4ED8</color>
+    <color name="yadro_light_background">#080E1C</color>
+    <color name="yadro_light_button">#3B82F6</color>
+    <color name="yadro_light_variant">#1D4ED8</color>
+    <color name="text_primary_light">#EAF0FC</color>
+    <color name="text_secondary_light">#7E93B3</color>
+    <color name="surface_dark">#121631</color>
+
     <color name="uni_blue_primary">#3B82F6</color>
     <color name="uni_blue_dark">#1D4ED8</color>
-    <color name="uni_blue_deep">#0F172A</color>
-    <color name="uni_blue_surface">#1E293B</color>
-    <color name="uni_blue_subtle">#334155</color>
+    <color name="uni_blue_deep">#0F1626</color>
+    <color name="uni_blue_surface">#1B2446</color>
+    <color name="uni_blue_subtle">#223948</color>
     <color name="uni_blue_accent">#60A5FA</color>
-    <color name="uni_blue_gradient_start">#0F172A</color>
-    <color name="uni_blue_gradient_end">#1E293B</color>
+    <color name="uni_blue_gradient_start">#115EE8</color>
+    <color name="uni_blue_gradient_end">#0B43BD</color>
 
-    <!-- Soft Neutral Surfaces (Dark) -->
-    <color name="bg_main">#0B0F19</color>
-    <color name="card_surface">#131C2E</color>
-    <color name="card_stroke">#1E293B</color>
-    <color name="divider_color">#1E293B</color>
-    <color name="text_main">#F8FAFC</color>
-    <color name="text_muted">#94A3B8</color>
-    <color name="text_subtle">#64748B</color>
+    <color name="bg_main">#080E1C</color>
+    <color name="card_surface">#121631</color>
+    <color name="card_stroke">#223948</color>
+    <color name="divider_color">#223948</color>
+    <color name="text_main">#EAF0FC</color>
+    <color name="text_muted">#7E93B3</color>
+    <color name="text_subtle">#5C718E</color>
 
     <!-- Attendance Status Badges (Dark) -->
     <color name="badge_ontime_bg">#064E3B</color>
@@ -35,10 +83,15 @@
     <color name="badge_absent_icon">#F87171</color>
     <color name="badge_absent_border">#991B1B</color>
 
-    <color name="badge_type_bg">#1E3A8A</color>
+    <color name="badge_excused_bg">#1E3A8A</color>
+    <color name="badge_excused_text">#93C5FD</color>
+    <color name="badge_excused_icon">#60A5FA</color>
+    <color name="badge_excused_border">#1D4ED8</color>
+
+    <color name="badge_type_bg">#1B2446</color>
     <color name="badge_type_text">#93C5FD</color>
-    <color name="badge_time_bg">#1E293B</color>
-    <color name="badge_time_text">#CBD5E1</color>
+    <color name="badge_time_bg">#0F1626</color>
+    <color name="badge_time_text">#A3BCE2</color>
 
     <!-- Grade Progress Colors (Dark) -->
     <color name="grade_excellent">#34D399</color>

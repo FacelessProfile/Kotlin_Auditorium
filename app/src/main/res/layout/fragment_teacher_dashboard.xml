@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface">
+    android:background="?attr/sib_bg_page">
 
     <LinearLayout
         android:id="@+id/headerTeacherDashboard"
@@ -12,18 +13,19 @@
         android:layout_alignParentTop="true"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="8dp"
-        android:background="?attr/colorSurface">
+        android:paddingTop="14dp"
+        android:paddingBottom="10dp"
+        android:background="?attr/sib_bg_card">
 
         <TextView
             android:id="@+id/tvDashboardSubjectName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Предмет"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
+            android:textColor="?attr/sib_text_primary"
+            android:layout_marginBottom="10dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -37,6 +39,11 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeColor="@color/sib_blue_primary"
                 android:hint="Семестр">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -46,6 +53,8 @@
                     android:focusable="false"
                     android:cursorVisible="false"
                     android:inputType="none"
+                    android:padding="12dp"
+                    android:textColor="?attr/sib_text_primary"
                     android:singleLine="true"
                     android:ellipsize="end"/>
             </com.google.android.material.textfield.TextInputLayout>
@@ -56,6 +65,11 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeColor="@color/sib_blue_primary"
                 android:hint="Группа">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -65,18 +79,27 @@
                     android:focusable="false"
                     android:cursorVisible="false"
                     android:inputType="none"
+                    android:padding="12dp"
+                    android:textColor="?attr/sib_text_primary"
                     android:singleLine="true"
                     android:ellipsize="end"/>
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
     </LinearLayout>
 
+    <View
+        android:id="@+id/headerDivider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/headerTeacherDashboard"
+        android:background="?attr/sib_border_subtle"/>
+
     <!-- Tab 1: Gradebook -->
     <LinearLayout
         android:id="@+id/layoutGradebook"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/headerTeacherDashboard"
+        android:layout_below="@id/headerDivider"
         android:layout_above="@+id/bottomNavDashboard"
         android:orientation="vertical"
         android:visibility="visible">
@@ -94,7 +117,7 @@
         android:id="@+id/layoutAnalytics"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/headerTeacherDashboard"
+        android:layout_below="@id/headerDivider"
         android:layout_above="@+id/bottomNavDashboard"
         android:orientation="vertical"
         android:visibility="gone">
@@ -104,17 +127,27 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingHorizontal="16dp"
+            android:paddingTop="10dp"
             android:gravity="center_vertical">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Группа: "
-                android:textSize="16sp"/>
+                android:text="Группа:"
+                android:textColor="?attr/sib_text_secondary"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp">
+                android:layout_marginStart="8dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeColor="@color/sib_blue_primary">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/actvAnalyticsGroup"
@@ -122,7 +155,9 @@
                     android:layout_height="wrap_content"
                     android:focusable="false"
                     android:cursorVisible="false"
-                    android:inputType="none"/>
+                    android:inputType="none"
+                    android:padding="12dp"
+                    android:textColor="?attr/sib_text_primary"/>
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
@@ -149,28 +184,35 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_margin="4dp"
-                        app:cardCornerRadius="8dp"
-                        app:cardElevation="2dp">
+                        app:cardBackgroundColor="?attr/sib_bg_card"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="?attr/sib_border_subtle">
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="8dp"
+                            android:padding="12dp"
                             android:gravity="center">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Ср. успеваемость"
                                 android:textSize="11sp"
-                                android:textColor="?android:attr/textColorSecondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textAlignment="center"/>
+
                             <TextView
                                 android:id="@+id/tvAvgGrade"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0%"
-                                android:textSize="18sp"
+                                android:textSize="17sp"
                                 android:textStyle="bold"
+                                android:textColor="@color/sib_blue_primary"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -181,28 +223,35 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_margin="4dp"
-                        app:cardCornerRadius="8dp"
-                        app:cardElevation="2dp">
+                        app:cardBackgroundColor="?attr/sib_bg_card"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="?attr/sib_border_subtle">
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="8dp"
+                            android:padding="12dp"
                             android:gravity="center">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Ср. посещаемость"
                                 android:textSize="11sp"
-                                android:textColor="?android:attr/textColorSecondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textAlignment="center"/>
+
                             <TextView
                                 android:id="@+id/tvAvgAttendance"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0%"
-                                android:textSize="18sp"
+                                android:textSize="17sp"
                                 android:textStyle="bold"
+                                android:textColor="@color/sib_success"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -213,28 +262,35 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_margin="4dp"
-                        app:cardCornerRadius="8dp"
-                        app:cardElevation="2dp">
+                        app:cardBackgroundColor="?attr/sib_bg_card"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="?attr/sib_border_subtle">
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="8dp"
+                            android:padding="12dp"
                             android:gravity="center">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Всего студентов"
                                 android:textSize="11sp"
-                                android:textColor="?android:attr/textColorSecondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textAlignment="center"/>
+
                             <TextView
                                 android:id="@+id/tvTotalStudents"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textSize="18sp"
+                                android:textSize="17sp"
                                 android:textStyle="bold"
+                                android:textColor="?attr/sib_text_primary"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -244,22 +300,26 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp"
+                    android:layout_marginHorizontal="16dp"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="2dp">
+                    app:cardBackgroundColor="?attr/sib_bg_card"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="?attr/sib_border_subtle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="12dp">
+                        android:padding="16dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Экспорт ведомости успеваемости"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"/>
 
@@ -267,27 +327,35 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginTop="8dp">
+                            android:layout_marginTop="12dp">
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnExportPDF"
                                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                                 android:layout_width="0dp"
-                                android:layout_height="wrap_content"
+                                android:layout_height="48dp"
                                 android:layout_weight="1"
-                                android:layout_marginEnd="4dp"
+                                android:layout_marginEnd="6dp"
                                 android:text="Экспорт в PDF"
-                                app:icon="@android:drawable/ic_menu_save"/>
+                                android:textColor="?attr/sib_text_primary"
+                                app:strokeColor="?attr/sib_border_subtle"
+                                app:cornerRadius="12dp"
+                                app:icon="@android:drawable/ic_menu_save"
+                                app:iconTint="@color/sib_blue_primary"/>
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnExportXLSX"
                                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                                 android:layout_width="0dp"
-                                android:layout_height="wrap_content"
+                                android:layout_height="48dp"
                                 android:layout_weight="1"
-                                android:layout_marginStart="4dp"
+                                android:layout_marginStart="6dp"
                                 android:text="Экспорт в Excel"
-                                app:icon="@android:drawable/ic_menu_save"/>
+                                android:textColor="?attr/sib_text_primary"
+                                app:strokeColor="?attr/sib_border_subtle"
+                                app:cornerRadius="12dp"
+                                app:icon="@android:drawable/ic_menu_save"
+                                app:iconTint="@color/sib_success"/>
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -296,16 +364,17 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Список успеваемости студентов"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="13sp"
                     android:textStyle="bold"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="8dp"/>
 
-                <!-- Use layout_height="wrap_content" with nestedScrollingEnabled="false" inside ScrollView -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvDashboardStudents"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="8dp"
+                    android:padding="12dp"
                     android:nestedScrollingEnabled="false"/>
 
             </LinearLayout>
@@ -317,7 +386,7 @@
         android:id="@+id/layoutAssignments"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/tvDashboardSubjectName"
+        android:layout_below="@id/headerDivider"
         android:layout_above="@+id/bottomNavDashboard"
         android:visibility="gone">
 
@@ -334,8 +403,9 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_margin="16dp"
-            android:src="@android:drawable/ic_input_add"
-            app:tint="@android:color/white"/>
+            android:src="@drawable/ic_add"
+            app:backgroundTint="@color/sib_blue_primary"
+            app:tint="@color/sib_text_white"/>
     </FrameLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -343,6 +413,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:background="?attr/sib_bg_card"
+        app:itemIconTint="@color/selector_bottom_nav"
+        app:itemTextColor="@color/selector_bottom_nav"
         app:menu="@menu/teacher_dashboard_menu" />
 
 </RelativeLayout>
