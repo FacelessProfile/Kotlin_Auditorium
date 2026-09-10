@@ -28,6 +28,7 @@ class LessonReminderReceiver : BroadcastReceiver() {
         const val EXTRA_START_TIME = "extra_start_time"
         const val EXTRA_MINUTES = "extra_minutes"
         const val EXTRA_START_MILLIS = "extra_start_millis"
+        const val EXTRA_IS_TEST = "extra_is_test"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -36,6 +37,7 @@ class LessonReminderReceiver : BroadcastReceiver() {
         val room = intent.getStringExtra(EXTRA_ROOM) ?: ""
         val startTime = intent.getStringExtra(EXTRA_START_TIME) ?: ""
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 5)
+        val isTest = intent.getBooleanExtra(EXTRA_IS_TEST, false) || subject.contains("Тест", ignoreCase = true)
 
         val startMillis = intent.getLongExtra(EXTRA_START_MILLIS, 0L).let {
             if (it > 0) it else {
@@ -50,7 +52,7 @@ class LessonReminderReceiver : BroadcastReceiver() {
             }
         }
 
-        android.util.Log.d("LessonReminderReceiver", "onReceive triggered for subject=$subject, startTime=$startTime, minutes=$minutes, startMillis=$startMillis")
+        android.util.Log.d("LessonReminderReceiver", "onReceive triggered for subject=$subject, startTime=$startTime, minutes=$minutes, startMillis=$startMillis, isTest=$isTest")
 
         // 1. Trigger Vibration ONLY ONCE on initial alarm trigger
         triggerVibration(context)
@@ -61,18 +63,20 @@ class LessonReminderReceiver : BroadcastReceiver() {
             if (abs == 0) 1001 else abs
         }
 
-        showNotification(context, notificationId, subject, lessonType, room, startTime, minutes, startMillis)
+        showNotification(context, notificationId, subject, lessonType, room, startTime, minutes, startMillis, isTest)
 
-        // 3. Start silent countdown ticker
-        LessonCountdownManager.startOrUpdateCountdown(
-            context,
-            notificationId,
-            subject,
-            lessonType,
-            room,
-            startTime,
-            startMillis
-        )
+        // 3. Start silent countdown ticker (only for real lessons)
+        if (!isTest) {
+            LessonCountdownManager.startOrUpdateCountdown(
+                context,
+                notificationId,
+                subject,
+                lessonType,
+                room,
+                startTime,
+                startMillis
+            )
+        }
     }
 
     private fun triggerVibration(context: Context) {
@@ -106,7 +110,8 @@ class LessonReminderReceiver : BroadcastReceiver() {
         room: String,
         startTime: String,
         minutes: Int,
-        startMillis: Long
+        startMillis: Long,
+        isTest: Boolean = false
     ) {
         val sysNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -142,14 +147,16 @@ class LessonReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
+        val title = if (isTest) "Тестовое оповещение: $subject" else "Скоро пара: $subject"
         val roomText = if (room.isNotBlank()) " в ауд. $room" else ""
         val contentText = "Через $minutes мин ($startTime) начнётся $lessonType$roomText"
+        val noteFooter = if (isTest) "Тест оповещения и вибрации выполнен успешно." else "Не забудьте отметиться на занятии!"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("🔔 Скоро пара: $subject")
+            .setContentTitle(title)
             .setContentText(contentText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$contentText\nНе забудьте отметиться на занятии!"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$contentText\n$noteFooter"))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setDefaults(NotificationCompat.DEFAULT_ALL)

@@ -81,12 +81,15 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                     val token = authPrefs.getString("auth_token", null)
-                    if (JwtUtils.needsRefresh(token)) {
+                    if (!token.isNullOrBlank()) {
                         lifecycleScope.launch(Dispatchers.IO) {
                             val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity)
                             val repo = StudentRepositoryHTTPS(this@MainActivity, db.studentDao())
                             repo.refreshSessionToken()
                         }
+                    }
+                    com.example.kotlinroomdatabase.util.AvatarManager.syncAvatarFromServer(this@MainActivity) {
+                        updateNavHeader()
                     }
                 }
             }
@@ -159,6 +162,7 @@ class MainActivity : AppCompatActivity() {
             binding.drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.toolbar.setNavigationIconTint(android.graphics.Color.WHITE)
         binding.navView.setupWithNavController(navController)
 
         // Setup bottom navigation listener
@@ -228,6 +232,7 @@ class MainActivity : AppCompatActivity() {
                 binding.appBarLayout.visibility = android.view.View.VISIBLE
                 binding.bottomNavigation.visibility = android.view.View.VISIBLE
                 binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                binding.toolbar.setNavigationIconTint(android.graphics.Color.WHITE)
                 // Sync selected bottom nav item if destination matches
                 val bottomMenu = binding.bottomNavigation.menu
                 for (i in 0 until bottomMenu.size()) {
@@ -399,31 +404,12 @@ class MainActivity : AppCompatActivity() {
             ?: if (userRole == "teacher") "teacher@sibsutis.ru" else "student@sibsutis.ru"
         tvEmail.text = savedEmail
 
-        val avatarPath = prefs.getString("avatar_path", null)
-        val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val avatarUrl = authPrefs.getString("avatar_url", null)
-        val syncedUrl = prefs.getString("synced_avatar_url", null)
-
-        Log.d("MainActivity", "Updating header: path=$avatarPath, url=$avatarUrl, synced=$syncedUrl")
-
-        val defaultNavPad = (12 * resources.displayMetrics.density).toInt()
-        if (avatarPath != null) {
-            val file = java.io.File(avatarPath)
-            if (file.exists() && (avatarUrl == null || avatarUrl == syncedUrl)) {
-                val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                if (bitmap != null) {
-                    ivAvatar.setPadding(0, 0, 0, 0)
-                    ivAvatar.setImageBitmap(bitmap)
-                    ivAvatar.imageTintList = null
-                } else {
-                    loadAvatarFromUrl(avatarUrl, ivAvatar)
-                }
-            } else {
-                loadAvatarFromUrl(avatarUrl, ivAvatar)
-            }
-        } else {
-            loadAvatarFromUrl(avatarUrl, ivAvatar)
-        }
+        com.example.kotlinroomdatabase.util.AvatarManager.loadCachedAvatar(
+            this,
+            ivAvatar,
+            defaultPadDp = 12,
+            placeholderTintRes = R.color.white
+        )
     }
 
     private fun loadAvatarFromUrl(url: String?, imageView: android.widget.ImageView) {

@@ -18,7 +18,11 @@ import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.databinding.FragmentSettingsBinding
 import com.example.kotlinroomdatabase.qr.CustomScannerActivity
 import com.example.kotlinroomdatabase.reminders.LessonReminderScheduler
+import com.example.kotlinroomdatabase.update.AppUpdateManager
+import com.example.kotlinroomdatabase.update.AppVersionInfo
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
 
@@ -158,6 +162,93 @@ class SettingsFragment : Fragment() {
         binding.btnTestReminder.setOnClickListener {
             LessonReminderScheduler.testReminderNow(requireContext())
             Toast.makeText(requireContext(), "Тестовое напоминание и вибрация сработают через 1.5 сек", Toast.LENGTH_SHORT).show()
+        }
+
+        // 4. App Version & In-App Update
+        val currentVersionName = AppUpdateManager.getCurrentVersionName(requireContext())
+        val currentVersionCode = AppUpdateManager.getCurrentVersionCode(requireContext())
+        binding.tvAppVersion.text = "СибГУТИ • Электронный журнал v$currentVersionName (сборка $currentVersionCode)"
+
+        binding.btnCheckUpdate.setOnClickListener {
+            checkAppUpdate()
+        }
+    }
+
+    private fun checkAppUpdate() {
+        val context = requireContext()
+        binding.btnCheckUpdate.isEnabled = false
+        binding.btnCheckUpdate.text = "Проверка обновлений..."
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = AppUpdateManager.checkUpdate(context)
+            if (_binding != null) {
+                binding.btnCheckUpdate.isEnabled = true
+                binding.btnCheckUpdate.text = "Проверить наличие обновлений"
+            }
+
+            result.onSuccess { updateInfo ->
+                if (updateInfo == null) {
+                    Toast.makeText(context, "У вас установлена актуальная версия приложения", Toast.LENGTH_SHORT).show()
+                } else {
+                    showUpdateAvailableDialog(updateInfo)
+                }
+            }.onFailure { e ->
+                Toast.makeText(context, "Ошибка проверки: ${e.localizedMessage ?: "сервер недоступен"}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun showUpdateAvailableDialog(info: AppVersionInfo) {
+        val context = context ?: return
+        val sizeMb = if (info.fileSize > 0) String.format("%.1f МБ", info.fileSize / (1024.0 * 1024.0)) else ""
+        val msg = buildString {
+            append("Доступна новая версия v${info.versionName} (сборка ${info.versionCode})")
+            if (sizeMb.isNotBlank()) append("\nРазмер: $sizeMb")
+            if (info.releaseNotes.isNotBlank()) {
+                append("\n\nЧто нового:\n")
+                append(info.releaseNotes)
+            }
+        }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle("Доступно обновление")
+            .setMessage(msg)
+            .setPositiveButton("Обновить") { _, _ ->
+                startApkDownload(info)
+            }
+            .setNegativeButton("Позже", null)
+            .setCancelable(!info.isCritical)
+            .show()
+    }
+
+    private fun startApkDownload(info: AppVersionInfo) {
+        val context = context ?: return
+        binding.btnCheckUpdate.visibility = View.GONE
+        binding.layoutUpdateProgress.visibility = View.VISIBLE
+        binding.pbUpdateProgress.progress = 0
+        binding.tvUpdateProgressText.text = "Подготовка к загрузке..."
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val downloadResult = AppUpdateManager.downloadApk(context, info) { percent, downloaded, total ->
+                if (_binding != null) {
+                    binding.pbUpdateProgress.progress = percent
+                    val downloadedMb = String.format("%.1f", downloaded / (1024.0 * 1024.0))
+                    val totalMb = if (total > 0) String.format("%.1f", total / (1024.0 * 1024.0)) else "?"
+                    binding.tvUpdateProgressText.text = "Скачивание: $percent% ($downloadedMb / $totalMb МБ)"
+                }
+            }
+
+            if (_binding != null) {
+                binding.btnCheckUpdate.visibility = View.VISIBLE
+                binding.layoutUpdateProgress.visibility = View.GONE
+            }
+
+            downloadResult.onSuccess { apkFile ->
+                Toast.makeText(context, "Обновление скачано, запуск установки...", Toast.LENGTH_SHORT).show()
+                AppUpdateManager.installApk(context, apkFile)
+            }.onFailure { err ->
+                Toast.makeText(context, "Не удалось скачать обновление: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 

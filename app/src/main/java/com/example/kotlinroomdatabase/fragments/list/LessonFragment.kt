@@ -175,7 +175,7 @@ class LessonFragment : NFC_Tools() {
 
     private fun showFraudDialog(student: AttendanceRosterStudent) {
         AlertDialog.Builder(requireContext())
-            .setTitle("⚠ Подозрение на антифрод")
+            .setTitle("Подозрение на антифрод")
             .setMessage(
                 "Студент: ${student.student_name}\n" +
                 "Группа: ${student.group_name}\n" +

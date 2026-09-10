@@ -29,6 +29,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.kotlinroomdatabase.MainActivity
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.config.ServerConfig
 import com.example.kotlinroomdatabase.databinding.UserUiBinding
@@ -209,6 +210,14 @@ class User_Interface : Fragment() {
         binding.swipeRefreshDashboard.setOnRefreshListener {
             loadSchedule()
             checkLessonStatusRemote(showToast = false)
+            context?.let { ctx ->
+                com.example.kotlinroomdatabase.util.AvatarManager.syncAvatarFromServer(ctx, forceRefresh = true) {
+                    if (_binding != null && isAdded) {
+                        loadHeroAvatar()
+                        (activity as? MainActivity)?.updateNavHeader()
+                    }
+                }
+            }
         }
 
         checkAndUpdateLessonState()
@@ -366,33 +375,26 @@ class User_Interface : Fragment() {
     }
 
     private fun loadHeroAvatar() {
-        val prefs = context?.getSharedPreferences("student_prefs", Context.MODE_PRIVATE) ?: return
-        val avatarPath = prefs.getString("avatar_path", null)
-        val defaultPad = (10 * resources.displayMetrics.density).toInt()
-        if (avatarPath != null) {
-            val avatarFile = java.io.File(avatarPath)
-            if (avatarFile.exists()) {
-                try {
-                    binding.ivHeroIcon.setPadding(0, 0, 0, 0)
-                    binding.ivHeroIcon.setImageURI(null)
-                    binding.ivHeroIcon.setImageURI(android.net.Uri.fromFile(avatarFile))
-                    binding.ivHeroIcon.imageTintList = null
-                    return
-                } catch (_: Exception) {}
-            }
-        }
-        binding.ivHeroIcon.setPadding(defaultPad, defaultPad, defaultPad, defaultPad)
-        binding.ivHeroIcon.setImageResource(R.drawable.ic_person)
-        context?.let { ctx ->
-            binding.ivHeroIcon.imageTintList = android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(ctx, R.color.sib_blue_primary)
-            )
-        }
+        val ctx = context ?: return
+        com.example.kotlinroomdatabase.util.AvatarManager.loadCachedAvatar(
+            ctx,
+            binding.ivHeroIcon,
+            defaultPadDp = 10,
+            placeholderTintRes = R.color.sib_blue_primary
+        )
     }
 
     override fun onResume() {
         super.onResume()
         loadHeroAvatar()
+        context?.let { ctx ->
+            com.example.kotlinroomdatabase.util.AvatarManager.syncAvatarFromServer(ctx) {
+                if (_binding != null && isAdded) {
+                    loadHeroAvatar()
+                    (activity as? MainActivity)?.updateNavHeader()
+                }
+            }
+        }
         checkAndUpdateLessonState()
         checkLessonStatusRemote(showToast = false)
         startStatusPolling()

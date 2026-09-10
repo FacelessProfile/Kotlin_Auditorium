@@ -99,7 +99,7 @@ object ServerConfig {
         }
 
         AlertDialog.Builder(context)
-            .setTitle("⚙️ Сервер бэкенда (Debug)")
+            .setTitle("Сервер бэкенда (Debug)")
             .setSingleChoiceItems(options, selectedIdx) { dialog, which ->
                 when (which) {
                     0 -> {

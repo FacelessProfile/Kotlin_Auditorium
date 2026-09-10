@@ -173,8 +173,13 @@
                     android:id="@+id/btnScan2FaQr"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
                     android:layout_marginTop="12dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:text="Привязать 2FA (Сканировать QR)"
                     android:textColor="?attr/sib_text_primary"
                     android:textSize="13sp"
@@ -252,9 +257,14 @@
                     android:id="@+id/btnTestReminder"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
                     android:layout_marginTop="8dp"
-                    android:text="🔔 Проверить вибрацию и уведомление"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="Проверить вибрацию и оповещение"
                     android:textColor="?attr/sib_text_primary"
                     android:textSize="13sp"
                     app:cornerRadius="12dp"
@@ -264,7 +274,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- About App Card -->
+        <!-- About & App Update Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -284,18 +294,66 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="О приложении"
+                    android:text="О приложении и обновления"
                     android:textColor="?attr/sib_text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tvAppVersion"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="СибГУТИ • Электронный журнал v2.0"
+                    android:text="СибГУТИ • Электронный журнал v1.0"
                     android:textColor="?attr/sib_text_secondary"
                     android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCheckUpdate"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:layout_marginTop="12dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="Проверить наличие обновлений"
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="13sp"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="?attr/sib_border_subtle" />
+
+                <!-- Progress container during download -->
+                <LinearLayout
+                    android:id="@+id/layoutUpdateProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvUpdateProgressText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="Загрузка обновления: 0%"
+                        android:textColor="?attr/sib_text_primary"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/pbUpdateProgress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:indeterminate="false"
+                        android:max="100"
+                        android:progress="0"
+                        app:indicatorColor="@color/sib_blue_primary"
+                        app:trackColor="?attr/sib_border_subtle"
+                        app:trackCornerRadius="4dp" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

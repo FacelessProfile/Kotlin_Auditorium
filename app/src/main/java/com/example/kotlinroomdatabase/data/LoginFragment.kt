@@ -17,6 +17,7 @@ import androidx.navigation.navOptions
 import com.example.kotlinroomdatabase.MainActivity
 import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.config.ServerConfig
+import com.example.kotlinroomdatabase.crypto.BiometricAuthManager
 import com.example.kotlinroomdatabase.databinding.FragmentLoginBinding
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.IStudentRepository
@@ -36,6 +37,7 @@ class LoginFragment : Fragment() {
 
     private lateinit var studentRepository: IStudentRepository
     private var isLoginMode = true
+    private var hasAutoPromptedBiometric = false
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -70,6 +72,10 @@ class LoginFragment : Fragment() {
 
         binding.btnAction.setOnClickListener {
             handleAction()
+        }
+
+        binding.btnBiometricLogin.setOnClickListener {
+            triggerBiometricLogin()
         }
 
         binding.logoContainer.setOnLongClickListener {
@@ -122,6 +128,19 @@ class LoginFragment : Fragment() {
         super.onResume()
         hideError()
         updateServerFooter()
+        setupBiometricLoginUI()
+
+        val context = context
+        if (!hasAutoPromptedBiometric && isLoginMode && context != null &&
+            BiometricAuthManager.hasSavedCredentials(context) &&
+            BiometricAuthManager.isBiometricOrPinAvailable(context)) {
+            hasAutoPromptedBiometric = true
+            view?.postDelayed({
+                if (isResumed && isLoginMode && _binding != null) {
+                    triggerBiometricLogin()
+                }
+            }, 300)
+        }
     }
 
     private fun updateServerFooter() {
@@ -151,7 +170,48 @@ class LoginFragment : Fragment() {
             binding.inviteCodeLayout.isVisible = true
             binding.passwordConfirmLayout.isVisible = true
         }
+        setupBiometricLoginUI()
         checkPasswordLayout()
+    }
+
+    private fun setupBiometricLoginUI() {
+        if (_binding == null) return
+        val context = context ?: return
+        if (isLoginMode && BiometricAuthManager.hasSavedCredentials(context) && BiometricAuthManager.isBiometricOrPinAvailable(context)) {
+            binding.btnBiometricLogin.visibility = View.VISIBLE
+            if (binding.etName.text.isNullOrBlank()) {
+                BiometricAuthManager.getSavedLogin(context)?.let {
+                    binding.etName.setText(it)
+                }
+            }
+        } else {
+            binding.btnBiometricLogin.visibility = View.GONE
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun triggerBiometricLogin() {
+        if (_binding == null) return
+        val context = context ?: return
+        if (!BiometricAuthManager.hasSavedCredentials(context)) {
+            showError("Нет сохранённых данных для быстрого входа. Войдите с паролем.")
+            return
+        }
+
+        hideError()
+        BiometricAuthManager.authenticate(
+            fragment = this,
+            title = "Вход в СибГУТИ",
+            subtitle = "Используйте отпечаток пальца, Face ID или PIN-код",
+            onSuccess = { savedLogin, savedPass ->
+                binding.etName.setText(savedLogin)
+                binding.etPassword.setText(savedPass)
+                performLogin(savedLogin, savedPass)
+            },
+            onError = { errMsg ->
+                showError(errMsg)
+            }
+        )
     }
 
     private fun showError(message: String) {
@@ -167,10 +227,36 @@ class LoginFragment : Fragment() {
         binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
         binding.btnAction.isEnabled = !loading
         binding.btnAction.alpha = if (loading) 0.7f else 1.0f
+        binding.btnBiometricLogin.isEnabled = !loading
+        binding.btnBiometricLogin.alpha = if (loading) 0.7f else 1.0f
         binding.etName.isEnabled = !loading
         binding.etPassword.isEnabled = !loading
         binding.etInviteCode.isEnabled = !loading
         binding.etPasswordConfirm.isEnabled = !loading
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun performLogin(name: String, pass: String) {
+        if (name.isBlank() || pass.isBlank()) {
+            showError("Пожалуйста, заполните логин и пароль")
+            return
+        }
+
+        setLoading(true)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = studentRepository.login(name, pass)
+            withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
+                setLoading(false)
+                when (result) {
+                    is LoginResult.Success -> {
+                        BiometricAuthManager.saveCredentials(requireContext(), name, pass)
+                        proceedToApp(result.student)
+                    }
+                    is LoginResult.Error -> showError(result.message)
+                }
+            }
+        }
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -181,23 +267,7 @@ class LoginFragment : Fragment() {
         hideError()
 
         if (isLoginMode) {
-            if (name.isBlank() || pass.isBlank()) {
-                showError("Пожалуйста, заполните логин и пароль")
-                return
-            }
-
-            setLoading(true)
-            lifecycleScope.launch(Dispatchers.IO) {
-                val result = studentRepository.login(name, pass)
-                withContext(Dispatchers.Main) {
-                    if (_binding == null) return@withContext
-                    setLoading(false)
-                    when (result) {
-                        is LoginResult.Success -> proceedToApp(result.student)
-                        is LoginResult.Error -> showError(result.message)
-                    }
-                }
-            }
+            performLogin(name, pass)
         } else {
             val inviteCode = binding.etInviteCode.text.toString().trim()
             val confirm = binding.etPasswordConfirm.text.toString().trim()
@@ -253,8 +323,16 @@ class LoginFragment : Fragment() {
                 student.studentNFC
             }
 
+            val oldUserId = prefs.getInt("current_student_id", -1)
+            if (oldUserId != -1 && oldUserId != student.id) {
+                val localFile = com.example.kotlinroomdatabase.util.AvatarManager.getCachedAvatarFile(requireContext())
+                if (localFile.exists()) {
+                    try { localFile.delete() } catch (_: Exception) {}
+                }
+                prefs.edit().remove("avatar_path").remove("synced_avatar_url").apply()
+            }
+
             prefs.edit().apply {
-                clear()
                 putInt("current_student_id", student.id)
                 putString("user_role", student.role)
                 putString("student_name", student.studentName)
@@ -264,6 +342,12 @@ class LoginFragment : Fragment() {
             }
 
             enableHceForStudent(student)
+
+            // Auto-sync avatar from server immediately
+            com.example.kotlinroomdatabase.util.AvatarManager.syncAvatarFromServer(requireContext().applicationContext) {
+                val mainActivity = activity as? MainActivity
+                mainActivity?.updateNavHeader()
+            }
 
             // Auto-sync data in background
             studentRepository.syncAllStudents()

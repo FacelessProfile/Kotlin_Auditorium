@@ -171,7 +171,40 @@ class ScheduleFragment : Fragment() {
         tvSelectedDate.text = dateDisplayFormat.format(currentCalendar.time)
 
         val weekdayRu = getRussianWeekday(currentCalendar.get(Calendar.DAY_OF_WEEK))
-        tvSelectedWeekday.text = weekdayRu
+        val weekType = getAcademicWeekType(currentCalendar)
+        val weekParity = if (weekType % 2 == 1) "1 неделя (Нечётная)" else "2 неделя (Чётная)"
+        tvSelectedWeekday.text = "$weekdayRu • $weekParity"
+    }
+
+    private fun getAcademicWeekType(calendar: Calendar): Int {
+        val target = calendar.clone() as Calendar
+        target.firstDayOfWeek = Calendar.MONDAY
+        val targetDayOfWeek = target.get(Calendar.DAY_OF_WEEK)
+        val dayOffset = if (targetDayOfWeek == Calendar.SUNDAY) 6 else targetDayOfWeek - Calendar.MONDAY
+        target.add(Calendar.DAY_OF_MONTH, -dayOffset)
+        target.set(Calendar.HOUR_OF_DAY, 0)
+        target.set(Calendar.MINUTE, 0)
+        target.set(Calendar.SECOND, 0)
+        target.set(Calendar.MILLISECOND, 0)
+
+        val calYear = calendar.get(Calendar.YEAR)
+        val calMonth = calendar.get(Calendar.MONTH)
+        val refYear = if (calMonth < Calendar.SEPTEMBER) calYear - 1 else calYear
+
+        val sept1 = Calendar.getInstance().apply {
+            firstDayOfWeek = Calendar.MONDAY
+            set(refYear, Calendar.SEPTEMBER, 1, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+            val sDayOfWeek = get(Calendar.DAY_OF_WEEK)
+            val sOffset = if (sDayOfWeek == Calendar.SUNDAY) 6 else sDayOfWeek - Calendar.MONDAY
+            add(Calendar.DAY_OF_MONTH, -sOffset)
+        }
+
+        val diffMillis = target.timeInMillis - sept1.timeInMillis
+        val diffDays = (diffMillis / (1000L * 60 * 60 * 24)).toInt()
+        val diffWeeks = diffDays / 7
+        val academicWeek = diffWeeks + 1
+        return if (academicWeek % 2 == 0) 2 else 1
     }
 
     private fun getRussianWeekday(dayOfWeek: Int): String {

@@ -33,6 +33,11 @@
         <item name="sib_text_primary">@color/sib_text_primary</item>
         <item name="sib_text_secondary">@color/sib_text_secondary</item>
         <item name="sib_text_muted">@color/sib_text_muted</item>
+        <item name="drawerArrowStyle">@style/WhiteDrawerArrow</item>
+    </style>
+
+    <style name="WhiteDrawerArrow" parent="Widget.AppCompat.DrawerArrowToggle">
+        <item name="color">@color/white</item>
     </style>
 
     <style name="FullScreenBottomSheetDialog" parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">

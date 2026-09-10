@@ -95,41 +95,22 @@ object LessonReminderScheduler {
 
     fun testReminderNow(context: Context) {
         val reminderMinutes = getReminderMinutes(context)
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-
-        val triggerMillis = System.currentTimeMillis() + 1500L // 1.5 seconds from now
-
         val intent = Intent(context, LessonReminderReceiver::class.java).apply {
             action = LessonReminderReceiver.ACTION_LESSON_REMINDER
-            putExtra(LessonReminderReceiver.EXTRA_SUBJECT, "Компьютерные сети (Тест)")
-            putExtra(LessonReminderReceiver.EXTRA_TYPE, "Лабораторная работа")
-            putExtra(LessonReminderReceiver.EXTRA_ROOM, "412")
+            putExtra(LessonReminderReceiver.EXTRA_SUBJECT, "Тестовая пара")
+            putExtra(LessonReminderReceiver.EXTRA_TYPE, "Тестовое занятие")
+            putExtra(LessonReminderReceiver.EXTRA_ROOM, "101")
             putExtra(LessonReminderReceiver.EXTRA_START_TIME, "10:15")
             putExtra(LessonReminderReceiver.EXTRA_MINUTES, reminderMinutes)
+            putExtra(LessonReminderReceiver.EXTRA_IS_TEST, true)
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            99999,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-        )
-
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerMillis, pendingIntent)
-                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                context.sendBroadcast(intent)
+            } catch (e: Exception) {
+                Log.e("LessonReminderScheduler", "Failed to send test broadcast", e)
             }
-        } catch (e: Exception) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            }
-        }
+        }, 1500L)
     }
 }

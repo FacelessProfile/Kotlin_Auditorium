@@ -95,9 +95,9 @@ object JwtUtils {
         if (studentId == -1 || token.isNullOrBlank()) {
             return false
         }
-        // If expired by more than 24 hours, session is invalid
+        // Allow refresh within backend grace period (up to 14 days past expiration)
         val expMillis = getExpirationMillis(token)
-        if (expMillis > 0 && System.currentTimeMillis() > expMillis + 24 * 3600 * 1000L) {
+        if (expMillis > 0 && System.currentTimeMillis() > expMillis + 14 * 24 * 3600 * 1000L) {
             return false
         }
         return true

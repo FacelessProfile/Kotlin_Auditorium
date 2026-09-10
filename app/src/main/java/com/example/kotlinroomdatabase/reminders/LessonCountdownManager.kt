@@ -67,7 +67,7 @@ object LessonCountdownManager {
 
                 val notification = NotificationCompat.Builder(appContext, LessonReminderReceiver.CHANNEL_ID)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
-                    .setContentTitle("🔔 Скоро пара: $subject")
+                    .setContentTitle("Скоро пара: $subject")
                     .setContentText(contentText)
                     .setStyle(NotificationCompat.BigTextStyle().bigText("$contentText\nНе забудьте отметиться на занятии!"))
                     .setPriority(NotificationCompat.PRIORITY_HIGH)

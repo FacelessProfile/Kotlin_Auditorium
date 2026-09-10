@@ -218,6 +218,13 @@ class StudentRepositoryHTTPS(
                         .edit().putString("user_email", email).apply()
                 }
 
+                val avatarUrl = result.optString("avatar", result.optString("avatar_url", "")).trim()
+                if (avatarUrl.isNotBlank() && avatarUrl != "null") {
+                    sharedPrefs.edit().putString("avatar_url", avatarUrl).apply()
+                    context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+                        .edit().putString("synced_avatar_url", avatarUrl).apply()
+                }
+
                 val userIdStr = result.optString("user_ID", result.optString("user_id", "0"))
                 val parsedId = userIdStr.toIntOrNull() ?: userIdStr.hashCode()
                 val effectiveRole = result.optString("active_role", result.optString("role", result.optString("primary_role", "student"))).trim().lowercase()
