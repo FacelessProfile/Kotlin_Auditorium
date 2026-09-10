@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "86623326969",
+    "project_id": "sibsutis-ejournal",
+    "storage_bucket": "sibsutis-ejournal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:86623326969:android:d4109d8a1ccb15d29ec828",
+        "android_client_info": {
+          "package_name": "ru.sibsutis.ejournal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLn-x9zGTNUO4NntbaENChNbOyw8M0PJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

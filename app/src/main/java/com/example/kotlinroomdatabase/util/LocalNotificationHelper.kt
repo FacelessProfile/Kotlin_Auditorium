@@ -27,6 +27,19 @@ object LocalNotificationHelper {
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
+
+            val cloudChannel = NotificationChannel(
+                "lms_cloud_notifications_channel",
+                "Облачные уведомления СибГУТИ",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Важные уведомления о расписании, оценках и безопасности"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 400, 200, 400)
+                setShowBadge(true)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(cloudChannel)
         }
     }
 

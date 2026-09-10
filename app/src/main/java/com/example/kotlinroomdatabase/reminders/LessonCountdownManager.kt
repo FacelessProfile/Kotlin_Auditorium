@@ -103,4 +103,18 @@ object LessonCountdownManager {
 
         activeCountdowns[notificationId] = job
     }
+
+    fun cancelAll(context: Context) {
+        val appContext = context.applicationContext
+        val notificationManager = NotificationManagerCompat.from(appContext)
+        activeCountdowns.forEach { (notificationId, job) ->
+            job.cancel()
+            try {
+                notificationManager.cancel(notificationId)
+            } catch (e: Exception) {
+                Log.e("LessonCountdownManager", "Failed to cancel notification $notificationId", e)
+            }
+        }
+        activeCountdowns.clear()
+    }
 }

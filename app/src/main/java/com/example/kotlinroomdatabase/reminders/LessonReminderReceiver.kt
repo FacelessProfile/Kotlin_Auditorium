@@ -20,7 +20,7 @@ import java.util.Locale
 class LessonReminderReceiver : BroadcastReceiver() {
 
     companion object {
-        const val ACTION_LESSON_REMINDER = "com.example.kotlinroomdatabase.ACTION_LESSON_REMINDER"
+        const val ACTION_LESSON_REMINDER = "ru.sibsutis.ejournal.ACTION_LESSON_REMINDER"
         const val CHANNEL_ID = "lms_notifications_channel"
         const val EXTRA_SUBJECT = "extra_subject"
         const val EXTRA_TYPE = "extra_type"
@@ -38,6 +38,11 @@ class LessonReminderReceiver : BroadcastReceiver() {
         val startTime = intent.getStringExtra(EXTRA_START_TIME) ?: ""
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 5)
         val isTest = intent.getBooleanExtra(EXTRA_IS_TEST, false) || subject.contains("Тест", ignoreCase = true)
+
+        if (!isTest && !LessonReminderScheduler.isRemindersEnabled(context)) {
+            android.util.Log.d("LessonReminderReceiver", "Reminders are disabled in settings, ignoring alarm for $subject")
+            return
+        }
 
         val startMillis = intent.getLongExtra(EXTRA_START_MILLIS, 0L).let {
             if (it > 0) it else {

@@ -147,6 +147,17 @@ class SettingsFragment : Fragment() {
         }
 
         // 3. Lesson Reminder Settings
+        val isReminderEnabled = LessonReminderScheduler.isRemindersEnabled(requireContext())
+        binding.switchLessonReminders.isChecked = isReminderEnabled
+        binding.layoutReminderDetails.visibility = if (isReminderEnabled) View.VISIBLE else View.GONE
+
+        binding.switchLessonReminders.setOnCheckedChangeListener { _, isChecked ->
+            LessonReminderScheduler.setRemindersEnabled(requireContext(), isChecked)
+            binding.layoutReminderDetails.visibility = if (isChecked) View.VISIBLE else View.GONE
+            val statusText = if (isChecked) "Оповещения о начале пар включены" else "Оповещения о начале пар отключены"
+            Toast.makeText(requireContext(), statusText, Toast.LENGTH_SHORT).show()
+        }
+
         val currentReminderMinutes = LessonReminderScheduler.getReminderMinutes(requireContext())
         binding.sliderReminderMinutes.value = currentReminderMinutes.toFloat().coerceIn(1.0f, 15.0f)
         binding.tvReminderMinutesLabel.text = "Предупреждать за: $currentReminderMinutes мин"

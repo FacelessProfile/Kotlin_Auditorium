@@ -367,6 +367,7 @@ class MainActivity : AppCompatActivity() {
         menu.findItem(R.id.scheduleFragment)?.isVisible = true
         menu.findItem(R.id.listFragment)?.isVisible = isTeacher
         updateNavHeader()
+        registerDeviceToken()
     }
 
     fun updateNavHeader() {
@@ -502,14 +503,33 @@ class MainActivity : AppCompatActivity() {
 
     private fun registerDeviceToken() {
         val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val token = authPrefs.getString("auth_token", "") ?: ""
-        if (token.isNotEmpty()) {
-            lifecycleScope.launch {
-                val httpsRepo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
-                val dummyFcmToken = "fcm_device_" + android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.ANDROID_ID)
-                httpsRepo.registerDeviceToken(dummyFcmToken, "android")
+        val authToken = authPrefs.getString("auth_token", "") ?: ""
+
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val fcmToken = task.result
+                    android.util.Log.d("MainActivity", "Fetched FCM token: $fcmToken")
+                    getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
+                        .edit().putString("fcm_token", fcmToken).apply()
+
+                    if (authToken.isNotEmpty()) {
+                        lifecycleScope.launch {
+                            val httpsRepo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
+                            httpsRepo.registerDeviceToken(fcmToken, "android")
+                        }
+                    }
+                } else {
+                    android.util.Log.w("MainActivity", "Fetching FCM token failed, falling back to device ID", task.exception)
+                    if (authToken.isNotEmpty()) {
+                        lifecycleScope.launch {
+                            val httpsRepo = StudentRepositoryHTTPS(this@MainActivity, com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity).studentDao())
+                            val fallbackToken = "device_" + android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+                            httpsRepo.registerDeviceToken(fallbackToken, "android")
+                        }
+                    }
+                }
             }
-        }
         checkNotificationPermission()
     }
 

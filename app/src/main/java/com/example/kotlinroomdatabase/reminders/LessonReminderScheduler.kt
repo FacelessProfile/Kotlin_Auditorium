@@ -15,7 +15,25 @@ object LessonReminderScheduler {
 
     private const val PREFS_NAME = "app_settings"
     private const val KEY_REMINDER_MINUTES = "lesson_reminder_minutes"
+    private const val KEY_REMINDERS_ENABLED = "lesson_reminders_enabled"
     const val DEFAULT_REMINDER_MINUTES = 5
+
+    fun isRemindersEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_REMINDERS_ENABLED, true)
+    }
+
+    fun setRemindersEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_REMINDERS_ENABLED, enabled).apply()
+        if (!enabled) {
+            cancelAllReminders(context)
+        }
+    }
+
+    fun cancelAllReminders(context: Context) {
+        LessonCountdownManager.cancelAll(context)
+    }
 
     fun getReminderMinutes(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -29,6 +47,10 @@ object LessonReminderScheduler {
     }
 
     fun scheduleAlarmsForDay(context: Context, schedule: DayScheduleResult) {
+        if (!isRemindersEnabled(context)) {
+            Log.d("LessonReminder", "Reminders disabled in settings, skipping scheduling")
+            return
+        }
         val reminderMinutes = getReminderMinutes(context)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val dateStr = schedule.date // YYYY-MM-DD
