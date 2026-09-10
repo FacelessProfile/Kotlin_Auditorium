@@ -120,6 +120,13 @@ jobs:
           name: app-v${{ needs.build.outputs.version_name }}-build${{ needs.build.outputs.version_code }}
           path: deploy_artifacts
 
+      - name: Validate Server Credentials
+        run: |
+          if [ -z "${{ secrets.SSH_HOST }}" ] || [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "::error::Секреты SSH_HOST и SSH_USER не настроены в репозитории! Добавьте SSH_HOST, SSH_USER, SSH_PASSWORD (или SSH_KEY) в Settings -> Secrets and variables -> Actions"
+            exit 1
+          fi
+
       - name: Upload APK to Server via SCP
         uses: appleboy/scp-action@master
         with:
@@ -127,9 +134,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          port: ${{ secrets.SSH_PORT }}
           source: "deploy_artifacts/app-release.apk"
-          target: "/home/sibsutis-ms/ejournal/downloads"
+          target: "/tmp"
           strip_components: 1
           overwrite: true
 
@@ -144,21 +151,23 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          port: ${{ secrets.SSH_PORT }}
           envs: VERSION_CODE,VERSION_NAME,RELEASE_NOTES
           script: |
             set -e
             cd /home/sibsutis-ms/ejournal
+            SOURCE_APK="/tmp/app-release.apk"
             TARGET_APK="./downloads/app-release.apk"
             VERSION_FILE="./downloads/version.json"
             
-            if [ -f "$TARGET_APK" ]; then
-              chmod 644 "$TARGET_APK"
-              
+            if [ -f "$SOURCE_APK" ]; then
               if [ -f "./scripts/publish_apk.sh" ]; then
                 chmod +x ./scripts/publish_apk.sh
-                ./scripts/publish_apk.sh "$TARGET_APK" "$VERSION_CODE" "$VERSION_NAME" "$RELEASE_NOTES"
+                ./scripts/publish_apk.sh "$SOURCE_APK" "$VERSION_CODE" "$VERSION_NAME" "$RELEASE_NOTES"
               else
+                mkdir -p ./downloads
+                cp -f "$SOURCE_APK" "$TARGET_APK"
+                chmod 644 "$TARGET_APK"
                 FILE_SIZE=$(stat -c%s "$TARGET_APK")
                 SHA256_HASH=$(sha256sum "$TARGET_APK" | awk '{print $1}')
                 cat <<EOF > "$VERSION_FILE"
@@ -174,11 +183,12 @@ jobs:
             EOF
                 chmod 644 "$VERSION_FILE"
               fi
+              rm -f "$SOURCE_APK"
               
               echo "=== Successfully published APK on production server! ==="
               cat "$VERSION_FILE"
             else
-              echo "Error: $TARGET_APK was not found after upload"
+              echo "Error: $SOURCE_APK was not found after upload"
               exit 1
             fi
 
