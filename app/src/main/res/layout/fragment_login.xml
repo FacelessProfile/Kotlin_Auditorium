@@ -257,41 +257,55 @@
                         android:text="Внимание: в пароле обнаружены русские буквы" />
                 </LinearLayout>
 
-                <!-- Action CTA Button -->
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnAction"
+                <!-- Action Row (Primary CTA + Quick Biometric/PIN Icon Button) -->
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_button_gradient"
-                    android:elevation="2dp"
-                    android:stateListAnimator="@null"
-                    android:text="Войти"
-                    android:textAllCaps="false"
-                    android:textColor="@color/sib_text_white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <!-- Biometric / Fingerprint / PIN Quick Login Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnBiometricLogin"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="10dp"
-                    android:text="Войти по отпечатку / PIN"
-                    android:textAllCaps="false"
-                    android:textColor="@color/sib_blue_primary"
-                    android:textSize="15sp"
-                    android:visibility="gone"
-                    app:cornerRadius="10dp"
-                    app:icon="@drawable/ic_fingerprint"
-                    app:iconGravity="textStart"
-                    app:iconPadding="8dp"
-                    app:iconTint="@color/sib_blue_primary"
-                    app:strokeColor="@color/sib_blue_primary"
-                    app:strokeWidth="1.5dp"
-                    tools:visibility="visible" />
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnAction"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_gradient"
+                        android:elevation="2dp"
+                        android:stateListAnimator="@null"
+                        android:text="Войти"
+                        android:textAllCaps="false"
+                        android:textColor="@color/sib_text_white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <!-- Quick Biometric / PIN Login Icon Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnBiometricLogin"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_marginStart="10dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:contentDescription="Быстрый вход"
+                        android:insetLeft="0dp"
+                        android:insetTop="0dp"
+                        android:insetRight="0dp"
+                        android:insetBottom="0dp"
+                        android:padding="0dp"
+                        android:visibility="gone"
+                        app:backgroundTint="@color/sib_blue_active_bg"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_fingerprint"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="26dp"
+                        app:iconTint="@color/sib_blue_primary"
+                        app:strokeColor="@color/sib_blue_primary"
+                        app:strokeWidth="1.5dp"
+                        tools:visibility="visible" />
+                </LinearLayout>
 
                 <!-- Loading Indicator -->
                 <ProgressBar

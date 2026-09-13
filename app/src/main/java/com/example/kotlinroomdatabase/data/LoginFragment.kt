@@ -177,15 +177,32 @@ class LoginFragment : Fragment() {
     private fun setupBiometricLoginUI() {
         if (_binding == null) return
         val context = context ?: return
-        if (isLoginMode && BiometricAuthManager.hasSavedCredentials(context) && BiometricAuthManager.isBiometricOrPinAvailable(context)) {
-            binding.btnBiometricLogin.visibility = View.VISIBLE
-            if (binding.etName.text.isNullOrBlank()) {
-                BiometricAuthManager.getSavedLogin(context)?.let {
-                    binding.etName.setText(it)
-                }
-            }
-        } else {
+        if (!isLoginMode) {
             binding.btnBiometricLogin.visibility = View.GONE
+            return
+        }
+
+        val authType = BiometricAuthManager.getAvailableAuthType(context)
+        when (authType) {
+            BiometricAuthManager.QuickAuthType.FINGERPRINT -> {
+                binding.btnBiometricLogin.setIconResource(R.drawable.ic_fingerprint)
+                binding.btnBiometricLogin.contentDescription = "Войти по отпечатку пальца"
+                binding.btnBiometricLogin.visibility = View.VISIBLE
+            }
+            BiometricAuthManager.QuickAuthType.PIN -> {
+                binding.btnBiometricLogin.setIconResource(R.drawable.ic_pin_code)
+                binding.btnBiometricLogin.contentDescription = "Войти по PIN-коду или графическому ключу"
+                binding.btnBiometricLogin.visibility = View.VISIBLE
+            }
+            BiometricAuthManager.QuickAuthType.NONE -> {
+                binding.btnBiometricLogin.visibility = View.GONE
+            }
+        }
+
+        if (binding.btnBiometricLogin.isVisible && binding.etName.text.isNullOrBlank()) {
+            BiometricAuthManager.getSavedLogin(context)?.let {
+                binding.etName.setText(it)
+            }
         }
     }
 
@@ -199,10 +216,17 @@ class LoginFragment : Fragment() {
         }
 
         hideError()
+        val authType = BiometricAuthManager.getAvailableAuthType(context)
+        val promptSubtitle = when (authType) {
+            BiometricAuthManager.QuickAuthType.PIN -> "Введите PIN-код или графический ключ устройства"
+            BiometricAuthManager.QuickAuthType.FINGERPRINT -> "Приложите палец к сканеру отпечатков"
+            BiometricAuthManager.QuickAuthType.NONE -> "Подтвердите вход"
+        }
+
         BiometricAuthManager.authenticate(
             fragment = this,
             title = "Вход в СибГУТИ",
-            subtitle = "Используйте отпечаток пальца, Face ID или PIN-код",
+            subtitle = promptSubtitle,
             onSuccess = { savedLogin, savedPass ->
                 binding.etName.setText(savedLogin)
                 binding.etPassword.setText(savedPass)

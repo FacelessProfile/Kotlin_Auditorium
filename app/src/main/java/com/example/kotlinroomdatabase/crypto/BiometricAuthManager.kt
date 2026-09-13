@@ -85,6 +85,31 @@ object BiometricAuthManager {
         }
     }
 
+    enum class QuickAuthType {
+        NONE,
+        FINGERPRINT,
+        PIN
+    }
+
+    fun getAvailableAuthType(context: Context): QuickAuthType {
+        if (!hasSavedCredentials(context)) return QuickAuthType.NONE
+        return try {
+            val biometricManager = BiometricManager.from(context)
+            val canBiometric = biometricManager.canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
+            )
+            if (canBiometric == BiometricManager.BIOMETRIC_SUCCESS) {
+                QuickAuthType.FINGERPRINT
+            } else if (isBiometricOrPinAvailable(context)) {
+                QuickAuthType.PIN
+            } else {
+                QuickAuthType.NONE
+            }
+        } catch (e: Exception) {
+            QuickAuthType.NONE
+        }
+    }
+
     fun isBiometricOrPinAvailable(context: Context): Boolean {
         return try {
             val biometricManager = BiometricManager.from(context)
