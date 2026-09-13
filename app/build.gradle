@@ -8,6 +8,24 @@ plugins {
     id 'com.google.gms.google-services'
 }
 
+def getGitCommitCount = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-list', '--count', 'HEAD'
+            standardOutput = stdout
+        }
+        return stdout.toString().trim().toInteger()
+    } catch (Exception ignored) {
+        return 0
+    }
+}
+
+def baseVersionName = "1.2"
+def gitCommitCount = getGitCommitCount()
+def autoVersionCode = gitCommitCount > 0 ? gitCommitCount : 3
+def autoVersionName = gitCommitCount > 0 ? "${baseVersionName}.${gitCommitCount}" : baseVersionName
+
 android {
     namespace = 'com.example.kotlinroomdatabase'
     compileSdk 36
@@ -16,8 +34,8 @@ android {
         applicationId = "ru.sibsutis.ejournal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = (project.findProperty("appVersionCode") ?: autoVersionCode) as Integer
+        versionName = (project.findProperty("appVersionName") ?: autoVersionName) as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {

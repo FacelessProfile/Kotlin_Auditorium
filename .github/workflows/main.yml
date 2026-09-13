@@ -38,6 +38,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -49,30 +51,66 @@ jobs:
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
 
+      - name: Calculate Dynamic App Version
+        id: calc_version
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+          if [ -z "$COMMIT_COUNT" ] || [ "$COMMIT_COUNT" -le 0 ]; then
+            COMMIT_COUNT=${{ github.run_number }}
+          fi
+
+          BASE_VERSION=$(grep -E '^\s*def\s+baseVersionName\s*=' app/build.gradle | cut -d'"' -f2)
+          if [ -z "$BASE_VERSION" ]; then
+            BASE_VERSION=$(grep -E '^\s*versionName\s*=' app/build.gradle | cut -d'"' -f2)
+          fi
+          if [ -z "$BASE_VERSION" ]; then
+            BASE_VERSION="1.2"
+          fi
+          # Ensure base version is major.minor (e.g. 1.2)
+          BASE_VERSION=$(echo "$BASE_VERSION" | awk -F. '{if (NF >= 2) print $1"."$2; else print $1".0"}')
+
+          # Dynamic version increments with each commit
+          APP_VERSION_NAME="${BASE_VERSION}.${COMMIT_COUNT}"
+          APP_VERSION_CODE="${COMMIT_COUNT}"
+
+          echo "VERSION_NAME=${APP_VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${APP_VERSION_CODE}" >> $GITHUB_OUTPUT
+
+          echo "========================================"
+          echo " Commit Count:    ${COMMIT_COUNT}"
+          echo " Dynamic Version: ${APP_VERSION_NAME} (code: ${APP_VERSION_CODE})"
+          echo "========================================"
+
       - name: Build Android APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug -PappVersionCode=${{ steps.calc_version.outputs.VERSION_CODE }} -PappVersionName="${{ steps.calc_version.outputs.VERSION_NAME }}" --stacktrace
 
       - name: Extract Version Info & Compute Checksum
         id: version_info
         run: |
-          VERSION_CODE=$(grep -E '^\s*versionCode\s*=' app/build.gradle | tr -dc '0-9')
-          VERSION_NAME=$(grep -E '^\s*versionName\s*=' app/build.gradle | cut -d'"' -f2)
-          
+          VERSION_CODE="${{ steps.calc_version.outputs.VERSION_CODE }}"
+          VERSION_NAME="${{ steps.calc_version.outputs.VERSION_NAME }}"
+
+          if [ -z "$VERSION_CODE" ]; then
+            VERSION_CODE=$(grep -E '^\s*versionCode\s*=' app/build.gradle | tr -dc '0-9')
+          fi
+          if [ -z "$VERSION_NAME" ]; then
+            VERSION_NAME=$(grep -E '^\s*versionName\s*=' app/build.gradle | cut -d'"' -f2)
+          fi
           if [ -z "$VERSION_CODE" ]; then VERSION_CODE="1"; fi
           if [ -z "$VERSION_NAME" ]; then VERSION_NAME="1.0"; fi
-          
+
           APK_SOURCE="app/build/outputs/apk/debug/app-debug.apk"
           if [ ! -f "$APK_SOURCE" ]; then
             echo "Error: APK not found at $APK_SOURCE"
             exit 1
           fi
-          
+
           mkdir -p release_package
           cp -f "$APK_SOURCE" release_package/app-release.apk
-          
+
           FILE_SIZE=$(stat -c%s release_package/app-release.apk)
           SHA256=$(sha256sum release_package/app-release.apk | awk '{print $1}')
-          
+
           RAW_NOTES="${{ github.event.inputs.release_notes }}"
           if [ -z "$RAW_NOTES" ]; then
             RAW_NOTES="${{ github.event.head_commit.message }}"
@@ -82,13 +120,13 @@ jobs:
           fi
           # Escape newlines and quotes for safe shell passing
           CLEAN_NOTES=$(echo "$RAW_NOTES" | tr '\n' ' ' | sed 's/"/\\"/g')
-          
+
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
           echo "FILE_SIZE=${FILE_SIZE}" >> $GITHUB_OUTPUT
           echo "SHA256=${SHA256}" >> $GITHUB_OUTPUT
           echo "RELEASE_NOTES=${CLEAN_NOTES}" >> $GITHUB_OUTPUT
-          
+
           echo "========================================"
           echo " Version:       ${VERSION_NAME} (${VERSION_CODE})"
           echo " Size:          ${FILE_SIZE} bytes"
