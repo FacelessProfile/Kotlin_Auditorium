@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardDevTask"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="5dp"
+    app:cardBackgroundColor="@color/sib_card_surface"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="1dp"
+    app:strokeColor="@color/sib_border"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <!-- Assignee Avatar -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivAssigneeAvatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_avatar_circle"
+            android:scaleType="centerCrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Circle"
+            tools:src="@drawable/ic_person" />
+
+        <!-- Status Toggle Checkbox -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/cbTaskDone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            app:buttonTint="#16A34A"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Task Title -->
+        <TextView
+            android:id="@+id/tvTaskTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/sib_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/cbTaskDone"
+            app:layout_constraintStart_toEndOf="@id/ivAssigneeAvatar"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Добавить сканер обновлений в приложение" />
+
+        <!-- Task Description Preview -->
+        <TextView
+            android:id="@+id/tvTaskDescription"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/sib_text_secondary"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toStartOf="@id/cbTaskDone"
+            app:layout_constraintStart_toEndOf="@id/ivAssigneeAvatar"
+            app:layout_constraintTop_toBottomOf="@id/tvTaskTitle"
+            tools:text="При открытии должна проверяться версия с GitHub API" />
+
+        <!-- Metadata Row: Assignee, Priority, Comments -->
+        <LinearLayout
+            android:id="@+id/llMetaRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivAssigneeAvatar"
+            app:layout_constraintTop_toBottomOf="@id/tvTaskDescription">
+
+            <!-- Priority Badge -->
+            <TextView
+                android:id="@+id/tvPriority"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_priority_medium"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/sib_blue_primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Medium" />
+
+            <!-- Assignee Name -->
+            <TextView
+                android:id="@+id/tvAssigneeName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/sib_text_secondary"
+                android:textSize="12sp"
+                tools:text="TechnoPonk" />
+
+            <!-- Spacer -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Comments Badge -->
+            <LinearLayout
+                android:id="@+id/llCommentsBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_comment"
+                    app:tint="@color/sib_text_muted" />
+
+                <TextView
+                    android:id="@+id/tvCommentsCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:textColor="@color/sib_text_muted"
+                    android:textSize="12sp"
+                    tools:text="3" />
+            </LinearLayout>
+
+            <!-- Creation Date -->
+            <TextView
+                android:id="@+id/tvCreatedAt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/sib_text_muted"
+                android:textSize="11sp"
+                tools:text="12.09" />
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

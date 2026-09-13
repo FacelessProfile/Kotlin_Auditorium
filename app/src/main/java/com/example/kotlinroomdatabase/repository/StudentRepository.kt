@@ -507,5 +507,21 @@ class StudentRepository(
     override suspend fun getAttendanceSessionRoster(lessonId: Int): GenericResult<com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun switchRole(role: String): GenericResult<com.example.kotlinroomdatabase.model.SwitchRoleResult> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getStudentSubgroups(semesterId: Int?): GenericResult<List<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun changeStudentSubgroup(subgroupId: Int, reason: String?): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun refreshSessionToken(): Boolean = false
+
+    // Developer Workspace stubs
+    override suspend fun getDevSprints(): GenericResult<List<com.example.kotlinroomdatabase.model.DevSprint>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getActiveDevSprint(): GenericResult<com.example.kotlinroomdatabase.model.DevSprint> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun closeDevSprint(): GenericResult<com.example.kotlinroomdatabase.model.DevSprint> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getDevTasks(sprintId: Int?, itemType: String?, status: String?, assigneeId: Int?): GenericResult<List<com.example.kotlinroomdatabase.model.DevTask>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun createDevTask(itemType: String, title: String, description: String, priority: String, assigneeId: Int?, sprintId: Int?): GenericResult<com.example.kotlinroomdatabase.model.DevTask> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun updateDevTaskStatus(taskId: Int, status: String): GenericResult<com.example.kotlinroomdatabase.model.DevTask> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun updateDevTaskAssignee(taskId: Int, assigneeId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevTask> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getDevTaskDetails(taskId: Int): GenericResult<Pair<com.example.kotlinroomdatabase.model.DevTask, List<com.example.kotlinroomdatabase.model.DevComment>>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun addDevComment(taskId: Int, content: String): GenericResult<com.example.kotlinroomdatabase.model.DevComment> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun toggleDevTaskFollow(taskId: Int, isFollowing: Boolean): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getDevSprintReport(sprintId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevSprintReport> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getDevTeam(): GenericResult<List<com.example.kotlinroomdatabase.model.DevTeamMember>> = GenericResult.Error("Not supported in ZMQ")
 }

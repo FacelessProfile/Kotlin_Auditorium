@@ -104,6 +104,16 @@ class NotificationForegroundService : Service() {
                 StudentDatabase.getInstance(applicationContext).studentDao()
             )
             while (isActive) {
+                val mode = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getNotificationMode(applicationContext)
+                val isEnabled = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isNotificationsEnabled(applicationContext)
+                if (!isEnabled || mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED ||
+                    mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_FCM_ONLY
+                ) {
+                    Log.d("BgService", "Notification polling stopped due to mode=$mode / enabled=$isEnabled")
+                    stopSelf()
+                    break
+                }
+
                 try {
                     val result = repo.getUserNotifications()
                     if (result is com.example.kotlinroomdatabase.repository.GenericResult.Success) {

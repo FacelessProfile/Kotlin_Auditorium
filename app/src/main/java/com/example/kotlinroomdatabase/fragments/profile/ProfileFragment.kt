@@ -65,6 +65,11 @@ class ProfileFragment : Fragment() {
 
         binding.swipeRefreshProfile.setOnRefreshListener {
             loadFullProfile(isSwipe = true)
+            val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+            val userRole = prefs.getString("user_role", "student") ?: "student"
+            if (!RoleUtils.isTeacherOrHead(userRole)) {
+                loadStudentSubgroups()
+            }
         }
 
         binding.profileAvatar.setOnClickListener {
@@ -123,6 +128,11 @@ class ProfileFragment : Fragment() {
         binding.tvLabelIdNumber.text = if (isTeacher) "Табельный номер" else "Номер зачетной книжки"
         binding.tvProfileIdNumber.text = if (isTeacher) "ID-T$studentId" else "№ 2023-${groupName.take(4)}-$studentId"
 
+        binding.cardStudentSubgroups.visibility = if (!isTeacher) View.VISIBLE else View.GONE
+        if (!isTeacher) {
+            loadStudentSubgroups()
+        }
+
         val storedRoles = try {
             prefs.getString("user_roles", null)
                 ?.split(",")
@@ -173,6 +183,11 @@ class ProfileFragment : Fragment() {
 
                     val idVal = if (profile.user_id > 0) profile.user_id.toString() else "001"
                     binding.tvProfileIdNumber.text = if (isTeacher) "ID-T$idVal" else "№ 2023-$idVal"
+
+                    binding.cardStudentSubgroups.visibility = if (!isTeacher) View.VISIBLE else View.GONE
+                    if (!isTeacher) {
+                        loadStudentSubgroups()
+                    }
 
                     // Available roles display & switch button visibility
                     val distinctRoles = (profile.availableRoles + profile.roles).filter { it.isNotBlank() }.distinct()
@@ -239,8 +254,8 @@ class ProfileFragment : Fragment() {
                 binding.swipeRefreshProfile.isRefreshing = false
 
                 when (result) {
-                    is GenericResult.Success -> {
-                        val switched = result.data
+                    is GenericResult.Success<*> -> {
+                        val switched = result.data as com.example.kotlinroomdatabase.model.SwitchRoleResult
                         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                         prefs.edit().putString("user_role", switched.active_role).apply()
 
@@ -515,6 +530,120 @@ class ProfileFragment : Fragment() {
                     binding.profileAvatar.setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
                     binding.profileAvatar.setImageResource(R.drawable.ic_person)
                     binding.profileAvatar.imageTintList = ContextCompat.getColorStateList(requireContext(), R.color.sib_text_secondary)
+                }
+            }
+        }
+    }
+
+    private fun loadStudentSubgroups() {
+        if (_binding == null) return
+        binding.progressSubgroups.visibility = View.VISIBLE
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val result = repository.getStudentSubgroups()
+
+            withContext(Dispatchers.Main) {
+                if (_binding == null || !isAdded) return@withContext
+                binding.progressSubgroups.visibility = View.GONE
+
+                if (result is GenericResult.Success) {
+                    val subjects = result.data
+                    populateSubgroupsList(subjects)
+                } else if (result is GenericResult.Error) {
+                    Log.w("ProfileFragment", "Failed to load subgroups: ${result.message}")
+                }
+            }
+        }
+    }
+
+    private fun populateSubgroupsList(subjects: List<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>) {
+        if (_binding == null || !isAdded) return
+        val container = binding.layoutSubgroupsList
+        container.removeAllViews()
+
+        if (subjects.isEmpty()) {
+            binding.tvNoSubgroups.visibility = View.VISIBLE
+            return
+        }
+
+        binding.tvNoSubgroups.visibility = View.GONE
+        val inflater = LayoutInflater.from(requireContext())
+
+        for (subject in subjects) {
+            val itemView = inflater.inflate(R.layout.item_profile_subgroup_subject, container, false)
+            val tvSubjectName = itemView.findViewById<android.widget.TextView>(R.id.tvSubgroupSubjectName)
+            val tvGroupName = itemView.findViewById<android.widget.TextView>(R.id.tvSubgroupGroupName)
+            val tvCurrentValue = itemView.findViewById<android.widget.TextView>(R.id.tvSubgroupCurrentValue)
+            val card = itemView.findViewById<View>(R.id.cardSubgroupItem)
+
+            tvSubjectName.text = subject.subject_name
+            tvGroupName.text = if (subject.group_name.isNotBlank()) "Группа ${subject.group_name}" else ""
+
+            val curr = subject.currentSubgroup
+            if (curr != null) {
+                tvCurrentValue.text = "${curr.displayName} (${curr.capacityInfo})"
+                tvCurrentValue.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_blue_primary))
+            } else {
+                tvCurrentValue.text = "Не выбрана (нажмите для выбора)"
+                tvCurrentValue.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_warning))
+            }
+
+            card.setOnClickListener {
+                showSubgroupSelectionDialog(subject)
+            }
+
+            container.addView(itemView)
+        }
+    }
+
+    private fun showSubgroupSelectionDialog(subject: com.example.kotlinroomdatabase.model.SubjectWithSubgroups) {
+        if (subject.subgroups.isEmpty()) {
+            Toast.makeText(requireContext(), "Для данного предмета нет доступных подгрупп", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val items = subject.subgroups.map { sg ->
+            val mark = if (sg.subgroup_id == subject.current_subgroup_id || sg.is_current) "  ✓" else ""
+            "${sg.displayName} (${sg.capacityInfo})$mark"
+        }.toTypedArray()
+
+        val currentIndex = subject.subgroups.indexOfFirst {
+            it.subgroup_id == subject.current_subgroup_id || it.is_current
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(subject.subject_name)
+            .setSingleChoiceItems(items, currentIndex) { dialog, which ->
+                dialog.dismiss()
+                val selectedSg = subject.subgroups[which]
+                if (selectedSg.subgroup_id != subject.current_subgroup_id && !selectedSg.is_current) {
+                    performChangeSubgroup(selectedSg.subgroup_id, subject.subject_name, selectedSg.displayName)
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun performChangeSubgroup(subgroupId: Int, subjectName: String, subgroupName: String) {
+        if (_binding == null) return
+        binding.progressSubgroups.visibility = View.VISIBLE
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val result = repository.changeStudentSubgroup(subgroupId)
+
+            withContext(Dispatchers.Main) {
+                if (_binding == null || !isAdded) return@withContext
+                binding.progressSubgroups.visibility = View.GONE
+
+                if (result is GenericResult.Success) {
+                    Toast.makeText(requireContext(), "$subjectName: выбрана $subgroupName", Toast.LENGTH_SHORT).show()
+                    loadStudentSubgroups()
+                } else if (result is GenericResult.Error) {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Не удалось сменить подгруппу")
+                        .setMessage(result.message)
+                        .setPositiveButton("ОК", null)
+                        .show()
                 }
             }
         }

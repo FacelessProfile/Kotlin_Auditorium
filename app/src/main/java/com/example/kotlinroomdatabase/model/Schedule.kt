@@ -32,5 +32,17 @@ data class LessonScheduleItem(
     val group_id: Int? = null,
     val lesson_type: String = "Практика",
     val room_info: String = "",
-    val subgroup: String = ""
+    val subgroup: String = "",
+    val subgroup_id: Int? = null,
+    val is_other_subgroup: Boolean = false,
+    val is_current_subgroup: Boolean = true,
+    val is_window: Boolean = false
+)
+
+data class ScheduleSlot(
+    val lessonNum: Int,
+    val startTime: String,
+    val endTime: String,
+    val lessons: List<LessonScheduleItem>,
+    val isWindow: Boolean = false
 )

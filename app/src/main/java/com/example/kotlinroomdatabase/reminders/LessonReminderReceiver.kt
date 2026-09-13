@@ -39,9 +39,11 @@ class LessonReminderReceiver : BroadcastReceiver() {
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 5)
         val isTest = intent.getBooleanExtra(EXTRA_IS_TEST, false) || subject.contains("Тест", ignoreCase = true)
 
-        if (!isTest && !LessonReminderScheduler.isRemindersEnabled(context)) {
-            android.util.Log.d("LessonReminderReceiver", "Reminders are disabled in settings, ignoring alarm for $subject")
-            return
+        if (!isTest) {
+            if (!LessonReminderScheduler.isNotificationsEnabled(context) || !LessonReminderScheduler.isRemindersEnabled(context)) {
+                android.util.Log.d("LessonReminderReceiver", "Notifications or reminders are disabled in settings, ignoring alarm for $subject")
+                return
+            }
         }
 
         val startMillis = intent.getLongExtra(EXTRA_START_MILLIS, 0L).let {
@@ -59,8 +61,12 @@ class LessonReminderReceiver : BroadcastReceiver() {
 
         android.util.Log.d("LessonReminderReceiver", "onReceive triggered for subject=$subject, startTime=$startTime, minutes=$minutes, startMillis=$startMillis, isTest=$isTest")
 
-        // 1. Trigger Vibration ONLY ONCE on initial alarm trigger
-        triggerVibration(context)
+        // 1. Trigger Vibration ONLY if vibration is enabled and notifications are active
+        if (isTest || LessonReminderScheduler.isVibrationEnabled(context)) {
+            triggerVibration(context)
+        } else {
+            android.util.Log.d("LessonReminderReceiver", "Vibration disabled in settings, skipping vibration")
+        }
 
         // 2. Show Initial Notification with countdown features
         val notificationId = (subject.hashCode() + startTime.hashCode()).let { 
@@ -85,6 +91,11 @@ class LessonReminderReceiver : BroadcastReceiver() {
     }
 
     private fun triggerVibration(context: Context) {
+        val notificationManager = NotificationManagerCompat.from(context)
+        if (!notificationManager.areNotificationsEnabled()) {
+            android.util.Log.d("LessonReminderReceiver", "System notifications disabled, skipping vibration")
+            return
+        }
         try {
             val pattern = longArrayOf(0, 600, 250, 600, 250, 900)
             val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -119,6 +130,8 @@ class LessonReminderReceiver : BroadcastReceiver() {
         isTest: Boolean = false
     ) {
         val sysNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val isVibrationOn = isTest || LessonReminderScheduler.isVibrationEnabled(context)
+        val isSoundOn = LessonReminderScheduler.isSoundEnabled(context)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
@@ -128,16 +141,21 @@ class LessonReminderReceiver : BroadcastReceiver() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Предупреждение за несколько минут до начала занятия"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 600, 250, 600, 250, 900)
-                setSound(soundUri, android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                )
+                enableVibration(isVibrationOn)
+                if (isVibrationOn) {
+                    vibrationPattern = longArrayOf(0, 600, 250, 600, 250, 900)
+                }
+                if (isSoundOn) {
+                    setSound(soundUri, android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                    )
+                } else {
+                    setSound(null, null)
+                }
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
                 setShowBadge(true)
-                setBypassDnd(true)
             }
             sysNotificationManager.createNotificationChannel(channel)
         }
@@ -155,24 +173,33 @@ class LessonReminderReceiver : BroadcastReceiver() {
         val title = if (isTest) "Тестовое оповещение: $subject" else "Скоро пара: $subject"
         val roomText = if (room.isNotBlank()) " в ауд. $room" else ""
         val contentText = "Через $minutes мин ($startTime) начнётся $lessonType$roomText"
-        val noteFooter = if (isTest) "Тест оповещения и вибрации выполнен успешно." else "Не забудьте отметиться на занятии!"
+        val noteFooter = if (isTest) "Тест оповещения выполнен успешно." else "Не забудьте отметиться на занятии!"
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText("$contentText\n$noteFooter"))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setWhen(startMillis)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
             .setOnlyAlertOnce(true) // DO NOT buzz/alert on text updates
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setVibrate(longArrayOf(0, 600, 250, 600, 250, 900))
-            .build()
+
+        if (isVibrationOn) {
+            notificationBuilder.setVibrate(longArrayOf(0, 600, 250, 600, 250, 900))
+        } else {
+            notificationBuilder.setVibrate(longArrayOf(0))
+        }
+
+        if (!isSoundOn) {
+            notificationBuilder.setSilent(true)
+        }
+
+        val notification = notificationBuilder.build()
 
         val notificationManager = NotificationManagerCompat.from(context)
         val areEnabled = notificationManager.areNotificationsEnabled()

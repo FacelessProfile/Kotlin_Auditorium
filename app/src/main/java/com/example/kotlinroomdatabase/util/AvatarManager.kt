@@ -182,4 +182,86 @@ object AvatarManager {
         editor.apply()
         return file
     }
+
+    /**
+     * Loads avatar from URL with local caching into any ImageView, supporting Recycler view recycling.
+     */
+    fun loadAvatarUrl(
+        context: Context,
+        imageView: ImageView,
+        avatarUrl: String?,
+        defaultPadDp: Int = 6
+    ) {
+        val appContext = context.applicationContext
+        val cleanUrl = avatarUrl?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+        if (cleanUrl == null) {
+            val pad = (defaultPadDp * context.resources.displayMetrics.density).toInt()
+            imageView.setPadding(pad, pad, pad, pad)
+            imageView.setImageResource(R.drawable.ic_person)
+            imageView.imageTintList = ContextCompat.getColorStateList(context, R.color.sib_blue_primary)
+            imageView.tag = null
+            return
+        }
+
+        val finalUrl = ServerConfig.resolveMediaUrl(appContext, cleanUrl)
+        imageView.tag = finalUrl
+
+        val cacheDir = File(appContext.cacheDir, "avatars_cache").apply { mkdirs() }
+        val cacheFile = File(cacheDir, "${cleanUrl.hashCode()}.jpg")
+
+        if (cacheFile.exists() && cacheFile.length() > 0) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                if (bitmap != null) {
+                    imageView.setPadding(0, 0, 0, 0)
+                    imageView.setImageBitmap(bitmap)
+                    imageView.imageTintList = null
+                    return
+                }
+            } catch (_: Exception) {}
+        }
+
+        // Placeholder while loading
+        val pad = (defaultPadDp * context.resources.displayMetrics.density).toInt()
+        imageView.setPadding(pad, pad, pad, pad)
+        imageView.setImageResource(R.drawable.ic_person)
+        imageView.imageTintList = ContextCompat.getColorStateList(context, R.color.sib_blue_primary)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val authPrefs = appContext.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                val token = authPrefs.getString("auth_token", "") ?: ""
+                val db = StudentDatabase.getInstance(appContext)
+                val repo = StudentRepositoryHTTPS(appContext, db.studentDao())
+                val okClient = repo.getUnsafeOkHttpClient()
+
+                val req = Request.Builder()
+                    .url(finalUrl)
+                    .apply {
+                        if (token.isNotBlank()) header("Authorization", "Bearer $token")
+                    }
+                    .build()
+
+                val resp = okClient.newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val bytes = resp.body?.bytes()
+                    if (bytes != null && bytes.isNotEmpty()) {
+                        FileOutputStream(cacheFile).use { it.write(bytes) }
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        if (bitmap != null) {
+                            withContext(Dispatchers.Main) {
+                                if (imageView.tag == finalUrl) {
+                                    imageView.setPadding(0, 0, 0, 0)
+                                    imageView.setImageBitmap(bitmap)
+                                    imageView.imageTintList = null
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Error loading avatar from url: ${e.message}")
+            }
+        }
+    }
 }

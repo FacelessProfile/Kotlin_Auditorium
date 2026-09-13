@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/sib_card_surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Drag Handle -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:background="@color/sib_border" />
+
+        <!-- Scrollable Detail Content -->
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Type & Priority & Status Switch Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Type Badge -->
+                    <TextView
+                        android:id="@+id/tvDetailType"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_priority_medium"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"
+                        android:textColor="@color/sib_blue_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        tools:text="Задача" />
+
+                    <!-- Priority Badge -->
+                    <TextView
+                        android:id="@+id/tvDetailPriority"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_priority_high"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"
+                        android:textColor="#EA580C"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        tools:text="High" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <!-- Status Toggle Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnToggleStatus"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:backgroundTint="#EEFDF4"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="В работе"
+                        android:textColor="#16A34A"
+                        android:textSize="12sp"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_task_check"
+                        app:iconSize="14dp"
+                        app:iconTint="#16A34A" />
+                </LinearLayout>
+
+                <!-- Task Title -->
+                <TextView
+                    android:id="@+id/tvDetailTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="@color/sib_text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    tools:text="Добавить сканер обновлений в приложение" />
+
+                <!-- People Row (Assignee & Creator) with Avatars -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_info_section"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <!-- Assignee Section -->
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/ivDetailAssigneeAvatar"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:scaleType="centerCrop"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearance.Circle"
+                        tools:src="@drawable/ic_person" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ответственный:"
+                            android:textColor="@color/sib_text_muted"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tvDetailAssigneeName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/sib_text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            tools:text="TechnoPonk (Шаламов)" />
+                    </LinearLayout>
+
+                    <!-- Unfollow / Follow Thread Push Notifications Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFollowToggle"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Следить"
+                        android:textColor="@color/sib_blue_primary"
+                        android:textSize="11sp"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_bell_ring"
+                        app:iconSize="14dp"
+                        app:iconTint="@color/sib_blue_primary"
+                        app:strokeColor="@color/sib_blue_primary" />
+                </LinearLayout>
+
+                <!-- Description Title -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Описание"
+                    android:textColor="@color/sib_text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <!-- Description Content -->
+                <TextView
+                    android:id="@+id/tvDetailDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:textColor="@color/sib_text_primary"
+                    android:textSize="14sp"
+                    tools:text="Необходимо добавить сканирование релизов на GitHub API при запуске приложения и отображать диалог обновления если доступна новая версия." />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@color/sib_border" />
+
+                <!-- Comments Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvCommentsTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Обсуждение"
+                        android:textColor="@color/sib_text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCommentsHeaderCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textColor="@color/sib_text_muted"
+                        android:textSize="13sp"
+                        tools:text="(2)" />
+                </LinearLayout>
+
+                <!-- Comments List -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvComments"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:itemCount="2"
+                    tools:listitem="@layout/item_dev_comment" />
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Bottom Input Bar for Adding Comment -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/sib_card_surface"
+            android:elevation="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <EditText
+                android:id="@+id/etCommentInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_comment_bubble"
+                android:hint="Написать комментарий..."
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="4"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp"
+                android:textColor="@color/sib_text_primary"
+                android:textColorHint="@color/sib_text_muted"
+                android:textSize="14sp" />
+
+            <ImageButton
+                android:id="@+id/btnSendComment"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_send"
+                app:tint="@color/sib_blue_primary" />
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

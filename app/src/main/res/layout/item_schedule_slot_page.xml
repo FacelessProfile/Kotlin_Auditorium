@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layoutLessonPageRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingBottom="12dp">
+
+    <!-- Left Accent Color Strip -->
+    <View
+        android:id="@+id/viewLessonColorStrip"
+        android:layout_width="4.5dp"
+        android:layout_height="match_parent"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="2dp"
+        android:background="@color/uni_blue_primary"/>
+
+    <!-- Main Lesson Information -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="4dp">
+
+        <!-- Subject Title -->
+        <TextView
+            android:id="@+id/tvScheduleSubject"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Предмет"
+            android:textSize="15.5sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_main"
+            android:maxLines="2"
+            android:ellipsize="end"/>
+
+        <!-- Teacher / Group Row + Subgroup Badge -->
+        <LinearLayout
+            android:id="@+id/layoutTeacherOrGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <ImageView
+                android:id="@+id/ivTeacherGroupIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_person"
+                app:tint="@color/text_muted"
+                android:layout_marginEnd="6dp"/>
+
+            <TextView
+                android:id="@+id/tvTeacherOrGroup"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Преподаватель"
+                android:textSize="12.5sp"
+                android:textColor="@color/text_muted"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <!-- Subgroup Indicator Badge (Right aligned) -->
+            <TextView
+                android:id="@+id/tvScheduleSubgroupBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ваша подгруппа"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/uni_blue_primary"
+                android:background="@drawable/bg_badge_subgroup_own"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2.5dp"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+        </LinearLayout>
+
+        <!-- Chips Row: Room + Lesson Type -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+
+            <!-- Room Badge -->
+            <TextView
+                android:id="@+id/tvScheduleRoom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ауд. 401"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:textColor="@color/badge_time_text"
+                android:background="@drawable/bg_badge_time"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2.5dp"/>
+
+            <!-- Lesson Type Badge -->
+            <TextView
+                android:id="@+id/tvScheduleLessonType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Практика"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:textColor="@color/badge_type_text"
+                android:background="@drawable/bg_badge_type"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2.5dp"
+                android:layout_marginStart="6dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

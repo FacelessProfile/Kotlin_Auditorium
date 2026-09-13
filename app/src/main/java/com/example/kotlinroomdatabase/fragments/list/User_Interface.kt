@@ -75,6 +75,9 @@ class User_Interface : Fragment() {
         const val KEY_LESSON_ID = "active_lesson_id"
         const val KEY_ATTENDED_TIME = "active_lesson_attended_time"
         const val KEY_EXPIRES_AT = "active_lesson_expires_at"
+        const val KEY_ATTENDANCE_METHOD = "active_lesson_method"
+        const val METHOD_NFC = "nfc"
+        const val METHOD_QR = "qr"
         const val ACTION_LESSON_FINISHED = "LESSON_FINISHED_EVENT"
     }
 
@@ -456,7 +459,7 @@ class User_Interface : Fragment() {
 
         if (savedServer != null && savedServer != currentServer) {
             clearActiveLessonState()
-            setNeutralNfcState()
+            setNeutralAttendanceState()
             binding.attendedCard.visibility = View.GONE
             return
         }
@@ -467,10 +470,11 @@ class User_Interface : Fragment() {
         val attendedTime = attPrefs.getLong(KEY_ATTENDED_TIME, 0L)
         val now = System.currentTimeMillis()
 
+        val method = attPrefs.getString(KEY_ATTENDANCE_METHOD, METHOD_QR) ?: METHOD_QR
         if (isAttended && !lessonName.isNullOrBlank()) {
             if (expiresAt > 0 && now >= expiresAt) {
                 clearActiveLessonState()
-                setNeutralNfcState()
+                setNeutralAttendanceState()
                 binding.attendedCard.visibility = View.GONE
             } else {
                 binding.attendedCard.visibility = View.VISIBLE
@@ -482,14 +486,33 @@ class User_Interface : Fragment() {
 
                 binding.tvActiveLessonDetails.text = "$markedStr\n$timerStr"
 
-                binding.statusIcon.setImageResource(R.drawable.ic_check)
-                binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
-                binding.statusText.text = "Присутствие подтверждено"
-                binding.statusText.setTextColor(Color.parseColor("#10B981"))
+                if (method == METHOD_NFC) {
+                    binding.statusIcon.setImageResource(R.drawable.ic_check)
+                    binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
+                    binding.statusText.text = "Отмечено через NFC"
+                    binding.statusText.setTextColor(Color.parseColor("#10B981"))
+
+                    binding.qrStatusIcon.setImageResource(R.drawable.ic_qr_code)
+                    binding.qrStatusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_blue_primary))
+                    binding.qrTitle.text = "Отметиться"
+                    binding.qrStatusText.text = "Сканировать QR"
+                    binding.qrStatusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+                } else {
+                    binding.qrStatusIcon.setImageResource(R.drawable.ic_check)
+                    binding.qrStatusIcon.setColorFilter(Color.parseColor("#10B981"))
+                    binding.qrTitle.text = "Присутствие подтверждено"
+                    binding.qrStatusText.text = "Отмечено через QR"
+                    binding.qrStatusText.setTextColor(Color.parseColor("#10B981"))
+
+                    binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+                    binding.statusIcon.colorFilter = null
+                    binding.statusText.text = "Поднесите к чекеру"
+                    binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+                }
             }
         } else {
             binding.attendedCard.visibility = View.GONE
-            setNeutralNfcState()
+            setNeutralAttendanceState()
         }
     }
 
@@ -513,10 +536,14 @@ class User_Interface : Fragment() {
                                 } catch (_: Exception) {}
                             }
 
+                            val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+                            val currentMethod = attPrefs.getString(KEY_ATTENDANCE_METHOD, METHOD_QR) ?: METHOD_QR
+
                             saveActiveLessonState(
                                 lessonName = if (info.lesson_name.isNotBlank()) info.lesson_name else info.subject_name,
                                 lessonId = info.session_id,
-                                expiresAtMillis = expiresAtMillis
+                                expiresAtMillis = expiresAtMillis,
+                                method = currentMethod
                             )
                             checkAndUpdateLessonState()
                             if (showToast) {
@@ -553,7 +580,7 @@ class User_Interface : Fragment() {
         attPrefs.edit().clear().apply()
     }
 
-    private fun saveActiveLessonState(lessonName: String, lessonId: Int, expiresAtMillis: Long) {
+    private fun saveActiveLessonState(lessonName: String, lessonId: Int, expiresAtMillis: Long, method: String = METHOD_QR) {
         if (!isAdded) return
         val currentServer = ServerConfig.getBaseUrl(requireContext())
         val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
@@ -564,16 +591,40 @@ class User_Interface : Fragment() {
             putInt(KEY_LESSON_ID, lessonId)
             putLong(KEY_ATTENDED_TIME, System.currentTimeMillis())
             putLong(KEY_EXPIRES_AT, expiresAtMillis)
+            putString(KEY_ATTENDANCE_METHOD, method)
         }.apply()
     }
 
-    fun showSuccessCheck(lessonName: String? = null) {
+    fun showSuccessCheck(lessonName: String? = null, method: String = METHOD_QR) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             if (_binding == null) return@launch
-            binding.statusIcon.setImageResource(R.drawable.ic_check)
-            binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
-            binding.statusText.setTextColor(Color.parseColor("#10B981"))
-            binding.statusText.text = "Присутствие зафиксировано"
+            if (method == METHOD_NFC) {
+                // Checkmark on NFC card ONLY
+                binding.statusIcon.setImageResource(R.drawable.ic_check)
+                binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
+                binding.statusText.setTextColor(Color.parseColor("#10B981"))
+                binding.statusText.text = "Отмечено через NFC"
+
+                // Reset QR card
+                binding.qrStatusIcon.setImageResource(R.drawable.ic_qr_code)
+                binding.qrStatusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_blue_primary))
+                binding.qrTitle.text = "Отметиться"
+                binding.qrStatusText.text = "Сканировать QR"
+                binding.qrStatusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+            } else {
+                // Checkmark on QR card ONLY
+                binding.qrStatusIcon.setImageResource(R.drawable.ic_check)
+                binding.qrStatusIcon.setColorFilter(Color.parseColor("#10B981"))
+                binding.qrTitle.text = "Присутствие подтверждено"
+                binding.qrStatusText.text = "Отмечено через QR"
+                binding.qrStatusText.setTextColor(Color.parseColor("#10B981"))
+
+                // Reset NFC card
+                binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+                binding.statusIcon.colorFilter = null
+                binding.statusText.text = "Поднесите к чекеру"
+                binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+            }
             delay(1200)
             checkAndUpdateLessonState()
         }
@@ -584,7 +635,7 @@ class User_Interface : Fragment() {
             when (intent?.action) {
                 "NFC_MARK_SUCCESS" -> {
                     if (!isProcessing) {
-                        showSuccessCheck()
+                        showSuccessCheck(method = METHOD_NFC)
                         viewLifecycleOwner.lifecycleScope.launch {
                             delay(1200)
                             checkLessonStatusRemote(showToast = false)
@@ -600,12 +651,68 @@ class User_Interface : Fragment() {
         }
     }
 
-    private fun setNeutralNfcState() {
+    private fun setNeutralAttendanceState() {
         if (_binding == null) return
+        // 1. Reset NFC Card
         binding.statusIcon.setImageResource(R.drawable.ic_nfc)
         binding.statusIcon.colorFilter = null
         binding.statusText.text = "Поднесите к чекеру"
         binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+
+        // 2. Reset QR Card
+        binding.qrStatusIcon.setImageResource(R.drawable.ic_qr_code)
+        binding.qrStatusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_blue_primary))
+        binding.qrTitle.text = "Отметиться"
+        binding.qrStatusText.text = "Сканировать QR"
+        binding.qrStatusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+    }
+
+    private data class PendingAttendanceParams(
+        val lessonId: Int,
+        val inviteToken: String?,
+        val totpCode: String?,
+        val ts: Long?,
+        val nonce: String?
+    )
+    private var pendingAttendance: PendingAttendanceParams? = null
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pendingAttendance?.let { p ->
+                markAttendance(p.lessonId, p.inviteToken, p.totpCode, p.ts, p.nonce)
+            }
+            pendingAttendance = null
+        } else {
+            handleLocationPermissionDenied()
+        }
+    }
+
+    private fun handleLocationPermissionDenied() {
+        if (!isAdded) return
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Требуется доступ к геолокации")
+                .setMessage("Для подтверждения присутствия в учебной аудитории СибГУТИ требуется разрешение на определение местоположения.")
+                .setPositiveButton("Повторить запрос") { _, _ ->
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        } else {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Геолокация отключена")
+                .setMessage("Разрешение на геолокацию отключено. Для подтверждения отметки на занятиях включите доступ к геолокации в настройках приложения.")
+                .setPositiveButton("Настройки") { _, _ ->
+                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", requireContext().packageName, null)
+                    }
+                    startActivity(intent)
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        }
     }
 
     private val barcodeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -722,7 +829,8 @@ class User_Interface : Fragment() {
         nonce: String? = null
     ) {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 100)
+            pendingAttendance = PendingAttendanceParams(lessonId, inviteToken, totpCode, ts, nonce)
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             return
         }
 
@@ -766,8 +874,8 @@ class User_Interface : Fragment() {
                                         }
 
                                         val finalSessionId = if (result.sessionId > 0) result.sessionId else lessonId
-                                        saveActiveLessonState(detectedLessonName, finalSessionId, expiresAtMillis)
-                                        showSuccessCheck(detectedLessonName)
+                                        saveActiveLessonState(detectedLessonName, finalSessionId, expiresAtMillis, method = METHOD_QR)
+                                        showSuccessCheck(detectedLessonName, method = METHOD_QR)
                                         Toast.makeText(requireContext(), "Вы успешно отметились на занятии!", Toast.LENGTH_LONG).show()
                                     }
                                     is com.example.kotlinroomdatabase.repository.AttendanceResult.Error -> {

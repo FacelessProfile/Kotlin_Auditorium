@@ -1,6 +1,7 @@
 package com.example.kotlinroomdatabase
 
 import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -157,7 +158,10 @@ class MainActivity : AppCompatActivity() {
                 R.id.listFragment,
                 R.id.settingsFragment,
                 R.id.notificationsFragment,
-                R.id.totpFragment
+                R.id.totpFragment,
+                R.id.devTasksFragment,
+                R.id.devBugsFragment,
+                R.id.devSprintFragment
             ),
             binding.drawerLayout
         )
@@ -167,11 +171,14 @@ class MainActivity : AppCompatActivity() {
 
         // Setup bottom navigation listener
         binding.bottomNavigation.setOnItemSelectedListener { item ->
-            if (item.itemId == R.id.userHomeFragment) {
-                // If user selected Home, pop everything back to userHomeFragment
-                val popped = navController.popBackStack(R.id.userHomeFragment, false)
-                if (!popped && navController.currentDestination?.id != R.id.userHomeFragment) {
-                    navController.navigate(R.id.userHomeFragment)
+            val userRole = getSharedPreferences("student_prefs", Context.MODE_PRIVATE).getString("user_role", "student") ?: "student"
+            val isDev = com.example.kotlinroomdatabase.util.RoleUtils.isDeveloper(userRole)
+            val rootDestId = if (isDev) R.id.devTasksFragment else R.id.userHomeFragment
+
+            if (item.itemId == rootDestId) {
+                val popped = navController.popBackStack(rootDestId, false)
+                if (!popped && navController.currentDestination?.id != rootDestId) {
+                    navController.navigate(rootDestId)
                 }
                 return@setOnItemSelectedListener true
             }
@@ -181,7 +188,7 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(item.itemId, null, navOptions {
                     launchSingleTop = true
                     restoreState = true
-                    popUpTo(R.id.userHomeFragment) {
+                    popUpTo(rootDestId) {
                         saveState = true
                     }
                 })
@@ -190,15 +197,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.bottomNavigation.setOnItemReselectedListener { item ->
-            if (item.itemId == R.id.userHomeFragment) {
-                // Double tap on Home: pop back from any child screen (like Schedule) directly to Home
-                if (navController.currentDestination?.id != R.id.userHomeFragment) {
-                    val popped = navController.popBackStack(R.id.userHomeFragment, false)
+            val userRole = getSharedPreferences("student_prefs", Context.MODE_PRIVATE).getString("user_role", "student") ?: "student"
+            val isDev = com.example.kotlinroomdatabase.util.RoleUtils.isDeveloper(userRole)
+            val rootDestId = if (isDev) R.id.devTasksFragment else R.id.userHomeFragment
+
+            if (item.itemId == rootDestId) {
+                if (navController.currentDestination?.id != rootDestId) {
+                    val popped = navController.popBackStack(rootDestId, false)
                     if (!popped) {
-                        navController.navigate(R.id.userHomeFragment)
+                        navController.navigate(rootDestId)
                     }
                 } else {
-                    // Already on Home: smooth scroll to top
                     val currentFrag = navHostFragment.childFragmentManager.fragments.firstOrNull()
                     if (currentFrag is com.example.kotlinroomdatabase.fragments.list.User_Interface) {
                         currentFrag.scrollToTop()
@@ -287,6 +296,11 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNavigation.visibility = android.view.View.GONE
         }
 
+        // Automatic in-app update scanner on launch
+        com.example.kotlinroomdatabase.update.AppUpdateManager.checkForUpdatesOnLaunch(this)
+
+        handleFcmIntentExtras(intent)
+
         binding.navView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.logout -> {
@@ -306,6 +320,21 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleFcmIntentExtras(intent)
+    }
+
+    private fun handleFcmIntentExtras(intent: Intent?) {
+        val taskIdStr = intent?.getStringExtra("fcm_extra_task_id")
+        val taskId = taskIdStr?.toIntOrNull()
+        if (taskId != null && taskId > 0) {
+            val sheet = com.example.kotlinroomdatabase.fragments.dev.DevTaskDetailBottomSheet.newInstance(taskId)
+            sheet.show(supportFragmentManager, com.example.kotlinroomdatabase.fragments.dev.DevTaskDetailBottomSheet.TAG)
         }
     }
 
@@ -340,6 +369,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val userRole = prefs.getString("user_role", "student") ?: "student"
         val isTeacher = com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(userRole)
+        val isDev = com.example.kotlinroomdatabase.util.RoleUtils.isDeveloper(userRole)
 
         binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
         binding.tvRoleBadge.text = com.example.kotlinroomdatabase.util.RoleUtils.getRoleLabel(userRole)
@@ -348,15 +378,22 @@ class MainActivity : AppCompatActivity() {
         val navController = navHostFragment?.navController
 
         // Switch bottom navigation menu depending on role
-        val currentMenuRes = if (isTeacher) R.menu.bottom_nav_teacher else R.menu.bottom_nav_student
+        val currentMenuRes = when {
+            isDev -> R.menu.bottom_nav_developer
+            isTeacher -> R.menu.bottom_nav_teacher
+            else -> R.menu.bottom_nav_student
+        }
         if (binding.bottomNavigation.tag != currentMenuRes) {
             binding.bottomNavigation.menu.clear()
             binding.bottomNavigation.inflateMenu(currentMenuRes)
             binding.bottomNavigation.tag = currentMenuRes
             if (navController != null) {
-                // Ensure active destination is checked in bottom nav
                 val currentDestId = navController.currentDestination?.id
-                if (currentDestId != null) {
+                if (isDev && currentDestId != R.id.devTasksFragment && currentDestId != R.id.devBugsFragment && currentDestId != R.id.devSprintFragment && currentDestId != R.id.profileFragment) {
+                    navController.navigate(R.id.devTasksFragment)
+                } else if (!isDev && (currentDestId == R.id.devTasksFragment || currentDestId == R.id.devBugsFragment || currentDestId == R.id.devSprintFragment)) {
+                    navController.navigate(R.id.userHomeFragment)
+                } else if (currentDestId != null) {
                     val item = binding.bottomNavigation.menu.findItem(currentDestId)
                     item?.isChecked = true
                 }
@@ -533,12 +570,24 @@ class MainActivity : AppCompatActivity() {
         checkNotificationPermission()
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.setNotificationsEnabled(this, isGranted)
+    }
+
     private fun checkNotificationPermission() {
         com.example.kotlinroomdatabase.util.LocalNotificationHelper.createNotificationChannel(this)
-        com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(this)
+        val mode = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getNotificationMode(this)
+        if (mode != com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_FCM_ONLY &&
+            mode != com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED &&
+            com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isNotificationsEnabled(this)
+        ) {
+            com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(this)
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }

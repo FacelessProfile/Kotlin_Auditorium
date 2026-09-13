@@ -158,6 +158,9 @@ class StudentRepositoryHTTPS(
         .build()
 
     companion object {
+        val cachedStudentSubgroupIds = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+        val cachedStudentSubgroupNames = java.util.concurrent.ConcurrentHashMap<Int, String>()
+
         fun triggerSessionExpired(context: Context, customMessage: String? = null) {
             com.example.kotlinroomdatabase.util.JwtUtils.clearAllSessionData(context)
             val intent = android.content.Intent("com.example.kotlinroomdatabase.LOGOUT").apply {
@@ -1699,7 +1702,7 @@ class StudentRepositoryHTTPS(
             val endpoint = if (role == "teacher" || role == "admin") {
                 "$BASE_URL/api/teacher/schedule/day?date=$date"
             } else {
-                "$BASE_URL/api/student/schedule/day?date=$date"
+                "$BASE_URL/api/student/schedule/day?date=$date&all_subgroups=1"
             }
 
             val request = Request.Builder()
@@ -1724,21 +1727,53 @@ class StudentRepositoryHTTPS(
             val lessonsArray = resultObj.optJSONArray("lessons") ?: org.json.JSONArray()
             val lessonsList = mutableListOf<com.example.kotlinroomdatabase.model.LessonScheduleItem>()
 
+            // Populate subgroup cache if empty for student
+            if (role != "teacher" && role != "admin" && cachedStudentSubgroupIds.isEmpty()) {
+                try {
+                    getStudentSubgroups(null)
+                } catch (_: Exception) {}
+            }
+
             for (i in 0 until lessonsArray.length()) {
                 val item = lessonsArray.getJSONObject(i)
+                val subgroupId = if (item.has("subgroup_id") && !item.isNull("subgroup_id")) item.optInt("subgroup_id") else null
+                val subjectId = item.optInt("subject_id", 0)
+                val subgroupStr = item.optString("subgroup", "")
+
+                var isOther = item.optBoolean("is_other_subgroup", false)
+                var isCurrent = item.optBoolean("is_current_subgroup", !isOther)
+
+                // Fallback for local resolution if server didn't provide is_other_subgroup
+                if (!item.has("is_other_subgroup") && role != "teacher") {
+                    val userSubgroupId = cachedStudentSubgroupIds[subjectId]
+                    val userSubgroupName = cachedStudentSubgroupNames[subjectId]
+
+                    if (userSubgroupId != null && subgroupId != null) {
+                        isOther = (subgroupId != userSubgroupId)
+                        isCurrent = !isOther
+                    } else if (!userSubgroupName.isNullOrBlank() && subgroupStr.isNotBlank() && subgroupStr != "_") {
+                        val matches = subgroupStr.contains(userSubgroupName, ignoreCase = true) || userSubgroupName.contains(subgroupStr, ignoreCase = true)
+                        isOther = !matches
+                        isCurrent = matches
+                    }
+                }
+
                 lessonsList.add(
                     com.example.kotlinroomdatabase.model.LessonScheduleItem(
                         lesson_num = item.optInt("lesson_num", i + 1),
                         start_time = item.optString("start_time", ""),
                         end_time = item.optString("end_time", ""),
-                        subject_id = item.optInt("subject_id", 0),
+                        subject_id = subjectId,
                         subject_name = item.optString("subject_name", ""),
                         teacher_name = if (item.has("teacher_name")) item.optString("teacher_name") else null,
                         group_name = if (item.has("group_name")) item.optString("group_name") else null,
                         group_id = if (item.has("group_id")) item.optInt("group_id") else null,
                         lesson_type = item.optString("lesson_type", "Практика"),
                         room_info = item.optString("room_info", ""),
-                        subgroup = item.optString("subgroup", "")
+                        subgroup = subgroupStr,
+                        subgroup_id = subgroupId,
+                        is_other_subgroup = isOther,
+                        is_current_subgroup = isCurrent
                     )
                 )
             }
@@ -2350,6 +2385,138 @@ class StudentRepositoryHTTPS(
         }
     }
 
+    override suspend fun getStudentSubgroups(semesterId: Int?): GenericResult<List<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val url = if (semesterId != null && semesterId > 0) {
+                "$BASE_URL/api/student/subgroups?semester_id=$semesterId"
+            } else {
+                "$BASE_URL/api/student/subgroups"
+            }
+
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(responseBody)
+                if (jsonObj.optBoolean("ok")) {
+                    val resultObj = jsonObj.optJSONObject("result")
+                    val subjectsArr = resultObj?.optJSONArray("subjects")
+                    val subjectsList = mutableListOf<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>()
+
+                    if (subjectsArr != null) {
+                        for (i in 0 until subjectsArr.length()) {
+                            val subObj = subjectsArr.getJSONObject(i)
+                            val subjectId = subObj.optInt("subject_id", 0)
+                            val subjectName = subObj.optString("subject_name", "")
+                            val groupId = subObj.optInt("group_id", 0)
+                            val groupName = subObj.optString("group_name", "")
+                            val currentSubgroupId = if (subObj.has("current_subgroup_id") && !subObj.isNull("current_subgroup_id")) {
+                                subObj.optInt("current_subgroup_id")
+                            } else null
+
+                            val subgroupsArr = subObj.optJSONArray("subgroups")
+                            val subgroupsList = mutableListOf<com.example.kotlinroomdatabase.model.SubjectSubgroup>()
+                            if (subgroupsArr != null) {
+                                for (j in 0 until subgroupsArr.length()) {
+                                    val sgObj = subgroupsArr.getJSONObject(j)
+                                    val sgId = sgObj.optInt("subgroup_id", 0)
+                                    val code = sgObj.optString("code", "")
+                                    val name = sgObj.optString("name", "")
+                                    val capacity = if (sgObj.has("capacity") && !sgObj.isNull("capacity")) sgObj.optInt("capacity") else null
+                                    val occupied = sgObj.optInt("occupied", 0)
+                                    val isCurrent = sgObj.optBoolean("is_current", false)
+
+                                    subgroupsList.add(
+                                        com.example.kotlinroomdatabase.model.SubjectSubgroup(
+                                            subgroup_id = sgId,
+                                            code = code,
+                                            name = name,
+                                            capacity = capacity,
+                                            occupied = occupied,
+                                            is_current = isCurrent
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (currentSubgroupId != null) {
+                                cachedStudentSubgroupIds[subjectId] = currentSubgroupId
+                                val curSg = subgroupsList.firstOrNull { it.subgroup_id == currentSubgroupId || it.is_current }
+                                if (curSg != null) {
+                                    cachedStudentSubgroupNames[subjectId] = curSg.name.ifBlank { curSg.code }
+                                }
+                            }
+
+                            subjectsList.add(
+                                com.example.kotlinroomdatabase.model.SubjectWithSubgroups(
+                                    subject_id = subjectId,
+                                    subject_name = subjectName,
+                                    group_id = groupId,
+                                    group_name = groupName,
+                                    current_subgroup_id = currentSubgroupId,
+                                    subgroups = subgroupsList
+                                )
+                            )
+                        }
+                    }
+                    GenericResult.Success(subjectsList)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(jsonObj.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getStudentSubgroups error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun changeStudentSubgroup(subgroupId: Int, reason: String?): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                if (!reason.isNullOrBlank()) {
+                    put("reason", reason)
+                }
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/subgroups/$subgroupId")
+                .put(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val jsonObj = JSONObject(responseBody)
+                if (jsonObj.optBoolean("ok")) {
+                    GenericResult.Success(true)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(jsonObj.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "changeStudentSubgroup error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
     override suspend fun testConnection(): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$BASE_URL/api/semesters/current").get().build()
@@ -2358,6 +2525,461 @@ class StudentRepositoryHTTPS(
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "testConnection failed", e)
             false
+        }
+    }
+
+    // ==========================================
+    // DEVELOPER WORKSPACE IMPLEMENTATION
+    // ==========================================
+
+    override suspend fun getDevSprints(): GenericResult<List<DevSprint>> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/sprints")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val rawResult = json.opt("result")
+                    val resultArr = when (rawResult) {
+                        is JSONArray -> rawResult
+                        is JSONObject -> rawResult.optJSONArray("items") ?: JSONArray()
+                        else -> JSONArray()
+                    }.toString()
+                    val list = jsonSerializer.decodeFromString<List<DevSprint>>(resultArr)
+                    GenericResult.Success(list)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "getDevSprints error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getActiveDevSprint(): GenericResult<DevSprint> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/sprints/active")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val sprint = jsonSerializer.decodeFromString<DevSprint>(resultObj)
+                    GenericResult.Success(sprint)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "getActiveDevSprint error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun closeDevSprint(): GenericResult<DevSprint> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/sprints/close")
+                .post("{}".toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val sprint = jsonSerializer.decodeFromString<DevSprint>(resultObj)
+                    GenericResult.Success(sprint)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "closeDevSprint error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getDevTasks(
+        sprintId: Int?,
+        itemType: String?,
+        status: String?,
+        assigneeId: Int?
+    ): GenericResult<List<DevTask>> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val queryParams = mutableListOf<String>()
+            if (sprintId != null) queryParams.add("sprint_id=$sprintId")
+            if (!itemType.isNullOrBlank()) queryParams.add("item_type=$itemType")
+            if (!status.isNullOrBlank()) queryParams.add("status=$status")
+            if (assigneeId != null) queryParams.add("assignee_id=$assigneeId")
+
+            val url = if (queryParams.isNotEmpty()) {
+                "$BASE_URL/api/dev/tasks?" + queryParams.joinToString("&")
+            } else {
+                "$BASE_URL/api/dev/tasks"
+            }
+
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val rawResult = json.opt("result")
+                    val resultArr = when (rawResult) {
+                        is JSONArray -> rawResult
+                        is JSONObject -> rawResult.optJSONArray("items") ?: JSONArray()
+                        else -> JSONArray()
+                    }.toString()
+                    val list = jsonSerializer.decodeFromString<List<DevTask>>(resultArr)
+                    GenericResult.Success(list)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "getDevTasks error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun createDevTask(
+        itemType: String,
+        title: String,
+        description: String,
+        priority: String,
+        assigneeId: Int?,
+        sprintId: Int?
+    ): GenericResult<DevTask> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("item_type", itemType)
+                put("title", title)
+                put("description", description)
+                put("priority", priority)
+                if (assigneeId != null) put("assignee_id", assigneeId)
+                if (sprintId != null) put("sprint_id", sprintId)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/tasks")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val task = jsonSerializer.decodeFromString<DevTask>(resultObj)
+                    GenericResult.Success(task)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "createDevTask error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun updateDevTaskStatus(taskId: Int, status: String): GenericResult<DevTask> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("status", status)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/tasks/$taskId")
+                .patch(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val task = jsonSerializer.decodeFromString<DevTask>(resultObj)
+                    GenericResult.Success(task)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "updateDevTaskStatus error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun updateDevTaskAssignee(taskId: Int, assigneeId: Int): GenericResult<DevTask> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("assignee_id", assigneeId)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/tasks/$taskId")
+                .patch(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val task = jsonSerializer.decodeFromString<DevTask>(resultObj)
+                    GenericResult.Success(task)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "updateDevTaskAssignee error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getDevTaskDetails(taskId: Int): GenericResult<Pair<DevTask, List<DevComment>>> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/tasks/$taskId")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result")
+                    val taskObj = resultObj.getJSONObject("task").toString()
+                    val task = jsonSerializer.decodeFromString<DevTask>(taskObj)
+
+                    val commentsArr = resultObj.optJSONArray("comments")?.toString() ?: "[]"
+                    val comments = jsonSerializer.decodeFromString<List<DevComment>>(commentsArr)
+
+                    GenericResult.Success(Pair(task, comments))
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "getDevTaskDetails error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun addDevComment(taskId: Int, content: String): GenericResult<DevComment> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("content", content)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/tasks/$taskId/comments")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val comment = jsonSerializer.decodeFromString<DevComment>(resultObj)
+                    GenericResult.Success(comment)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "addDevComment error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun toggleDevTaskFollow(taskId: Int, isFollowing: Boolean): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("is_following", isFollowing)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/tasks/$taskId/follow")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    GenericResult.Success(isFollowing)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "toggleDevTaskFollow error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getDevSprintReport(sprintId: Int): GenericResult<DevSprintReport> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/sprints/$sprintId/report")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.getJSONObject("result").toString()
+                    val report = jsonSerializer.decodeFromString<DevSprintReport>(resultObj)
+                    GenericResult.Success(report)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "getDevSprintReport error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getDevTeam(): GenericResult<List<DevTeamMember>> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/dev/team")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("ok")) {
+                    val rawResult = json.opt("result")
+                    val resultArr = when (rawResult) {
+                        is JSONArray -> rawResult
+                        is JSONObject -> rawResult.optJSONArray("items") ?: JSONArray()
+                        else -> JSONArray()
+                    }.toString()
+                    val list = jsonSerializer.decodeFromString<List<DevTeamMember>>(resultArr)
+                    GenericResult.Success(list)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseBody))
+            }
+        } catch (e: Exception) {
+            Log.e("DEV_REPO", "getDevTeam error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
         }
     }
 }

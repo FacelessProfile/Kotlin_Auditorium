@@ -276,6 +276,101 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 2.5. Student Subgroups Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardStudentSubgroups"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:visibility="gone"
+                tools:visibility="visible"
+                app:cardBackgroundColor="?attr/sib_bg_card"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="1dp"
+                app:strokeColor="?attr/sib_border_subtle"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_groups_badge"
+                            app:tint="@color/sib_blue_primary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Подгруппы по предметам"
+                                android:textColor="?attr/sib_text_primary"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Распределение для пар и лабораторных"
+                                android:textColor="?attr/sib_text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/progressSubgroups"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:indeterminate="true"
+                            android:visibility="gone"
+                            tools:visibility="visible" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvSubgroupsHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Нажмите на предмет, чтобы выбрать или сменить учебную подгруппу."
+                        android:textColor="?attr/sib_text_secondary"
+                        android:textSize="12sp" />
+
+                    <!-- Container for dynamically added subjects -->
+                    <LinearLayout
+                        android:id="@+id/layoutSubgroupsList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="vertical" />
+
+                    <TextView
+                        android:id="@+id/tvNoSubgroups"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Для вашей группы нет предметов с разделением на подгруппы."
+                        android:textColor="?attr/sib_text_secondary"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 3. Security & Agreements Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

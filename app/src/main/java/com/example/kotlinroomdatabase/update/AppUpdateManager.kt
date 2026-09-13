@@ -7,9 +7,16 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import android.view.LayoutInflater
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.lifecycle.lifecycleScope
+import com.example.kotlinroomdatabase.R
 import com.example.kotlinroomdatabase.config.ServerConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +26,7 @@ import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
@@ -283,6 +291,158 @@ object AppUpdateManager {
             Log.e(TAG, "installApk failed", e)
             Toast.makeText(context, "Ошибка запуска установщика: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             return false
+        }
+    }
+
+    // =========================================================================
+    // AUTO-UPDATE SCANNER & DIALOGS
+    // =========================================================================
+
+    const val PREFS_NAME = "app_update_prefs"
+    const val KEY_AUTO_CHECK_ENABLED = "auto_check_updates_enabled"
+    const val KEY_LAST_DISMISSED_VERSION = "last_dismissed_version_code"
+    const val KEY_LAST_DISMISSED_TIME = "last_dismissed_time"
+
+    fun isAutoCheckEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_AUTO_CHECK_ENABLED, true)
+    }
+
+    fun setAutoCheckEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_AUTO_CHECK_ENABLED, enabled)
+            .apply()
+    }
+
+    /**
+     * Automatically scans for app updates on launch.
+     * Respects user preference and skips non-critical updates if recently dismissed.
+     */
+    fun checkForUpdatesOnLaunch(activity: AppCompatActivity) {
+        if (!isAutoCheckEnabled(activity)) return
+
+        activity.lifecycleScope.launch {
+            val result = checkUpdate(activity)
+            if (activity.isFinishing || activity.isDestroyed) return@launch
+
+            result.onSuccess { info ->
+                if (info != null) {
+                    val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    val lastDismissedCode = prefs.getInt(KEY_LAST_DISMISSED_VERSION, -1)
+                    val lastDismissedTime = prefs.getLong(KEY_LAST_DISMISSED_TIME, 0L)
+                    val now = System.currentTimeMillis()
+
+                    val wasRecentlyDismissed = !info.isCritical &&
+                            lastDismissedCode == info.versionCode &&
+                            (now - lastDismissedTime < 12 * 60 * 60 * 1000L)
+
+                    if (!wasRecentlyDismissed) {
+                        showUpdateDialog(activity, info)
+                    }
+                }
+            }.onFailure { e ->
+                Log.d(TAG, "Silent auto-update check skipped: ${e.message}")
+            }
+        }
+    }
+
+    fun showUpdateDialog(
+        activity: AppCompatActivity,
+        info: AppVersionInfo,
+        onDismiss: (() -> Unit)? = null
+    ) {
+        if (activity.isFinishing || activity.isDestroyed) return
+
+        val sizeMb = if (info.fileSize > 0) String.format(Locale.US, "%.1f МБ", info.fileSize / (1024.0 * 1024.0)) else ""
+        val msg = buildString {
+            append("Доступна новая версия: v${info.versionName} (сборка ${info.versionCode})\n")
+            if (sizeMb.isNotBlank()) append("Размер загрузки: $sizeMb\n")
+            if (info.releaseNotes.isNotBlank()) {
+                append("\nЧто нового:\n")
+                append(info.releaseNotes)
+            }
+        }
+
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+            .setTitle(if (info.isCritical) "Критическое обновление!" else "Доступно обновление приложения")
+            .setMessage(msg)
+            .setPositiveButton("Обновить") { _, _ ->
+                startDownloadWithDialog(activity, info)
+            }
+
+        if (!info.isCritical) {
+            builder.setNegativeButton("Позже") { _, _ ->
+                val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putInt(KEY_LAST_DISMISSED_VERSION, info.versionCode)
+                    .putLong(KEY_LAST_DISMISSED_TIME, System.currentTimeMillis())
+                    .apply()
+                onDismiss?.invoke()
+            }
+            builder.setCancelable(true)
+        } else {
+            builder.setCancelable(false)
+        }
+
+        builder.show()
+    }
+
+    fun startDownloadWithDialog(
+        activity: AppCompatActivity,
+        info: AppVersionInfo
+    ) {
+        if (activity.isFinishing || activity.isDestroyed) return
+
+        val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_app_update_progress, null)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvUpdateDialogTitle)
+        val tvStatus = dialogView.findViewById<TextView>(R.id.tvUpdateDialogStatus)
+        val tvBytes = dialogView.findViewById<TextView>(R.id.tvUpdateDialogBytes)
+        val pb = dialogView.findViewById<com.google.android.material.progressindicator.LinearProgressIndicator>(R.id.pbUpdateDialog)
+
+        tvTitle.text = "Загрузка обновления v${info.versionName}..."
+
+        var downloadJob: Job? = null
+
+        val progressDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+            .setView(dialogView)
+            .setCancelable(false)
+            .apply {
+                if (!info.isCritical) {
+                    setNegativeButton("Отмена") { _, _ ->
+                        downloadJob?.cancel()
+                    }
+                }
+            }
+            .create()
+
+        progressDialog.show()
+
+        downloadJob = activity.lifecycleScope.launch {
+            val downloadResult = downloadApk(activity, info) { percent, downloaded, total ->
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    pb.progress = percent
+                    val downloadedMb = String.format(Locale.US, "%.1f", downloaded / (1024.0 * 1024.0))
+                    val totalMb = if (total > 0) String.format(Locale.US, "%.1f", total / (1024.0 * 1024.0)) else "?"
+                    tvStatus.text = "Скачивание установочного пакета ($percent%)"
+                    tvBytes.text = "$downloadedMb / $totalMb МБ"
+                }
+            }
+
+            if (progressDialog.isShowing) {
+                try {
+                    progressDialog.dismiss()
+                } catch (_: Exception) {}
+            }
+
+            downloadResult.onSuccess { apkFile ->
+                Toast.makeText(activity, "Файл обновления готов к установке", Toast.LENGTH_SHORT).show()
+                installApk(activity, apkFile)
+            }.onFailure { err ->
+                if (err !is kotlinx.coroutines.CancellationException) {
+                    Toast.makeText(activity, "Ошибка скачивания: ${err.localizedMessage ?: "неизвестная ошибка"}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 }

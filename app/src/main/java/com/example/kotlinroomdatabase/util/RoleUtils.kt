@@ -11,6 +11,7 @@ object RoleUtils {
     const val ROLE_PROGRAM_CREATOR = "program_creator"
     const val ROLE_DIRECTOR = "director"
     const val ROLE_MINISTER = "minister"
+    const val ROLE_DEVELOPER = "developer"
 
     val STAFF_ROLES = setOf(
         ROLE_ADMIN,
@@ -19,16 +20,22 @@ object RoleUtils {
         ROLE_SECRETARY,
         ROLE_PROGRAM_CREATOR,
         ROLE_DIRECTOR,
-        ROLE_MINISTER
+        ROLE_MINISTER,
+        ROLE_DEVELOPER
     )
 
     fun normalizeRole(role: String?): String {
         return role?.trim()?.lowercase()?.ifBlank { ROLE_STUDENT } ?: ROLE_STUDENT
     }
 
+    fun isDeveloper(role: String?): Boolean {
+        return normalizeRole(role) == ROLE_DEVELOPER
+    }
+
     fun getRoleLabel(role: String?): String {
         return when (normalizeRole(role)) {
             ROLE_ADMIN -> "Администратор"
+            ROLE_DEVELOPER -> "Разработчик"
             ROLE_DEAN -> "Декан"
             ROLE_HEAD -> "Зав. кафедрой"
             ROLE_SECRETARY -> "Секретарь"
@@ -43,6 +50,7 @@ object RoleUtils {
 
     fun getRoleHeroTitle(role: String?): String {
         return when (normalizeRole(role)) {
+            ROLE_DEVELOPER -> "Рабочая панель разработчика"
             ROLE_TEACHER -> "Рабочая панель преподавателя"
             ROLE_ADMIN -> "Панель администратора"
             ROLE_HEAD -> "Панель заведующего кафедрой"

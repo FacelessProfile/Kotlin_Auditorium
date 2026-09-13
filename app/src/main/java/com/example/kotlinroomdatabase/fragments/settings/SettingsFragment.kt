@@ -146,19 +146,81 @@ class SettingsFragment : Fragment() {
             Log.e("Settings", "Crypto init failed", e)
         }
 
-        // 3. Lesson Reminder Settings
-        val isReminderEnabled = LessonReminderScheduler.isRemindersEnabled(requireContext())
+        // 3. Notifications & Delivery Mode Settings
+        val context = requireContext()
+        val isNotifMasterEnabled = LessonReminderScheduler.isNotificationsEnabled(context)
+        binding.switchNotificationsMaster.isChecked = isNotifMasterEnabled
+        binding.layoutNotificationsConfig.visibility = if (isNotifMasterEnabled) View.VISIBLE else View.GONE
+
+        // Delivery Mode
+        val currentMode = LessonReminderScheduler.getNotificationMode(context)
+        when (currentMode) {
+            LessonReminderScheduler.MODE_FCM_ONLY -> binding.rbModeFcmOnly.isChecked = true
+            LessonReminderScheduler.MODE_LOCAL_ONLY -> binding.rbModeLocalOnly.isChecked = true
+            else -> binding.rbModeFcmAndLocal.isChecked = true
+        }
+
+        binding.rgNotificationMode.setOnCheckedChangeListener { _, checkedId ->
+            val newMode = when (checkedId) {
+                R.id.rbModeFcmOnly -> LessonReminderScheduler.MODE_FCM_ONLY
+                R.id.rbModeLocalOnly -> LessonReminderScheduler.MODE_LOCAL_ONLY
+                else -> LessonReminderScheduler.MODE_FCM_AND_LOCAL
+            }
+            LessonReminderScheduler.setNotificationMode(context, newMode)
+            if (newMode == LessonReminderScheduler.MODE_FCM_ONLY) {
+                com.example.kotlinroomdatabase.service.NotificationForegroundService.stopService(context)
+                Toast.makeText(context, "Режим FCM: фоновая служба остановлена", Toast.LENGTH_SHORT).show()
+            } else {
+                com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(context)
+                Toast.makeText(context, "Режим обновлен", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Master switch
+        binding.switchNotificationsMaster.setOnCheckedChangeListener { _, isChecked ->
+            LessonReminderScheduler.setNotificationsEnabled(context, isChecked)
+            binding.layoutNotificationsConfig.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (isChecked) {
+                val mode = LessonReminderScheduler.getNotificationMode(context)
+                if (mode != LessonReminderScheduler.MODE_FCM_ONLY) {
+                    com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(context)
+                }
+                Toast.makeText(context, "Уведомления включены", Toast.LENGTH_SHORT).show()
+            } else {
+                com.example.kotlinroomdatabase.service.NotificationForegroundService.stopService(context)
+                Toast.makeText(context, "Уведомления и вибрация отключены", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Vibration
+        binding.switchVibration.isChecked = LessonReminderScheduler.isVibrationEnabled(context)
+        binding.switchVibration.setOnCheckedChangeListener { _, isChecked ->
+            LessonReminderScheduler.setVibrationEnabled(context, isChecked)
+            val msg = if (isChecked) "Вибрация включена" else "Вибрация отключена"
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        }
+
+        // Sound
+        binding.switchSound.isChecked = LessonReminderScheduler.isSoundEnabled(context)
+        binding.switchSound.setOnCheckedChangeListener { _, isChecked ->
+            LessonReminderScheduler.setSoundEnabled(context, isChecked)
+            val msg = if (isChecked) "Звук уведомлений включен" else "Звук уведомлений отключен"
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        }
+
+        // Lesson Reminders
+        val isReminderEnabled = LessonReminderScheduler.isRemindersEnabled(context)
         binding.switchLessonReminders.isChecked = isReminderEnabled
         binding.layoutReminderDetails.visibility = if (isReminderEnabled) View.VISIBLE else View.GONE
 
         binding.switchLessonReminders.setOnCheckedChangeListener { _, isChecked ->
-            LessonReminderScheduler.setRemindersEnabled(requireContext(), isChecked)
+            LessonReminderScheduler.setRemindersEnabled(context, isChecked)
             binding.layoutReminderDetails.visibility = if (isChecked) View.VISIBLE else View.GONE
-            val statusText = if (isChecked) "Оповещения о начале пар включены" else "Оповещения о начале пар отключены"
-            Toast.makeText(requireContext(), statusText, Toast.LENGTH_SHORT).show()
+            val statusText = if (isChecked) "Напоминания о начале пар включены" else "Напоминания о парах отключены"
+            Toast.makeText(context, statusText, Toast.LENGTH_SHORT).show()
         }
 
-        val currentReminderMinutes = LessonReminderScheduler.getReminderMinutes(requireContext())
+        val currentReminderMinutes = LessonReminderScheduler.getReminderMinutes(context)
         binding.sliderReminderMinutes.value = currentReminderMinutes.toFloat().coerceIn(1.0f, 15.0f)
         binding.tvReminderMinutesLabel.text = "Предупреждать за: $currentReminderMinutes мин"
 
@@ -166,19 +228,27 @@ class SettingsFragment : Fragment() {
             if (fromUser) {
                 val mins = value.toInt()
                 binding.tvReminderMinutesLabel.text = "Предупреждать за: $mins мин"
-                LessonReminderScheduler.setReminderMinutes(requireContext(), mins)
+                LessonReminderScheduler.setReminderMinutes(context, mins)
             }
         }
 
         binding.btnTestReminder.setOnClickListener {
-            LessonReminderScheduler.testReminderNow(requireContext())
-            Toast.makeText(requireContext(), "Тестовое напоминание и вибрация сработают через 1.5 сек", Toast.LENGTH_SHORT).show()
+            LessonReminderScheduler.testReminderNow(context)
+            val vibStatus = if (LessonReminderScheduler.isVibrationEnabled(context)) "с вибрацией" else "без вибрации"
+            Toast.makeText(context, "Тестовое уведомление ($vibStatus) сработает через 1.5 сек", Toast.LENGTH_SHORT).show()
         }
 
         // 4. App Version & In-App Update
         val currentVersionName = AppUpdateManager.getCurrentVersionName(requireContext())
         val currentVersionCode = AppUpdateManager.getCurrentVersionCode(requireContext())
         binding.tvAppVersion.text = "СибГУТИ • Электронный журнал v$currentVersionName (сборка $currentVersionCode)"
+
+        binding.switchAutoCheckUpdates.isChecked = AppUpdateManager.isAutoCheckEnabled(requireContext())
+        binding.switchAutoCheckUpdates.setOnCheckedChangeListener { _, isChecked ->
+            AppUpdateManager.setAutoCheckEnabled(requireContext(), isChecked)
+            val msg = if (isChecked) "Автопроверка обновлений при запуске включена" else "Автопроверка обновлений отключена"
+            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+        }
 
         binding.btnCheckUpdate.setOnClickListener {
             checkAppUpdate()

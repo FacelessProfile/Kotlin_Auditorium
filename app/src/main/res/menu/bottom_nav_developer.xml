@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/devTasksFragment"
+        android:icon="@drawable/ic_task_check"
+        android:title="Задачи" />
+    <item
+        android:id="@+id/devBugsFragment"
+        android:icon="@drawable/ic_bug"
+        android:title="Баги" />
+    <item
+        android:id="@+id/devSprintFragment"
+        android:icon="@drawable/ic_sprint"
+        android:title="Спринт" />
+    <item
+        android:id="@+id/profileFragment"
+        android:icon="@drawable/ic_person"
+        android:title="Профиль" />
+</menu>

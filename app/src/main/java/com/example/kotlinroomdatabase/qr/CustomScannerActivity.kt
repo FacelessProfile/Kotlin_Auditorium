@@ -146,8 +146,39 @@ class CustomScannerActivity : AppCompatActivity() {
         if (isGranted) {
             setupAndStart()
         } else {
-            Toast.makeText(this, "Требуется разрешение на использование камеры", Toast.LENGTH_SHORT).show()
-            finish()
+            handleCameraPermissionDenied()
+        }
+    }
+
+    private fun handleCameraPermissionDenied() {
+        if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Требуется доступ к камере")
+                .setMessage("Для сканирования QR-кодов занятий и 2FA приложению необходим доступ к камере вашего смартфона.")
+                .setPositiveButton("Повторить запрос") { _, _ ->
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+                .setNegativeButton("Отмена") { _, _ ->
+                    finish()
+                }
+                .setCancelable(false)
+                .show()
+        } else {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Доступ к камере отключен")
+                .setMessage("Разрешение на использование камеры отключено. Для сканирования QR-кодов, пожалуйста, включите доступ к камере в настройках приложения.")
+                .setPositiveButton("Настройки") { _, _ ->
+                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", packageName, null)
+                    }
+                    startActivity(intent)
+                    finish()
+                }
+                .setNegativeButton("Отмена") { _, _ ->
+                    finish()
+                }
+                .setCancelable(false)
+                .show()
         }
     }
 
@@ -200,12 +231,12 @@ class CustomScannerActivity : AppCompatActivity() {
         discoverCameras()
         setupPresetButtons()
 
-        // AUTO-SELECT THE HIGHEST OPTICAL ZOOM (TELEPHOTO) BY DEFAULT
-        val telephotoIdx = discoveredLenses.indexOfLast { it.isTelephoto }
-        activeLensIndex = if (telephotoIdx >= 0) telephotoIdx else {
-            // fallback to 1x main lens
-            val mainIdx = discoveredLenses.indexOfFirst { abs(it.zoomMultiplier - 1.0f) < 0.3f }
-            if (mainIdx >= 0) mainIdx else 0
+        // ALWAYS DEFAULT TO 1X MAIN WIDE LENS (Fixes Samsung S22 black screen & sensor timeouts)
+        val idZeroIdx = discoveredLenses.indexOfFirst { it.cameraId == "0" && abs(it.zoomMultiplier - 1.0f) < 0.5f }
+        val mainIdx = if (idZeroIdx >= 0) idZeroIdx else discoveredLenses.indexOfFirst { abs(it.zoomMultiplier - 1.0f) < 0.35f }
+        activeLensIndex = if (mainIdx >= 0) mainIdx else {
+            val nonTeleIdx = discoveredLenses.indexOfFirst { !it.isTelephoto }
+            if (nonTeleIdx >= 0) nonTeleIdx else 0
         }
 
         Log.i(TAG, "Selected initial camera: ${discoveredLenses.getOrNull(activeLensIndex)?.label} " +
@@ -219,153 +250,78 @@ class CustomScannerActivity : AppCompatActivity() {
     }
 
     // =========================================================================
-    // CAMERA DISCOVERY ENGINE (Logical + Hidden Physical Sensors)
+    // CAMERA DISCOVERY ENGINE (Logical Camera Preferred)
     // =========================================================================
 
     private fun discoverCameras() {
-        val allCameraIds = mutableSetOf<String>()
+        val backLenses = mutableListOf<DiscoveredLens>()
 
         try {
-            // 1. Gather standard Camera IDs
             val list = cameraManager.cameraIdList
-            allCameraIds.addAll(list)
-
-            // 2. Discover hidden physical cameras inside Logical Multi-Cameras
             for (id in list) {
                 try {
                     val chars = cameraManager.getCameraCharacteristics(id)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        val physicalIds = chars.physicalCameraIds
-                        if (physicalIds.isNotEmpty()) {
-                            Log.i(TAG, "Logical camera $id exposes physical cameras: $physicalIds")
-                            allCameraIds.addAll(physicalIds)
+                    val facing = chars.get(CameraCharacteristics.LENS_FACING)
+                    if (facing != CameraCharacteristics.LENS_FACING_BACK) continue
+
+                    val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                    val focal = focalLengths?.firstOrNull() ?: 5.0f
+
+                    val sensorSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                    val sensorWidth = sensorSize?.width ?: 6.0f
+                    val eqFocal = (focal * 36.0f) / sensorWidth
+
+                    val maxDigZoom = chars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 10.0f
+
+                    val zoomRange = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        chars.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)?.let {
+                            Pair(it.lower, it.upper)
                         }
-                    }
+                    } else null
+
+                    val capabilities = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+                    val isLogical = capabilities?.contains(
+                        CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA
+                    ) == true
+
+                    Log.i(TAG, "Discovered Back Camera ID $id: focal=${focal}mm, eqFocal=${eqFocal}mm, isLogical=$isLogical, zoomRange=$zoomRange")
+                    backLenses.add(
+                        DiscoveredLens(
+                            cameraId = id,
+                            focalLength = focal,
+                            eqFocalLength = eqFocal,
+                            zoomMultiplier = 1.0f,
+                            label = "1x",
+                            isTelephoto = false,
+                            maxDigitalZoom = maxDigZoom,
+                            zoomRatioRange = zoomRange
+                        )
+                    )
                 } catch (e: Exception) {
-                    Log.w(TAG, "Error inspecting camera $id for physical IDs: ${e.message}")
+                    Log.w(TAG, "Cannot read characteristics for camera $id: ${e.message}")
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error discovering cameras", e)
         }
 
-        val backLenses = mutableListOf<DiscoveredLens>()
-
-        for (id in allCameraIds) {
-            try {
-                val chars = cameraManager.getCameraCharacteristics(id)
-                val facing = chars.get(CameraCharacteristics.LENS_FACING)
-                if (facing != CameraCharacteristics.LENS_FACING_BACK) continue
-
-                val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
-                if (focalLengths == null || focalLengths.isEmpty()) continue
-                val focal = focalLengths[0]
-                if (focal <= 0f) continue // ignore ToF / depth sensors
-
-                val sensorSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
-                val sensorWidth = sensorSize?.width ?: 6.0f
-                val eqFocal = (focal * 36.0f) / sensorWidth
-
-                val maxDigZoom = chars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1.0f
-
-                val zoomRange = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    chars.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)?.let {
-                        Pair(it.lower, it.upper)
-                    }
-                } else null
-
-                // Skip SAT logical master if individual physical cameras are available
-                val capabilities = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-                val isLogical = capabilities?.contains(
-                    CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA
-                ) == true
-
-                if (isLogical && allCameraIds.size > 2) {
-                    Log.i(TAG, "Skipping logical multi-camera $id in favor of physical sensors")
-                    continue
-                }
-
-                Log.i(TAG, "Found Back Camera ID $id: focal=${focal}mm, eqFocal=${eqFocal}mm, isLogical=$isLogical")
-                backLenses.add(
-                    DiscoveredLens(
-                        cameraId = id,
-                        focalLength = focal,
-                        eqFocalLength = eqFocal,
-                        zoomMultiplier = 1.0f, // will calculate relative to main
-                        label = "",
-                        isTelephoto = false,
-                        maxDigitalZoom = maxDigZoom,
-                        zoomRatioRange = zoomRange
-                    )
-                )
-            } catch (e: Exception) {
-                Log.w(TAG, "Cannot read characteristics for camera $id: ${e.message}")
-            }
-        }
-
         if (backLenses.isEmpty()) {
-            // Absolute fallback
-            backLenses.add(
-                DiscoveredLens("0", 5.0f, 26.0f, 1.0f, "1x", false, 10.0f, null)
-            )
+            backLenses.add(DiscoveredLens("0", 5.0f, 26.0f, 1.0f, "1x", false, 10.0f, null))
         }
 
-        // Sort by 35mm equivalent focal length
-        backLenses.sortBy { it.eqFocalLength }
+        // Strictly prefer Camera "0" (Standard Logical Multi-Camera, rock-solid on Samsung S22)
+        val idZeroIdx = backLenses.indexOfFirst { it.cameraId == "0" }
+        discoveredLenses = backLenses
+        activeLensIndex = if (idZeroIdx >= 0) idZeroIdx else 0
 
-        // Find main 1x camera (typically 22-28mm eq focal length)
-        val mainEqFocal = backLenses.firstOrNull { it.eqFocalLength in 20.0f..35.0f }?.eqFocalLength
-            ?: backLenses[if (backLenses.size > 2) 1 else 0].eqFocalLength
-
-        discoveredLenses = backLenses.map { lens ->
-            val mult = lens.eqFocalLength / mainEqFocal
-            val isTele = mult >= 2.2f || lens.focalLength >= 12.0f
-            val label = when {
-                mult < 0.8f -> String.format(Locale.US, "%.1fx", mult)
-                abs(mult - 1.0f) < 0.25f -> "1x"
-                abs(mult - 4.3f) < 0.4f -> "4.3x"
-                abs(mult - 3.0f) < 0.3f -> "3x"
-                abs(mult - 5.0f) < 0.4f -> "5x"
-                else -> String.format(Locale.US, "%.1fx", mult)
-            }
-            lens.copy(zoomMultiplier = mult, label = label, isTelephoto = isTele)
-        }
-
-        Log.i(TAG, "=== FINAL DISCOVERED LENSES ===")
-        discoveredLenses.forEachIndexed { i, l ->
-            Log.i(TAG, "  [$i] ID=${l.cameraId} label=${l.label} mult=${l.zoomMultiplier}x " +
-                    "eqFocal=${l.eqFocalLength}mm tele=${l.isTelephoto}")
-        }
+        Log.i(TAG, "=== SELECTED CAMERA: ID=${discoveredLenses[activeLensIndex].cameraId} ===")
     }
 
     private fun setupPresetButtons() {
-        val l = discoveredLenses
-        when {
-            l.size >= 4 -> {
-                btnPreset1x.text = l[0].label
-                btnPreset2x.text = l[1].label
-                btnPreset3x.text = l[2].label
-                btnPreset5x.text = l[3].label
-            }
-            l.size == 3 -> {
-                btnPreset1x.text = l[0].label // 0.7x
-                btnPreset2x.text = l[1].label // 1x
-                btnPreset3x.text = l[2].label // 4.3x Telephoto
-                btnPreset5x.text = "10x"      // 10x Hybrid Telephoto
-            }
-            l.size == 2 -> {
-                btnPreset1x.text = l[0].label
-                btnPreset2x.text = l[1].label
-                btnPreset3x.text = "2x"
-                btnPreset5x.text = "10x"
-            }
-            else -> {
-                btnPreset1x.text = "1x"
-                btnPreset2x.text = "2x"
-                btnPreset3x.text = "4x"
-                btnPreset5x.text = "10x"
-            }
-        }
+        btnPreset1x.text = "1x"
+        btnPreset2x.text = "2x"
+        btnPreset3x.text = "3x"
+        btnPreset5x.text = "5x"
     }
 
     // =========================================================================
@@ -374,6 +330,7 @@ class CustomScannerActivity : AppCompatActivity() {
 
     private val surfaceTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
+            configureTransform(width, height)
             if (discoveredLenses.isNotEmpty()) {
                 openCamera(discoveredLenses[activeLensIndex].cameraId)
             }
@@ -447,9 +404,11 @@ class CustomScannerActivity : AppCompatActivity() {
 
             // Determine zoom limits for active camera
             val currentLens = discoveredLenses.getOrNull(activeLensIndex)
-            minZoomFactor = currentLens?.zoomRatioRange?.first ?: 1.0f
-            maxZoomFactor = currentLens?.zoomRatioRange?.second ?: currentLens?.maxDigitalZoom ?: 10.0f
-            currentZoomFactor = minZoomFactor
+            val lowerRange = currentLens?.zoomRatioRange?.first ?: 1.0f
+            val upperRange = currentLens?.zoomRatioRange?.second ?: currentLens?.maxDigitalZoom ?: 10.0f
+            minZoomFactor = lowerRange.coerceAtLeast(0.6f)
+            maxZoomFactor = upperRange.coerceAtMost(15.0f)
+            currentZoomFactor = 1.0f.coerceIn(minZoomFactor, maxZoomFactor)
 
             cameraManager.openCamera(cameraId, stateCallback, backgroundHandler)
 
@@ -714,33 +673,10 @@ class CustomScannerActivity : AppCompatActivity() {
     }
 
     private fun highlightPresetButtons() {
-        val l = discoveredLenses
-        when {
-            l.size >= 4 -> {
-                setChipSelected(btnPreset1x, activeLensIndex == 0)
-                setChipSelected(btnPreset2x, activeLensIndex == 1)
-                setChipSelected(btnPreset3x, activeLensIndex == 2)
-                setChipSelected(btnPreset5x, activeLensIndex == 3)
-            }
-            l.size == 3 -> {
-                setChipSelected(btnPreset1x, activeLensIndex == 0)
-                setChipSelected(btnPreset2x, activeLensIndex == 1)
-                setChipSelected(btnPreset3x, activeLensIndex == 2 && currentZoomFactor < 1.8f)
-                setChipSelected(btnPreset5x, activeLensIndex == 2 && currentZoomFactor >= 1.8f)
-            }
-            l.size == 2 -> {
-                setChipSelected(btnPreset1x, activeLensIndex == 0)
-                setChipSelected(btnPreset2x, activeLensIndex == 1 && currentZoomFactor < 1.8f)
-                setChipSelected(btnPreset3x, activeLensIndex == 1 && currentZoomFactor in 1.8f..3.5f)
-                setChipSelected(btnPreset5x, activeLensIndex == 1 && currentZoomFactor > 3.5f)
-            }
-            else -> {
-                setChipSelected(btnPreset1x, currentZoomFactor < 1.5f)
-                setChipSelected(btnPreset2x, currentZoomFactor in 1.5f..2.5f)
-                setChipSelected(btnPreset3x, currentZoomFactor in 2.5f..6.0f)
-                setChipSelected(btnPreset5x, currentZoomFactor > 6.0f)
-            }
-        }
+        setChipSelected(btnPreset1x, abs(currentZoomFactor - 1.0f) < 0.4f)
+        setChipSelected(btnPreset2x, abs(currentZoomFactor - 2.0f) < 0.4f)
+        setChipSelected(btnPreset3x, abs(currentZoomFactor - 3.0f) < 0.6f)
+        setChipSelected(btnPreset5x, currentZoomFactor >= 4.5f)
     }
 
     private fun setChipSelected(tv: TextView, on: Boolean) {
@@ -773,9 +709,9 @@ class CustomScannerActivity : AppCompatActivity() {
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
-                // Cycle through available lenses
-                val nextIndex = (activeLensIndex + 1) % discoveredLenses.size
-                switchCamera(nextIndex)
+                // Smoothly toggle between 1x and 3x zoom
+                val nextZoom = if (currentZoomFactor < 2.5f) 3.0f else 1.0f
+                applyZoom(nextZoom)
                 return true
             }
         })
@@ -813,67 +749,35 @@ class CustomScannerActivity : AppCompatActivity() {
     }
 
     private fun onPresetClicked(buttonIdx: Int) {
-        val l = discoveredLenses
-        when {
-            l.size >= 4 -> {
-                if (buttonIdx < l.size) switchCamera(buttonIdx)
-            }
-            l.size == 3 -> when (buttonIdx) {
-                0 -> switchCamera(0) // Ultrawide
-                1 -> switchCamera(1) // Main 1x
-                2 -> {
-                    // Telephoto 4.3x (optical)
-                    if (activeLensIndex != 2) switchCamera(2)
-                    applyZoom(1.0f)
-                }
-                3 -> {
-                    // 10x Hybrid Telephoto (4.3x optical * 2.3x digital)
-                    if (activeLensIndex != 2) switchCamera(2)
-                    applyZoom(2.32f)
-                }
-            }
-            l.size == 2 -> when (buttonIdx) {
-                0 -> switchCamera(0)
-                1 -> {
-                    if (activeLensIndex != 1) switchCamera(1)
-                    applyZoom(1.0f)
-                }
-                2 -> {
-                    if (activeLensIndex != 1) switchCamera(1)
-                    applyZoom(2.0f)
-                }
-                3 -> {
-                    if (activeLensIndex != 1) switchCamera(1)
-                    applyZoom(5.0f)
-                }
-            }
-            else -> when (buttonIdx) {
-                0 -> applyZoom(1.0f)
-                1 -> applyZoom(2.0f)
-                2 -> applyZoom(4.0f)
-                3 -> applyZoom(10.0f)
-            }
+        val targetZoom = when (buttonIdx) {
+            0 -> 1.0f
+            1 -> 2.0f
+            2 -> 3.0f
+            3 -> 5.0f
+            else -> 1.0f
         }
+        applyZoom(targetZoom)
     }
 
     // =========================================================================
     // MATRIX TRANSFORM & SIZING
     // =========================================================================
 
-    private fun chooseOptimalSize(choices: Array<Size>, textureViewWidth: Int, textureViewHeight: Int): Size {
+    private fun chooseOptimalSize(choices: Array<Size>?, preferredWidth: Int, preferredHeight: Int): Size {
+        if (choices.isNullOrEmpty()) return Size(1920, 1080)
         val targetRatio = 16.0 / 9.0
+        val targetPixels = preferredWidth * preferredHeight
+
         val matched = choices.filter {
             val ratio = it.width.toDouble() / it.height.toDouble()
-            abs(ratio - targetRatio) < 0.1 || abs((1.0 / ratio) - targetRatio) < 0.1
+            abs(ratio - targetRatio) < 0.15 || abs((1.0 / ratio) - targetRatio) < 0.15
         }
-
-        return matched.firstOrNull { it.width >= 1920 || it.height >= 1920 }
-            ?: matched.firstOrNull { it.width >= 1280 || it.height >= 1280 }
-            ?: choices.firstOrNull { it.width >= 1920 }
-            ?: choices[0]
+        val pool = if (matched.isNotEmpty()) matched else choices.toList()
+        return pool.minByOrNull { abs(it.width * it.height - targetPixels) } ?: pool[0]
     }
 
     private fun configureTransform(viewWidth: Int, viewHeight: Int) {
+        if (viewWidth <= 0 || viewHeight <= 0) return
         val matrix = Matrix()
         val viewRect = RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
         val bufferRect = RectF(0f, 0f, previewSize.height.toFloat(), previewSize.width.toFloat())

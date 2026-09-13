@@ -57,6 +57,19 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         Log.d(TAG, "Received Cloud Push from: ${remoteMessage.from}")
 
+        val mode = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getNotificationMode(applicationContext)
+        if (mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED ||
+            mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_LOCAL_ONLY
+        ) {
+            Log.d(TAG, "Cloud push ignored due to notification mode=$mode")
+            return
+        }
+
+        if (!com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isNotificationsEnabled(applicationContext)) {
+            Log.d(TAG, "Cloud push ignored because notifications are disabled in settings")
+            return
+        }
+
         // 1. Extract title and body from either Notification payload or Data payload
         val title = remoteMessage.notification?.title
             ?: remoteMessage.data["title"]
@@ -77,6 +90,8 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun showCloudNotification(title: String, body: String, data: Map<String, String>) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val isVibrationOn = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isVibrationEnabled(this)
+        val isSoundOn = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isSoundEnabled(this)
 
         // Create high-priority notification channel for Android O+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -87,15 +102,21 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Важные уведомления о расписании, оценках и безопасности"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 400, 200, 400)
-                setSound(
-                    soundUri,
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
+                enableVibration(isVibrationOn)
+                if (isVibrationOn) {
+                    vibrationPattern = longArrayOf(0, 400, 200, 400)
+                }
+                if (isSoundOn) {
+                    setSound(
+                        soundUri,
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                } else {
+                    setSound(null, null)
+                }
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
                 setShowBadge(true)
             }
@@ -125,7 +146,16 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
+
+        if (isVibrationOn) {
+            notificationBuilder.setVibrate(longArrayOf(0, 400, 200, 400))
+        } else {
+            notificationBuilder.setVibrate(longArrayOf(0))
+        }
+
+        if (!isSoundOn) {
+            notificationBuilder.setSilent(true)
+        }
 
         try {
             NotificationManagerCompat.from(this).notify(pendingIntentId, notificationBuilder.build())

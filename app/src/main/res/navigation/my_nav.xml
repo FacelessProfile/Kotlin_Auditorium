@@ -154,4 +154,22 @@
         android:name="com.example.kotlinroomdatabase.fragments.analytics.AnalyticsFragment"
         android:label="Аналитика"
         tools:layout="@layout/fragment_analytics" />
+
+    <fragment
+        android:id="@+id/devTasksFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.dev.DevTasksFragment"
+        android:label="Задачи"
+        tools:layout="@layout/fragment_dev_tasks" />
+
+    <fragment
+        android:id="@+id/devBugsFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.dev.DevBugsFragment"
+        android:label="Баги"
+        tools:layout="@layout/fragment_dev_bugs" />
+
+    <fragment
+        android:id="@+id/devSprintFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.dev.DevSprintFragment"
+        android:label="Спринт"
+        tools:layout="@layout/fragment_dev_sprint" />
 </navigation>

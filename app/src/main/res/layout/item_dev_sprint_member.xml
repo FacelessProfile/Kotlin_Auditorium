@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="5dp"
+    app:cardBackgroundColor="@color/sib_card_surface"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="1dp"
+    app:strokeColor="@color/sib_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <!-- Top Member Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivMemberAvatar"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_avatar_circle"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Circle"
+                tools:src="@drawable/ic_person" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvMemberName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/sib_text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    tools:text="Шаламов В. А." />
+
+                <TextView
+                    android:id="@+id/tvMemberLogin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/sib_text_secondary"
+                    android:textSize="12sp"
+                    tools:text="@TechnoPonk" />
+            </LinearLayout>
+
+            <!-- Total Completed Badge -->
+            <TextView
+                android:id="@+id/tvTotalCompleted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_priority_medium"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/sib_blue_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="8 закрыто" />
+        </LinearLayout>
+
+        <!-- Stats row: Tasks vs Bugs -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <!-- Tasks Done -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_sprint_task_chip"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_task_check"
+                    app:tint="#16A34A" />
+
+                <TextView
+                    android:id="@+id/tvTasksDoneCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="#16A34A"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:text="5 задач" />
+            </LinearLayout>
+
+            <!-- Bugs Closed -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_sprint_bug_chip"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_bug"
+                    app:tint="#D97706" />
+
+                <TextView
+                    android:id="@+id/tvBugsDoneCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="#D97706"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:text="3 бага" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- List of item titles completed -->
+        <TextView
+            android:id="@+id/tvCompletedItemsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="@color/sib_text_secondary"
+            android:textSize="12sp"
+            tools:text="• Сканер обновлений\n• Push-уведомления трекера\n• Исправление отображения окон в расписании" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

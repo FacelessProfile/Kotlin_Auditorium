@@ -146,8 +146,24 @@ interface IStudentRepository {
     suspend fun getActiveStudentLesson(): GenericResult<com.example.kotlinroomdatabase.model.ActiveStudentLessonInfo>
     suspend fun getTeacherActiveSession(): GenericResult<com.example.kotlinroomdatabase.model.ActiveSessionInfo>
     suspend fun getAttendanceSessionRoster(lessonId: Int): GenericResult<com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult>
-    suspend fun switchRole(role: String): GenericResult<com.example.kotlinroomdatabase.model.SwitchRoleResult>
     suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile>
+    suspend fun getStudentSubgroups(semesterId: Int? = null): GenericResult<List<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>>
+    suspend fun changeStudentSubgroup(subgroupId: Int, reason: String? = null): GenericResult<Boolean>
+    suspend fun switchRole(role: String): GenericResult<com.example.kotlinroomdatabase.model.SwitchRoleResult>
     suspend fun refreshSessionToken(): Boolean
     suspend fun testConnection(): Boolean
+
+    // Developer Workspace methods
+    suspend fun getDevSprints(): GenericResult<List<com.example.kotlinroomdatabase.model.DevSprint>>
+    suspend fun getActiveDevSprint(): GenericResult<com.example.kotlinroomdatabase.model.DevSprint>
+    suspend fun closeDevSprint(): GenericResult<com.example.kotlinroomdatabase.model.DevSprint>
+    suspend fun getDevTasks(sprintId: Int? = null, itemType: String? = null, status: String? = null, assigneeId: Int? = null): GenericResult<List<com.example.kotlinroomdatabase.model.DevTask>>
+    suspend fun createDevTask(itemType: String, title: String, description: String, priority: String, assigneeId: Int?, sprintId: Int?): GenericResult<com.example.kotlinroomdatabase.model.DevTask>
+    suspend fun updateDevTaskStatus(taskId: Int, status: String): GenericResult<com.example.kotlinroomdatabase.model.DevTask>
+    suspend fun updateDevTaskAssignee(taskId: Int, assigneeId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevTask>
+    suspend fun getDevTaskDetails(taskId: Int): GenericResult<Pair<com.example.kotlinroomdatabase.model.DevTask, List<com.example.kotlinroomdatabase.model.DevComment>>>
+    suspend fun addDevComment(taskId: Int, content: String): GenericResult<com.example.kotlinroomdatabase.model.DevComment>
+    suspend fun toggleDevTaskFollow(taskId: Int, isFollowing: Boolean): GenericResult<Boolean>
+    suspend fun getDevSprintReport(sprintId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevSprintReport>
+    suspend fun getDevTeam(): GenericResult<List<com.example.kotlinroomdatabase.model.DevTeamMember>>
 }

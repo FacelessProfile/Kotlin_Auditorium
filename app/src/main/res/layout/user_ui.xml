@@ -261,12 +261,14 @@
                             android:padding="14dp">
 
                             <ImageView
+                                android:id="@+id/qrStatusIcon"
                                 android:layout_width="32dp"
                                 android:layout_height="32dp"
                                 android:src="@drawable/ic_qr_code"
                                 app:tint="@color/sib_blue_primary" />
 
                             <TextView
+                                android:id="@+id/qrTitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
@@ -276,9 +278,12 @@
                                 android:textStyle="bold" />
 
                             <TextView
+                                android:id="@+id/qrStatusText"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
                                 android:text="Сканировать QR"
                                 android:textColor="?attr/sib_text_secondary"
                                 android:textSize="12sp" />

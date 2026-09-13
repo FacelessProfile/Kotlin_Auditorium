@@ -68,6 +68,16 @@ object LocalNotificationHelper {
         message: String,
         totpCode: String? = null
     ) {
+        val mode = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getNotificationMode(context)
+        if (mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED ||
+            mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_FCM_ONLY
+        ) {
+            return
+        }
+        if (!com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isNotificationsEnabled(context)) {
+            return
+        }
+
         createNotificationChannel(context)
 
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -84,6 +94,9 @@ object LocalNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val isVibrationOn = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isVibrationEnabled(context)
+        val isSoundOn = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isSoundEnabled(context)
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
@@ -93,6 +106,16 @@ object LocalNotificationHelper {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+
+        if (isVibrationOn) {
+            builder.setVibrate(longArrayOf(0, 300, 200, 300))
+        } else {
+            builder.setVibrate(longArrayOf(0))
+        }
+
+        if (!isSoundOn) {
+            builder.setSilent(true)
+        }
 
         val notificationManager: NotificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
