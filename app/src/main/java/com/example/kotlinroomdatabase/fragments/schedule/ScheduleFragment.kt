@@ -149,7 +149,8 @@ class ScheduleFragment : Fragment() {
                         // Update week parity if returned
                         val weekParity = if (schedule.week_type % 2 == 1) "1 неделя (Нечётная)" else "2 неделя (Чётная)"
                         val weekdayRu = getRussianWeekday(currentCalendar.get(Calendar.DAY_OF_WEEK))
-                        tvSelectedWeekday.text = "$weekdayRu • $weekParity"
+                        val offlineHint = if (!isNetworkAvailable(requireContext())) " • 📴 Офлайн" else ""
+                        tvSelectedWeekday.text = "$weekdayRu • $weekParity$offlineHint"
                     }
                     is GenericResult.Error -> {
                         layoutEmptySchedule.visibility = View.VISIBLE
@@ -164,6 +165,13 @@ class ScheduleFragment : Fragment() {
                 Toast.makeText(requireContext(), "Ошибка соединения", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return false
+        val activeNetwork = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(activeNetwork) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private fun updateDateHeader() {

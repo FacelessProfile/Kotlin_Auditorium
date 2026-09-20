@@ -7,6 +7,9 @@ import java.net.UnknownHostException
 object ApiErrorMapper {
 
     fun mapError(throwable: Throwable?, fallbackMessage: String = "Произошла ошибка при обращении к серверу"): String {
+        if (throwable != null) {
+            AppErrorLogger.logError("NETWORK_ERROR", throwable.message ?: "Unknown network error", throwable)
+        }
         return when (throwable) {
             is UnknownHostException, is ConnectException -> "Нет подключения к серверу. Проверьте интернет-соединение"
             is SocketTimeoutException -> "Сервер не ответил вовремя. Попробуйте повторить запрос"
@@ -19,6 +22,9 @@ object ApiErrorMapper {
     }
 
     fun mapHttpStatus(statusCode: Int, rawError: String? = null): String {
+        if (statusCode >= 400) {
+            AppErrorLogger.logError("HTTP_ERROR", "Server responded with HTTP $statusCode: $rawError")
+        }
         val serverMsg = rawError?.takeIf { it.isNotBlank() }
         return when (statusCode) {
             400 -> serverMsg ?: "Некорректный запрос"

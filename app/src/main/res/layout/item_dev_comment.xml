@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:paddingHorizontal="16dp"
-    android:paddingVertical="8dp">
+    android:paddingVertical="6dp">
 
     <!-- Comment Author Avatar -->
     <com.google.android.material.imageview.ShapeableImageView
@@ -18,8 +18,9 @@
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Circle"
         tools:src="@drawable/ic_person" />
 
-    <!-- Comment Body -->
+    <!-- Comment Body Bubble -->
     <LinearLayout
+        android:id="@+id/layoutCommentBubble"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
@@ -36,25 +37,28 @@
 
             <TextView
                 android:id="@+id/tvCommentAuthor"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:textColor="@color/sib_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                tools:text="TechnoPonk" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                tools:text="Шаламов Никита Вячеславович" />
 
             <TextView
-                android:id="@+id/tvCommentTime"
+                android:id="@+id/tvCommentRoleBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/sib_text_muted"
-                android:textSize="11sp"
-                tools:text="14:32" />
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_role_pill"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/sib_blue_primary"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                tools:text="Разработчик" />
         </LinearLayout>
 
         <TextView
@@ -66,6 +70,33 @@
             android:textColor="@color/sib_text_primary"
             android:textSize="13sp"
             tools:text="Проверил на Samsung S22, камера теперь запускается без подвисаний." />
+
+        <!-- Comment Attachments -->
+        <HorizontalScrollView
+            android:id="@+id/scrollCommentAttachments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/layoutCommentAttachments"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- Time under comment content -->
+        <TextView
+            android:id="@+id/tvCommentTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/sib_text_muted"
+            android:textSize="11sp"
+            tools:text="14:32" />
 
     </LinearLayout>
 </LinearLayout>

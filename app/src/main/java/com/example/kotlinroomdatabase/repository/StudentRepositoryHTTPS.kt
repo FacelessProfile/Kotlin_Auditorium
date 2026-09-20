@@ -1787,13 +1787,74 @@ class StudentRepositoryHTTPS(
                 lessons = lessonsList
             )
 
+            // Cache locally in Room for offline access
+            try {
+                studentDao.insertCachedSchedule(
+                    com.example.kotlinroomdatabase.data.CachedDayScheduleEntity(
+                        date = scheduleResult.date,
+                        weekday = scheduleResult.weekday,
+                        dayIdx = scheduleResult.day_idx,
+                        weekType = scheduleResult.week_type,
+                        teacherId = scheduleResult.teacher_id,
+                        lessonsJson = lessonsArray.toString()
+                    )
+                )
+            } catch (ce: Exception) {
+                Log.w("HTTP_REPO", "Failed to cache schedule in Room", ce)
+            }
+
             // Schedule background lesson reminder alarms for this day
             com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.scheduleAlarmsForDay(context, scheduleResult)
 
             GenericResult.Success(scheduleResult)
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "getScheduleForDay error", e)
+            // Fallback: check Room database for cached schedule if offline
+            val cachedResult = getCachedDaySchedule(date)
+            if (cachedResult != null) {
+                return@withContext GenericResult.Success(cachedResult)
+            }
             GenericResult.Error("Network error: ${e.localizedMessage}")
+        }
+    }
+
+    private suspend fun getCachedDaySchedule(date: String): com.example.kotlinroomdatabase.model.DayScheduleResult? {
+        return try {
+            val cached = studentDao.getCachedSchedule(date) ?: return null
+            val lessonsArr = org.json.JSONArray(cached.lessonsJson)
+            val cachedLessons = mutableListOf<com.example.kotlinroomdatabase.model.LessonScheduleItem>()
+            for (i in 0 until lessonsArr.length()) {
+                val item = lessonsArr.getJSONObject(i)
+                cachedLessons.add(
+                    com.example.kotlinroomdatabase.model.LessonScheduleItem(
+                        lesson_num = item.optInt("lesson_num", i + 1),
+                        start_time = item.optString("start_time", ""),
+                        end_time = item.optString("end_time", ""),
+                        subject_id = item.optInt("subject_id", 0),
+                        subject_name = item.optString("subject_name", ""),
+                        teacher_name = if (item.has("teacher_name")) item.optString("teacher_name") else null,
+                        group_name = if (item.has("group_name")) item.optString("group_name") else null,
+                        group_id = if (item.has("group_id")) item.optInt("group_id") else null,
+                        lesson_type = item.optString("lesson_type", "Практика"),
+                        room_info = item.optString("room_info", ""),
+                        subgroup = item.optString("subgroup", ""),
+                        subgroup_id = if (item.has("subgroup_id") && !item.isNull("subgroup_id")) item.optInt("subgroup_id") else null,
+                        is_other_subgroup = item.optBoolean("is_other_subgroup", false),
+                        is_current_subgroup = item.optBoolean("is_current_subgroup", true)
+                    )
+                )
+            }
+            com.example.kotlinroomdatabase.model.DayScheduleResult(
+                date = cached.date,
+                weekday = cached.weekday,
+                day_idx = cached.dayIdx,
+                week_type = cached.weekType,
+                teacher_id = cached.teacherId,
+                lessons = cachedLessons
+            )
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "Failed to read cached schedule from Room", e)
+            null
         }
     }
 
@@ -2981,5 +3042,264 @@ class StudentRepositoryHTTPS(
             Log.e("DEV_REPO", "getDevTeam error", e)
             GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
         }
+    }
+
+    // Feedback implementations
+    override suspend fun uploadFeedbackAttachment(file: java.io.File): GenericResult<String> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+            if (!file.exists()) return@withContext GenericResult.Error("Файл не найден")
+
+            val mimeType = when (file.extension.lowercase()) {
+                "log", "txt" -> "text/plain; charset=utf-8"
+                "png" -> "image/png"
+                "webp" -> "image/webp"
+                else -> "image/jpeg"
+            }
+            val body = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", file.name, file.asRequestBody(mimeType.toMediaType()))
+                .build()
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/feedback/upload")
+                .post(body)
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseStr)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.optJSONObject("result")
+                    val fileUrl = resultObj?.optString("url") ?: ""
+                    if (fileUrl.isNotBlank()) {
+                        return@withContext GenericResult.Success(fileUrl)
+                    }
+                }
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseStr))
+            }
+        } catch (e: Exception) {
+            Log.e("FEEDBACK_REPO", "uploadFeedbackAttachment error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun createFeedbackTicket(
+        title: String,
+        description: String,
+        category: String,
+        priority: String,
+        attachments: List<String>
+    ): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicket> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("title", title)
+                put("description", description)
+                put("category", category)
+                put("priority", priority)
+                val arr = JSONArray()
+                attachments.forEach { arr.put(it) }
+                put("attachments", arr)
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/feedback/tickets")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseStr)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.optJSONObject("result") ?: JSONObject()
+                    GenericResult.Success(parseFeedbackTicket(resultObj))
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseStr))
+            }
+        } catch (e: Exception) {
+            Log.e("FEEDBACK_REPO", "createFeedbackTicket error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getMyFeedbackTickets(): GenericResult<List<com.example.kotlinroomdatabase.model.FeedbackTicket>> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/feedback/my-tickets")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseStr)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.optJSONObject("result")
+                    val itemsArr = resultObj?.optJSONArray("items") ?: JSONArray()
+                    val list = mutableListOf<com.example.kotlinroomdatabase.model.FeedbackTicket>()
+                    for (i in 0 until itemsArr.length()) {
+                        val itemObj = itemsArr.optJSONObject(i)
+                        if (itemObj != null) {
+                            list.add(parseFeedbackTicket(itemObj))
+                        }
+                    }
+                    GenericResult.Success(list)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseStr))
+            }
+        } catch (e: Exception) {
+            Log.e("FEEDBACK_REPO", "getMyFeedbackTickets error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun getFeedbackTicketDetails(ticketId: Int): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicketDetails> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/feedback/tickets/$ticketId")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseStr)
+                if (json.optBoolean("ok")) {
+                    val resultObj = json.optJSONObject("result") ?: JSONObject()
+                    val ticketObj = resultObj.optJSONObject("ticket") ?: JSONObject()
+                    val commentsArr = resultObj.optJSONArray("comments") ?: JSONArray()
+
+                    val ticket = parseFeedbackTicket(ticketObj)
+                    val comments = mutableListOf<com.example.kotlinroomdatabase.model.FeedbackComment>()
+                    for (i in 0 until commentsArr.length()) {
+                        val commentObj = commentsArr.optJSONObject(i)
+                        if (commentObj != null) {
+                            comments.add(parseFeedbackComment(commentObj))
+                        }
+                    }
+                    GenericResult.Success(com.example.kotlinroomdatabase.model.FeedbackTicketDetails(ticket, comments))
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseStr))
+            }
+        } catch (e: Exception) {
+            Log.e("FEEDBACK_REPO", "getFeedbackTicketDetails error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    override suspend fun replyFeedbackTicket(ticketId: Int, content: String, attachments: List<String>): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val token = sharedPrefs.getString("auth_token", "") ?: ""
+            if (token.isEmpty()) return@withContext GenericResult.Error("Пользователь не авторизован")
+
+            val jsonBody = JSONObject().apply {
+                put("content", content)
+                if (attachments.isNotEmpty()) {
+                    val attArray = org.json.JSONArray()
+                    for (att in attachments) {
+                        attArray.put(att)
+                    }
+                    put("attachments", attArray)
+                }
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/feedback/tickets/$ticketId/reply")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseStr)
+                if (json.optBoolean("ok")) {
+                    GenericResult.Success(true)
+                } else {
+                    GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapErrorMessage(json.optString("error")))
+                }
+            } else {
+                GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code, responseStr))
+            }
+        } catch (e: Exception) {
+            Log.e("FEEDBACK_REPO", "replyFeedbackTicket error", e)
+            com.example.kotlinroomdatabase.util.AppErrorLogger.logError(context, "FEEDBACK_REPO", "replyFeedbackTicket error", e)
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(e))
+        }
+    }
+
+    private fun parseFeedbackTicket(obj: JSONObject): com.example.kotlinroomdatabase.model.FeedbackTicket {
+        val atts = mutableListOf<String>()
+        val attArray = obj.optJSONArray("attachments")
+        if (attArray != null) {
+            for (i in 0 until attArray.length()) {
+                atts.add(attArray.optString(i))
+            }
+        }
+        return com.example.kotlinroomdatabase.model.FeedbackTicket(
+            ticketId = obj.optInt("ticket_id"),
+            title = obj.optString("title"),
+            description = obj.optString("description"),
+            category = obj.optString("category", "bug"),
+            priority = obj.optString("priority", "medium"),
+            status = obj.optString("status", "open"),
+            attachments = atts,
+            createdAt = obj.optString("created_at"),
+            updatedAt = obj.optString("updated_at")
+        )
+    }
+
+    private fun parseFeedbackComment(obj: JSONObject): com.example.kotlinroomdatabase.model.FeedbackComment {
+        val atts = mutableListOf<String>()
+        val attArray = obj.optJSONArray("attachments")
+        if (attArray != null) {
+            for (i in 0 until attArray.length()) {
+                atts.add(attArray.optString(i))
+            }
+        }
+        return com.example.kotlinroomdatabase.model.FeedbackComment(
+            commentId = obj.optInt("comment_id"),
+            ticketId = obj.optInt("ticket_id"),
+            authorId = obj.optInt("author_id"),
+            authorName = obj.optString("author_name"),
+            authorRole = obj.optString("author_role"),
+            authorAvatar = obj.optString("author_avatar").takeIf { it.isNotBlank() && it != "null" },
+            content = obj.optString("content"),
+            isInternal = obj.optBoolean("is_internal", false),
+            attachments = atts,
+            createdAt = obj.optString("created_at")
+        )
     }
 }

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bottom_sheet_bg">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/circle_shape"
+        android:backgroundTint="?attr/sib_border_subtle" />
+
+    <!-- Scrollable content area: header, details, ticket attachments, comments -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollFeedbackDetails"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:paddingHorizontal="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Category / Ticket ID / Status badges -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvDetailCategoryBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_role_pill"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    tools:text="Ошибка / Баг" />
+
+                <TextView
+                    android:id="@+id/tvDetailTicketId"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:textColor="?attr/sib_text_secondary"
+                    android:textSize="12sp"
+                    tools:text="#14" />
+
+                <TextView
+                    android:id="@+id/tvDetailStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_done_count_badge"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    tools:text="Открыт" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvDetailTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="?attr/sib_text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                tools:text="Не отображаются оценки" />
+
+            <TextView
+                android:id="@+id/tvDetailDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="?attr/sib_text_muted"
+                android:textSize="11sp"
+                tools:text="Отправлено: 20.09.2026 14:30" />
+
+            <TextView
+                android:id="@+id/tvDetailDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:lineSpacingExtra="3dp"
+                android:textColor="?attr/sib_text_primary"
+                android:textSize="14sp"
+                tools:text="Подробное описание проблемы..." />
+
+            <!-- Attachments section -->
+            <TextView
+                android:id="@+id/tvAttachmentsHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Прикреплённые фото"
+                android:textColor="?attr/sib_text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <HorizontalScrollView
+                android:id="@+id/scrollAttachments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:id="@+id/layoutAttachmentsContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="?attr/sib_border_subtle" />
+
+            <!-- Comments / Responses -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ответы разработчиков"
+                android:textColor="?attr/sib_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvNoCommentsHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Пока нет ответов от команды разработки. Как только разработчик ответит, сообщение появится здесь."
+                android:textColor="?attr/sib_text_secondary"
+                android:textSize="12sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvTicketComments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
+            <!-- Extra padding at bottom so scroll doesn't hide behind footer -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="12dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Pinned bottom section: Reply preview + Reply Input bar -->
+    <LinearLayout
+        android:id="@+id/layoutPinnedReplySection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="12dp"
+        android:background="@drawable/bottom_sheet_bg">
+
+        <!-- Reply Attachments Preview -->
+        <HorizontalScrollView
+            android:id="@+id/scrollReplyAttachments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/layoutReplyAttachmentsPreview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- Reply Input -->
+        <LinearLayout
+            android:id="@+id/layoutReplySection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnAttachReplyPhoto"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/circle_shape"
+                android:backgroundTint="@color/sib_block_bg"
+                android:contentDescription="Прикрепить фото"
+                android:src="@drawable/ic_camera"
+                app:tint="?attr/sib_text_secondary" />
+
+            <EditText
+                android:id="@+id/etReplyMessage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_spinner_field"
+                android:hint="Написать ответ..."
+                android:maxLines="4"
+                android:padding="10dp"
+                android:textColor="?attr/sib_text_primary"
+                android:textColorHint="?attr/sib_text_muted"
+                android:textSize="13sp" />
+
+            <ImageButton
+                android:id="@+id/btnSendReply"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/circle_shape"
+                android:backgroundTint="@color/sib_blue_primary"
+                android:contentDescription="Отправить"
+                android:src="@drawable/ic_send"
+                app:tint="#FFFFFF" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

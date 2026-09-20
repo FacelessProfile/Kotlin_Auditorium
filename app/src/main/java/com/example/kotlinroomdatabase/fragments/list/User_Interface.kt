@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
 import android.nfc.NfcAdapter
 import android.nfc.cardemulation.CardEmulation
@@ -691,28 +692,25 @@ class User_Interface : Fragment() {
 
     private fun handleLocationPermissionDenied() {
         if (!isAdded) return
-        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Требуется доступ к геолокации")
-                .setMessage("Для подтверждения присутствия в учебной аудитории СибГУТИ требуется разрешение на определение местоположения.")
-                .setPositiveButton("Повторить запрос") { _, _ ->
+        val canShowRationale = shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Требуется доступ к геолокации")
+            .setMessage("Для подтверждения присутствия в учебной аудитории СибГУТИ требуется постоянное разрешение на определение точного местоположения.")
+            .setCancelable(false)
+            .setPositiveButton(if (canShowRationale) "Повторить запрос" else "Настройки") { _, _ ->
+                if (canShowRationale) {
                     locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
-        } else {
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Геолокация отключена")
-                .setMessage("Разрешение на геолокацию отключено. Для подтверждения отметки на занятиях включите доступ к геолокации в настройках приложения.")
-                .setPositiveButton("Настройки") { _, _ ->
-                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = android.net.Uri.fromParts("package", requireContext().packageName, null)
+                } else {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", requireContext().packageName, null)
                     }
                     startActivity(intent)
                 }
-                .setNegativeButton("Отмена", null)
-                .show()
-        }
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                pendingAttendance = null
+            }
+            .show()
     }
 
     private val barcodeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -830,23 +828,38 @@ class User_Interface : Fragment() {
     ) {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             pendingAttendance = PendingAttendanceParams(lessonId, inviteToken, totpCode, ts, nonce)
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            } else {
+                handleLocationPermissionDenied()
+            }
             return
         }
 
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                val lat = location?.latitude ?: 0.0
-                val lon = location?.longitude ?: 0.0
-                val deviceId = Settings.Secure.getString(requireContext().contentResolver, Settings.Secure.ANDROID_ID)
-                val payloadToSign = "attendance:$lessonId:${nonce ?: ""}:${ts ?: 0}:$deviceId:$lat:$lon"
+        val locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val isGpsEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
+                           locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+        if (!isGpsEnabled) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Службы геолокации отключены")
+                .setMessage("Включите службы геолокации (GPS) на устройстве для подтверждения отметки на занятии.")
+                .setPositiveButton("Включить") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+            return
+        }
 
-                biometricHelper.authenticateAndSign(
-                    payloadToSign = payloadToSign,
-                    title = "Подтверждение присутствия",
-                    subtitle = "Приложите палец для подтверждения отметки на занятии",
-                    onSuccess = { biometricSig ->
+        val proceedWithLocation = { lat: Double, lon: Double ->
+            val deviceId = Settings.Secure.getString(requireContext().contentResolver, Settings.Secure.ANDROID_ID)
+            val payloadToSign = "attendance:$lessonId:${nonce ?: ""}:${ts ?: 0}:$deviceId:$lat:$lon"
+
+            biometricHelper.authenticateAndSign(
+                payloadToSign = payloadToSign,
+                title = "Подтверждение присутствия",
+                subtitle = "Приложите палец для подтверждения отметки на занятии",
+                onSuccess = { biometricSig ->
                         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                             val result = repository.markAttendanceViaQr(
                                 lessonId,
@@ -896,7 +909,29 @@ class User_Interface : Fragment() {
                     }
                 )
             }
-        } catch (_: SecurityException) {
+
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
+                    proceedWithLocation(location.latitude, location.longitude)
+                } else {
+                    fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
+                        .addOnSuccessListener { curLoc ->
+                            if (curLoc != null && (curLoc.latitude != 0.0 || curLoc.longitude != 0.0)) {
+                                proceedWithLocation(curLoc.latitude, curLoc.longitude)
+                            } else {
+                                Toast.makeText(requireContext(), "Не удалось определить координаты GPS. Попробуйте снова.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(requireContext(), "Не удалось определить координаты GPS: ${it.message}", Toast.LENGTH_LONG).show()
+                        }
+                }
+            }.addOnFailureListener {
+                Toast.makeText(requireContext(), "Ошибка геопозиции: ${it.message}", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: SecurityException) {
             Toast.makeText(requireContext(), "Нет разрешения на геолокацию", Toast.LENGTH_SHORT).show()
         }
     }

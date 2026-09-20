@@ -524,4 +524,11 @@ class StudentRepository(
     override suspend fun toggleDevTaskFollow(taskId: Int, isFollowing: Boolean): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getDevSprintReport(sprintId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevSprintReport> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getDevTeam(): GenericResult<List<com.example.kotlinroomdatabase.model.DevTeamMember>> = GenericResult.Error("Not supported in ZMQ")
+
+    // Feedback stubs
+    override suspend fun uploadFeedbackAttachment(file: java.io.File): GenericResult<String> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun createFeedbackTicket(title: String, description: String, category: String, priority: String, attachments: List<String>): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicket> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getMyFeedbackTickets(): GenericResult<List<com.example.kotlinroomdatabase.model.FeedbackTicket>> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getFeedbackTicketDetails(ticketId: Int): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicketDetails> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun replyFeedbackTicket(ticketId: Int, content: String, attachments: List<String>): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
 }

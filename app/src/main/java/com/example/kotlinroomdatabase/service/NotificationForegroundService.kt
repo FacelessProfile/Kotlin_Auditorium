@@ -122,7 +122,7 @@ class NotificationForegroundService : Service() {
                 } catch (e: Exception) {
                     Log.e("BgService", "Polling error: ${e.message}")
                 }
-                delay(8000) // check every 8 seconds
+                delay(15 * 60 * 1000L) // check every 15 minutes only in local fallback mode
             }
         }
     }

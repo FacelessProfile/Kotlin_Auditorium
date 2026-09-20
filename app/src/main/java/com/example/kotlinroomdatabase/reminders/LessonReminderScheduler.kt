@@ -30,7 +30,7 @@ object LessonReminderScheduler {
 
     fun isNotificationsEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val mode = prefs.getString(KEY_NOTIFICATION_MODE, MODE_FCM_AND_LOCAL) ?: MODE_FCM_AND_LOCAL
+        val mode = prefs.getString(KEY_NOTIFICATION_MODE, MODE_FCM_ONLY) ?: MODE_FCM_ONLY
         return mode != MODE_DISABLED && prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
     }
 
@@ -44,7 +44,7 @@ object LessonReminderScheduler {
 
     fun getNotificationMode(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_NOTIFICATION_MODE, MODE_FCM_AND_LOCAL) ?: MODE_FCM_AND_LOCAL
+        return prefs.getString(KEY_NOTIFICATION_MODE, MODE_FCM_ONLY) ?: MODE_FCM_ONLY
     }
 
     fun setNotificationMode(context: Context, mode: String) {

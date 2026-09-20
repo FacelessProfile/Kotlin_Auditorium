@@ -102,6 +102,10 @@ class ProfileFragment : Fragment() {
             }
         }
 
+        binding.rowFeedback.setOnClickListener {
+            findNavController().navigate(R.id.feedbackFragment)
+        }
+
         binding.btnLogoutProfile.setOnClickListener {
             showLogoutConfirmDialog()
         }
@@ -144,6 +148,9 @@ class ProfileFragment : Fragment() {
         }
         val hasMultipleRoles = (storedRoles?.size ?: 0) > 1
         binding.btnSwitchRole.visibility = if (hasMultipleRoles) View.VISIBLE else View.GONE
+
+        val isDev = RoleUtils.isDeveloper(userRole)
+        binding.rowFeedback.visibility = if (isDev) View.GONE else View.VISIBLE
 
         loadAvatar()
     }
@@ -200,6 +207,9 @@ class ProfileFragment : Fragment() {
 
                     // Show switch button ONLY if user has more than 1 role
                     binding.btnSwitchRole.visibility = if (distinctRoles.size > 1) View.VISIBLE else View.GONE
+
+                    val isDev = RoleUtils.isDeveloper(profile.effectiveRole)
+                    binding.rowFeedback.visibility = if (isDev) View.GONE else View.VISIBLE
                 }
 
                 if (agreementResult is GenericResult.Success) {

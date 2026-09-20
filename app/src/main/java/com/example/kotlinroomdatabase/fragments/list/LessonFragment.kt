@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
+import android.location.LocationManager
 import android.nfc.NfcAdapter
 import android.os.Bundle
 import android.util.Log
@@ -67,6 +68,42 @@ class LessonFragment : NFC_Tools() {
     private var currentSubject: String? = null
     private var pollingJob: Job? = null
     private var qrUpdateJob: Job? = null
+
+    private var pendingCreateLesson: (() -> Unit)? = null
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pendingCreateLesson?.invoke()
+            pendingCreateLesson = null
+        } else {
+            showLocationRequiredDialog()
+        }
+    }
+
+    private fun showLocationRequiredDialog() {
+        if (!isAdded) return
+        val canShowRationale = shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Требуется доступ к геолокации")
+            .setMessage("Для создания занятия и фиксации аудитории необходимо разрешение на доступ к точному местоположению.")
+            .setCancelable(false)
+            .setPositiveButton(if (canShowRationale) "Повторить запрос" else "Настройки") { _, _ ->
+                if (canShowRationale) {
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                } else {
+                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", requireContext().packageName, null)
+                    }
+                    startActivity(intent)
+                }
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                pendingCreateLesson = null
+            }
+            .show()
+    }
 
     private val currentRosterList = mutableListOf<AttendanceRosterStudent>()
 
@@ -616,21 +653,54 @@ class LessonFragment : NFC_Tools() {
                 }
             }
 
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                try {
+            val checkAndExecute: () -> Unit = {
+                val locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                val isGpsEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
+                                   locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+                if (!isGpsEnabled) {
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Геолокация отключена")
+                        .setMessage("Включите службы геолокации (GPS) на устройстве для создания занятия.")
+                        .setPositiveButton("Включить") { _, _ ->
+                            startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                        }
+                        .setNegativeButton("Отмена", null)
+                        .show()
+                } else {
                     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-                    fusedLocationClient.lastLocation
-                        .addOnSuccessListener { location: Location? ->
-                            executeCreate(location?.latitude ?: 0.0, location?.longitude ?: 0.0)
-                        }
-                        .addOnFailureListener {
-                            executeCreate(0.0, 0.0)
-                        }
-                } catch (e: Exception) {
-                    executeCreate(0.0, 0.0)
+                    try {
+                        fusedLocationClient.lastLocation
+                            .addOnSuccessListener { location: Location? ->
+                                if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
+                                    executeCreate(location.latitude, location.longitude)
+                                } else {
+                                    fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
+                                        .addOnSuccessListener { curLoc ->
+                                            if (curLoc != null && (curLoc.latitude != 0.0 || curLoc.longitude != 0.0)) {
+                                                executeCreate(curLoc.latitude, curLoc.longitude)
+                                            } else {
+                                                Toast.makeText(requireContext(), "Не удалось определить координаты GPS. Попробуйте снова.", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                        .addOnFailureListener {
+                                            Toast.makeText(requireContext(), "Не удалось определить координаты GPS: ${it.message}", Toast.LENGTH_LONG).show()
+                                        }
+                                }
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(requireContext(), "Ошибка получения геолокации: ${it.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
+            }
+
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                checkAndExecute()
             } else {
-                executeCreate(0.0, 0.0)
+                pendingCreateLesson = checkAndExecute
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
         }
         bottomSheet.show()

@@ -166,4 +166,17 @@ interface IStudentRepository {
     suspend fun toggleDevTaskFollow(taskId: Int, isFollowing: Boolean): GenericResult<Boolean>
     suspend fun getDevSprintReport(sprintId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevSprintReport>
     suspend fun getDevTeam(): GenericResult<List<com.example.kotlinroomdatabase.model.DevTeamMember>>
+
+    // Feedback methods (for all users except developers)
+    suspend fun uploadFeedbackAttachment(file: java.io.File): GenericResult<String>
+    suspend fun createFeedbackTicket(
+        title: String,
+        description: String,
+        category: String,
+        priority: String,
+        attachments: List<String>
+    ): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicket>
+    suspend fun getMyFeedbackTickets(): GenericResult<List<com.example.kotlinroomdatabase.model.FeedbackTicket>>
+    suspend fun getFeedbackTicketDetails(ticketId: Int): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicketDetails>
+    suspend fun replyFeedbackTicket(ticketId: Int, content: String, attachments: List<String> = emptyList()): GenericResult<Boolean>
 }

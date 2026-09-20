@@ -172,4 +172,10 @@
         android:name="com.example.kotlinroomdatabase.fragments.dev.DevSprintFragment"
         android:label="Спринт"
         tools:layout="@layout/fragment_dev_sprint" />
+
+    <fragment
+        android:id="@+id/feedbackFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.feedback.FeedbackFragment"
+        android:label="Обратная связь"
+        tools:layout="@layout/fragment_feedback" />
 </navigation>

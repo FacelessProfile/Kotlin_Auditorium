@@ -67,4 +67,10 @@ interface StudentDao {
 
     @Delete
     suspend fun deleteOfflineGradeAction(action: OfflineGradeAction)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCachedSchedule(schedule: CachedDayScheduleEntity)
+
+    @Query("SELECT * FROM cached_day_schedule WHERE date = :date LIMIT 1")
+    suspend fun getCachedSchedule(date: String): CachedDayScheduleEntity?
 }

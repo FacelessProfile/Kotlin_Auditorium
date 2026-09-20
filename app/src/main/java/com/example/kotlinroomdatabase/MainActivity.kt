@@ -120,6 +120,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.example.kotlinroomdatabase.util.AppErrorLogger.init(applicationContext)
+
         val appPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val themeMode = appPrefs.getString("theme_mode", "system") ?: "system"
         val appCompatMode = when (themeMode) {
@@ -161,7 +163,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.totpFragment,
                 R.id.devTasksFragment,
                 R.id.devBugsFragment,
-                R.id.devSprintFragment
+                R.id.devSprintFragment,
+                R.id.feedbackFragment
             ),
             binding.drawerLayout
         )
@@ -335,6 +338,21 @@ class MainActivity : AppCompatActivity() {
         if (taskId != null && taskId > 0) {
             val sheet = com.example.kotlinroomdatabase.fragments.dev.DevTaskDetailBottomSheet.newInstance(taskId)
             sheet.show(supportFragmentManager, com.example.kotlinroomdatabase.fragments.dev.DevTaskDetailBottomSheet.TAG)
+            return
+        }
+
+        val ticketIdStr = intent?.getStringExtra("fcm_extra_ticket_id")
+        val ticketId = ticketIdStr?.toIntOrNull()
+        if (ticketId != null && ticketId > 0) {
+            val taskFromTicketStr = intent?.getStringExtra("fcm_extra_associated_task_id")
+            val associatedTaskId = taskFromTicketStr?.toIntOrNull()
+            if (associatedTaskId != null && associatedTaskId > 0) {
+                val sheet = com.example.kotlinroomdatabase.fragments.dev.DevTaskDetailBottomSheet.newInstance(associatedTaskId)
+                sheet.show(supportFragmentManager, com.example.kotlinroomdatabase.fragments.dev.DevTaskDetailBottomSheet.TAG)
+            } else {
+                val sheet = com.example.kotlinroomdatabase.fragments.feedback.FeedbackDetailsBottomSheet.newInstance(ticketId)
+                sheet.show(supportFragmentManager, com.example.kotlinroomdatabase.fragments.feedback.FeedbackDetailsBottomSheet.TAG)
+            }
         }
     }
 
@@ -403,6 +421,7 @@ class MainActivity : AppCompatActivity() {
         val menu = binding.navView.menu
         menu.findItem(R.id.scheduleFragment)?.isVisible = true
         menu.findItem(R.id.listFragment)?.isVisible = isTeacher
+        menu.findItem(R.id.feedbackFragment)?.isVisible = !isDev
         updateNavHeader()
         registerDeviceToken()
     }
