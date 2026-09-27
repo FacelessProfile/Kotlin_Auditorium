@@ -22,7 +22,16 @@ abstract class  NFC_Tools : Fragment() {
     private val SERVICE_AID = "F0010203040506"
 
     protected fun startNfcReadingMode(infiniteMode: Boolean = false) {
-        if (nfcAdapter == null || isReadingMode) return
+        val adapter = nfcAdapter ?: try { NfcAdapter.getDefaultAdapter(context) } catch (_: Exception) { null }
+        if (adapter == null) {
+            showNfcNotSupportedMessage()
+            return
+        }
+        if (!adapter.isEnabled) {
+            showNfcDisabledMessage()
+            return
+        }
+        if (isReadingMode) return
 
         isReadingMode = true
         isInfiniteMode = infiniteMode
@@ -30,14 +39,13 @@ abstract class  NFC_Tools : Fragment() {
         val flags = NfcAdapter.FLAG_READER_NFC_A or
                 NfcAdapter.FLAG_READER_NFC_B or
                 NfcAdapter.FLAG_READER_NFC_F or
-                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
                 NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
 
         val options = Bundle().apply {
             putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 300)
         }
 
-        nfcAdapter?.enableReaderMode(
+        adapter.enableReaderMode(
             requireActivity(),
             nfcReaderCallback,
             flags,
@@ -59,8 +67,21 @@ abstract class  NFC_Tools : Fragment() {
         }
 
         if (!nfcAdapter!!.isEnabled) {
-            Toast.makeText(requireContext(), "Включите NFC в настройках", Toast.LENGTH_LONG).show()
+            showNfcDisabledMessage()
         }
+    }
+
+    protected open fun showNfcDisabledMessage() {
+        if (!isAdded) return
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("NFC выключен")
+            .setIcon(com.example.kotlinroomdatabase.R.drawable.ic_nfc)
+            .setMessage("Модуль NFC выключен на смартфоне. Для работы отметки посещаемости необходимо включить NFC в настройках.\n\nВключить NFC сейчас?")
+            .setPositiveButton("Включить") { _, _ ->
+                com.example.kotlinroomdatabase.util.NfcHelper.openNfcSettings(requireContext())
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     protected fun stopNfcReadingModeByTimeout() {
@@ -84,19 +105,29 @@ abstract class  NFC_Tools : Fragment() {
         val techs = tag.techList?.joinToString(", ") { it.substringAfterLast(".") } ?: "none"
         Log.i("NFC_TOOLS", "Tag detected! UID: $uid, Techs: [$techs]")
 
-        val hceData = readHcePayload(tag)
-
-        val resultString = if (!hceData.isNullOrBlank()) {
-            Log.i("NFC_TOOLS", "HCE SUCCESS detected. Payload: $hceData")
-            hceData
+        // 1. Try reading physical tag NDEF (NTAG216 / Type 2 tag)
+        var resultString = com.example.kotlinroomdatabase.util.SafeNdefManager.readNdefPayload(tag)
+        if (!resultString.isNullOrBlank()) {
+            Log.i("NFC_TOOLS", "NDEF pass detected: $resultString")
         } else {
-            Log.w("NFC_TOOLS", "Fallback to raw UID: $uid")
-            uid
+            // 2. Try HCE IsoDep APDU
+            val hceData = readHcePayload(tag)
+            if (!hceData.isNullOrBlank()) {
+                Log.i("NFC_TOOLS", "HCE SUCCESS detected: $hceData")
+                resultString = hceData
+            } else {
+                Log.w("NFC_TOOLS", "Fallback to raw UID: $uid")
+                resultString = uid
+            }
         }
+
         requireActivity().runOnUiThread {
-            processNfcTag(resultString)
+            processNfcTag(resultString, uid)
+            onPhysicalTagScanned(tag, resultString)
         }
     }
+
+    open fun onPhysicalTagScanned(tag: Tag, payloadOrUid: String) {}
 
     private val CANDIDATE_AIDS = listOf("F0010203040506", "F14954574F58", "F222222222", "F000000001020304", "A0000000041010")
 
@@ -178,7 +209,12 @@ abstract class  NFC_Tools : Fragment() {
     }
 
     @OptIn(InternalSerializationApi::class)
-    protected abstract fun processNfcTag(nfcId: String)
+    protected open fun processNfcTag(nfcId: String) {}
+
+    @OptIn(InternalSerializationApi::class)
+    protected open fun processNfcTag(nfcId: String, physicalUid: String) {
+        processNfcTag(nfcId)
+    }
 
     protected abstract fun showNfcNotSupportedMessage()
 

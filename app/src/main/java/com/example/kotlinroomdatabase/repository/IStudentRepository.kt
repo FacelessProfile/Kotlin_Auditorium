@@ -84,6 +84,7 @@ interface IStudentRepository {
 
     suspend fun finishLesson(lessonId: Int): FinishLessonResult
     suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult
+    suspend fun markAttendanceSmart(lessonId: Int, markType: String, payload: String, physicalUid: String = ""): AttendanceResult
     suspend fun markAttendanceViaQr(
         lessonId: Int,
         deviceId: String,
@@ -179,4 +180,12 @@ interface IStudentRepository {
     suspend fun getMyFeedbackTickets(): GenericResult<List<com.example.kotlinroomdatabase.model.FeedbackTicket>>
     suspend fun getFeedbackTicketDetails(ticketId: Int): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicketDetails>
     suspend fun replyFeedbackTicket(ticketId: Int, content: String, attachments: List<String> = emptyList()): GenericResult<Boolean>
+
+    // NFC Gradebook Card Lifecycle & Developer Tooling
+    suspend fun generateNfcPayload(studentId: Int, tagUid: String): GenericResult<com.example.kotlinroomdatabase.model.NfcPayloadResult>
+    suspend fun bindNfcTag(studentId: Int, tagUid: String, signature: String? = null): GenericResult<com.example.kotlinroomdatabase.model.NfcBindResult>
+    suspend fun replaceNfcTag(studentId: Int, newTagUid: String, reason: String): GenericResult<com.example.kotlinroomdatabase.model.NfcReplaceResult>
+    suspend fun revokeNfcTag(tagUid: String, reason: String): GenericResult<com.example.kotlinroomdatabase.model.NfcRevokeResult>
+    suspend fun getStudentDossier(tagUid: String? = null, studentId: Int? = null): GenericResult<com.example.kotlinroomdatabase.model.StudentDossier>
+    suspend fun getNfcConveyorStudents(): GenericResult<List<com.example.kotlinroomdatabase.model.NfcConveyorStudent>>
 }

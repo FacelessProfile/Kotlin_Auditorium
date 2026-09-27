@@ -1,0 +1,274 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Ground Shadow -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.18"
+        android:pathData="M24,88 C34,84 62,84 76,88 C70,91 30,91 24,88 Z" />
+
+    <!-- Drooped Bushy Tail (Lying along the ground) -->
+    <!-- Base Shadow Layer -->
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M56,80 C68,80 84,78 88,64 C90,52 82,42 72,42 C64,42 62,50 68,54 C74,58 76,68 64,74 C56,78 48,80 42,82 Z" />
+    <!-- Mid Fur Layer -->
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M58,78 C68,78 82,74 84,62 C86,52 78,44 72,44 C66,44 64,52 68,54 C72,58 74,66 62,72 C54,76 46,78 40,80 Z" />
+    <!-- Highlight Fur Fluff -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M60,74 C68,74 78,70 80,60 C80,52 74,46 70,46 C67,46 66,52 70,54 C72,58 70,64 60,68 C52,72 46,74 42,76 Z" />
+    <!-- Golden Accent Fluff -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M64,68 C68,68 74,64 74,58 C74,52 70,50 68,50 C66,50 66,54 68,56 C70,58 68,62 62,64 Z" />
+
+    <!-- Slumped Squirrel Body -->
+    <!-- Outer Dark Silhouette / Shading -->
+    <path
+        android:fillColor="#92400E"
+        android:pathData="M32,48 C32,36 40,30 52,30 C64,30 70,36 70,48 C70,60 68,74 64,82 C60,86 40,86 36,82 C34,74 32,60 32,48 Z" />
+    <!-- Main Body Fur -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M34,47 C34,37 42,32 52,32 C62,32 68,37 68,47 C68,58 66,72 62,80 C58,84 40,84 38,80 C36,72 34,58 34,47 Z" />
+    <!-- Soft Top Fur Warmth -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M38,45 C38,38 44,34 52,34 C60,34 64,38 64,45 C64,52 62,64 60,70 C56,72 44,72 40,70 C38,64 38,52 38,45 Z" />
+
+    <!-- Cream Belly / Chest (Drooped) -->
+    <path
+        android:fillColor="#FEF3C7"
+        android:pathData="M44,54 C44,46 47,42 52,42 C57,42 60,46 60,54 C60,65 58,74 52,74 C46,74 44,65 44,54 Z" />
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M46,54 C46,48 48,45 52,45 C56,45 58,48 58,54 C58,63 56,70 52,70 C48,70 46,63 46,54 Z" />
+
+    <!-- Drooped / Sad Ears (Flattened backwards) -->
+    <!-- Left Ear Base & Tufts -->
+    <path
+        android:fillColor="#92400E"
+        android:pathData="M34,34 L20,24 L34,22 Z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M33,32 L22,25 L34,24 Z" />
+    <path
+        android:fillColor="#FECDD3"
+        android:pathData="M31,31 L24,26 L32,25 Z" />
+    <!-- Left Ear Fur Tip -->
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M20,24 L14,18 L22,22 Z" />
+
+    <!-- Right Ear Base & Tufts -->
+    <path
+        android:fillColor="#92400E"
+        android:pathData="M70,34 L84,24 L70,22 Z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M71,32 L82,25 L70,24 Z" />
+    <path
+        android:fillColor="#FECDD3"
+        android:pathData="M73,31 L80,26 L72,25 Z" />
+    <!-- Right Ear Fur Tip -->
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M84,24 L90,18 L82,22 Z" />
+
+    <!-- Sad Glossy Eyes with Multiple Specular Highlights -->
+    <!-- Left Eye -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M42,42 A5,5 0 1,0 52,42 A5,5 0 1,0 42,42 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M43,43 A4,4 0 1,0 51,43 A4,4 0 1,0 43,43 Z" />
+    <!-- Left Eye Big Anime Reflections -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,39.5 A2,2 0 1,0 48,39.5 A2,2 0 1,0 44,39.5 Z" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M48,43 A1,1 0 1,0 50,43 A1,1 0 1,0 48,43 Z" />
+
+    <!-- Right Eye -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M56,42 A5,5 0 1,0 66,42 A5,5 0 1,0 56,42 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M57,43 A4,4 0 1,0 65,43 A4,4 0 1,0 57,43 Z" />
+    <!-- Right Eye Big Anime Reflections -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,39.5 A2,2 0 1,0 62,39.5 A2,2 0 1,0 58,39.5 Z" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M62,43 A1,1 0 1,0 64,43 A1,1 0 1,0 62,43 Z" />
+
+    <!-- Sad Trembling Eyebrows -->
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M41,36 C44,38 48,39 50,38" />
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M63,36 C60,38 56,39 54,38" />
+
+    <!-- Streaming Anime Tears with Shading -->
+    <!-- Left Tear River -->
+    <path
+        android:fillColor="#60A5FA"
+        android:pathData="M43,45 C43,52 40,58 41,66 C42,67.5 45,67.5 46,65.5 C47,58 45,52 45,45 Z" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M43.5,47 C43.5,52 41,58 42,64 C42.5,65 44,65 44.5,64 C45,58 44.5,52 44.5,47 Z" />
+    <!-- Right Tear River -->
+    <path
+        android:fillColor="#60A5FA"
+        android:pathData="M61,45 C61,52 64,58 63,66 C62,67.5 59,67.5 58,65.5 C57,58 59,52 59,45 Z" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M60.5,47 C60.5,52 63,58 62,64 C61.5,65 60,65 59.5,64 C59,58 59.5,52 59.5,47 Z" />
+
+    <!-- Puddle of Tears on Floor -->
+    <path
+        android:fillColor="#60A5FA"
+        android:fillAlpha="0.75"
+        android:pathData="M38,82 C42,80 48,80 50,82 C48,83.5 42,83.5 38,82 Z" />
+    <path
+        android:fillColor="#60A5FA"
+        android:fillAlpha="0.75"
+        android:pathData="M56,82 C60,80 66,80 68,82 C66,83.5 60,83.5 56,82 Z" />
+
+    <!-- Muzzle / Little Nose & Trembling Sad Mouth -->
+    <path
+        android:fillColor="#FEF3C7"
+        android:pathData="M48,46 C48,44 50,43 52,43 C54,43 56,44 56,46 C56,49 54,51 52,51 C50,51 48,49 48,46 Z" />
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M50.5,45 C50.5,44.2 51.2,43.8 52,43.8 C52.8,43.8 53.5,44.2 53.5,45 C53.5,45.8 52.8,46.2 52,46.2 C51.2,46.2 50.5,45.8 50.5,45 Z" />
+    <!-- Downturned Wavy Trembling Mouth -->
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M49,52 C50.5,50 51.5,51 52,50 C52.5,51 53.5,50 55,52" />
+
+    <!-- Paws holding Chewed Severed Telecom Cables -->
+    <path
+        android:fillColor="#92400E"
+        android:pathData="M43,62 C41,60 38,64 40,68 L45,70 L47,64 Z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M43.5,63 C42,61 39.5,64 41,67 L45,69 L46.5,64 Z" />
+    <path
+        android:fillColor="#92400E"
+        android:pathData="M61,62 C63,60 66,64 64,68 L59,70 L57,64 Z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M60.5,63 C62,61 64.5,64 63,67 L59,69 L57.5,64 Z" />
+
+    <!-- Left Severed Cable (Cat.6 Network Cable with Outer Blue Jacket) -->
+    <path
+        android:strokeColor="#1E3A8A"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M20,80 C26,78 34,74 42,66" />
+    <path
+        android:strokeColor="#3B82F6"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M20,79.5 C26,77.5 34,73.5 42,65.5" />
+    <!-- Chewed / Frayed 4 Twisted Pairs Sticking Out -->
+    <path
+        android:strokeColor="#F97316"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M42,66 L46,63" />
+    <path
+        android:strokeColor="#22C55E"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M42,66.5 L47,66" />
+    <path
+        android:strokeColor="#3B82F6"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M41.5,67 L46,69" />
+    <path
+        android:strokeColor="#A855F7"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M41,67.5 L45,71" />
+
+    <!-- Right Severed Cable (Yellow Fiber Optic Patch Cable) -->
+    <path
+        android:strokeColor="#B45309"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M84,80 C78,78 70,74 62,66" />
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M84,79.5 C78,77.5 70,73.5 62,65.5" />
+    <!-- Broken Optical Fiber Strands Sparking -->
+    <path
+        android:strokeColor="#EF4444"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M62,66 L58,63" />
+    <path
+        android:strokeColor="#06B6D4"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M62,66.5 L57,66" />
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M62.5,67 L58,69" />
+
+    <!-- Broken Connection / Red "LINK DOWN" LED Beacon -->
+    <path
+        android:fillColor="#EF4444"
+        android:fillAlpha="0.3"
+        android:pathData="M52,66 A5,5 0 1,0 52,56 A5,5 0 1,0 52,66 Z" />
+    <path
+        android:fillColor="#DC2626"
+        android:pathData="M52,63 A2.5,2.5 0 1,0 52,58 A2.5,2.5 0 1,0 52,63 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M51.5,59.5 A0.8,0.8 0 1,0 51.5,61.1 A0.8,0.8 0 1,0 51.5,59.5 Z" />
+
+    <!-- Sad Floating Broken Heart / Disconnect Badge -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M52,24 C50,21 47,21 45.5,22.5 C43.5,24.5 44,27 46,29 L52,34 L58,29 C60,27 60.5,24.5 58.5,22.5 C57,21 54,21 52,24 Z" />
+    <!-- Lightning Crack in the Heart -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M52,22 L51,26 L53,28 L51.5,33" />
+
+</vector>

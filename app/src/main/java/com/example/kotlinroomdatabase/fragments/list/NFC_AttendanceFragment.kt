@@ -19,6 +19,7 @@ import com.example.kotlinroomdatabase.repository.StudentRepository
 import com.example.kotlinroomdatabase.repository.SyncResult
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import com.example.kotlinroomdatabase.getColorFromAttr
+import com.example.kotlinroomdatabase.util.SafeNdefManager
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 
@@ -95,7 +96,32 @@ class NFC_AttendanceFragment : NFC_Tools() {
         requireActivity().runOnUiThread {
             statusText.text = "NFC не поддерживается"
             setErrorState()
-            Toast.makeText(requireContext(), "NFC не поддерживается устройством", Toast.LENGTH_LONG).show()
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("NFC не поддерживается")
+                .setIcon(R.drawable.ic_nfc)
+                .setMessage("На данном смартфоне отсутствует аппаратный модуль NFC.\n\nОтметка через NFC на этом устройстве невозможна.")
+                .setPositiveButton("Понятно") { _, _ ->
+                    findNavController().navigateUp()
+                }
+                .show()
+        }
+    }
+
+    override fun showNfcDisabledMessage() {
+        requireActivity().runOnUiThread {
+            statusText.text = "NFC выключен"
+            setErrorState()
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("NFC выключен")
+                .setIcon(R.drawable.ic_nfc)
+                .setMessage("Модуль NFC выключен на смартфоне.\n\nДля работы отметки посещаемости необходимо включить NFC в настройках.\n\nВключить модуль сейчас?")
+                .setPositiveButton("Включить") { _, _ ->
+                    com.example.kotlinroomdatabase.util.NfcHelper.openNfcSettings(requireContext())
+                }
+                .setNegativeButton("Отмена") { _, _ ->
+                    findNavController().navigateUp()
+                }
+                .show()
         }
     }
 
@@ -118,11 +144,31 @@ class NFC_AttendanceFragment : NFC_Tools() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
+        processNfcTag(nfcId, "")
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override fun processNfcTag(nfcId: String, physicalUid: String) {
         lifecycleScope.launch {
             try {
-                val existingStudent = studentRepository.getStudentByNfc(nfcId)
+                val cleanPhysUid = SafeNdefManager.cleanUid(physicalUid)
+                val parsed = SafeNdefManager.parsePassPayload(nfcId, cleanPhysUid)
+
+                // Clone detection: physical chip UID must match payload UID
+                if (parsed != null && parsed.isCloneDetected) {
+                    Log.e(TAG, "CLONE DETECTED: chip UID $cleanPhysUid does not match payload UID ${parsed.tagUid}")
+                    updateUI(Color.RED, "ОБНАРУЖЕН КЛОН МЕТКИ!\nUID чипа не совпадает с криптограммой")
+                    return@launch
+                }
+
+                val searchKey = when {
+                    parsed != null && parsed.tagUid.isNotBlank() -> parsed.tagUid
+                    cleanPhysUid.isNotBlank() -> cleanPhysUid
+                    else -> nfcId.trim()
+                }
+
+                val existingStudent = studentRepository.getStudentByNfc(searchKey)
 
                 if (existingStudent != null) {
                     if (existingStudent.attendance) {
@@ -132,7 +178,7 @@ class NFC_AttendanceFragment : NFC_Tools() {
                         updateUI(Color.GREEN, "${existingStudent.studentName}\nотмечен")
                     }
                 } else {
-                    updateUI(Color.RED, "Студент не найден\n$nfcId")
+                    updateUI(Color.RED, "Студент не найден\n$searchKey")
                 }
             } catch (e: Exception) {
                 updateUI(Color.RED, "Ошибка синхронизации")

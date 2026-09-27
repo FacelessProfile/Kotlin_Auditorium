@@ -11,7 +11,7 @@ import com.example.kotlinroomdatabase.model.OfflineGradeAction
 import kotlinx.serialization.InternalSerializationApi
 
 @OptIn(InternalSerializationApi::class)
-@Database(entities = [Student::class, Lesson::class, OfflineGradeAction::class, CachedDayScheduleEntity::class], version = 5, exportSchema = false)
+@Database(entities = [Student::class, Lesson::class, OfflineGradeAction::class, CachedDayScheduleEntity::class], version = 6, exportSchema = false)
 abstract class StudentDatabase : RoomDatabase() {
             abstract fun studentDao(): StudentDao
 

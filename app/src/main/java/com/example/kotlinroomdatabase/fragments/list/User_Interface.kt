@@ -40,6 +40,9 @@ import com.example.kotlinroomdatabase.qr.CustomScannerActivity
 import com.example.kotlinroomdatabase.repository.GenericResult
 import com.example.kotlinroomdatabase.repository.IStudentRepository
 import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
+import com.example.kotlinroomdatabase.mascot.MascotPhrases
+import com.example.kotlinroomdatabase.mascot.MascotType
+import com.example.kotlinroomdatabase.streak.StreakManager
 import com.example.kotlinroomdatabase.util.RoleUtils
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.Dispatchers
@@ -233,14 +236,15 @@ class User_Interface : Fragment() {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val studentName = prefs.getString("student_name", "Студент") ?: "Студент"
         val group = prefs.getString("student_group", "СибГУТИ") ?: "СибГУТИ"
-        val nfcPayload = prefs.getString("nfc_payload", "Активен")
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Электронный пропуск СибГУТИ")
-            .setMessage("Владелец: $studentName\nГруппа: $group\n\nСтатус HCE: Эмуляция карты активна.\nПоднесите заднюю панель смартфона к турникету или валидатору аудитории.")
-            .setIcon(R.drawable.ic_nfc)
-            .setPositiveButton("Понятно", null)
-            .show()
+        com.example.kotlinroomdatabase.util.NfcHelper.showStudentNfcDialog(
+            context = requireContext(),
+            studentName = studentName,
+            group = group,
+            onScanQrRequested = {
+                startScanning()
+            }
+        )
     }
 
     private fun setupWeekdayChips() {
@@ -424,6 +428,57 @@ class User_Interface : Fragment() {
         }
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(requireContext())
             .registerReceiver(broadcastReceiver, filter)
+
+        try {
+            val nfcFilter = IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED)
+            requireActivity().registerReceiver(nfcStateReceiver, nfcFilter)
+        } catch (_: Exception) {}
+
+        updateNfcCardUi()
+    }
+
+    private val nfcStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == NfcAdapter.ACTION_ADAPTER_STATE_CHANGED) {
+                updateNfcCardUi()
+            }
+        }
+    }
+
+    private fun updateNfcCardUi() {
+        if (_binding == null || !isAdded) return
+        val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+        val isAttended = attPrefs.getBoolean(KEY_IS_ATTENDED, false)
+        val method = attPrefs.getString(KEY_ATTENDANCE_METHOD, METHOD_QR) ?: METHOD_QR
+
+        if (isAttended && method == METHOD_NFC) {
+            binding.statusIcon.setImageResource(R.drawable.ic_check)
+            binding.statusIcon.setColorFilter(Color.parseColor("#10B981"))
+            binding.statusText.text = "Отмечено через NFC"
+            binding.statusText.setTextColor(Color.parseColor("#10B981"))
+            return
+        }
+
+        when (com.example.kotlinroomdatabase.util.NfcHelper.getNfcState(requireContext())) {
+            com.example.kotlinroomdatabase.util.NfcHelper.NfcState.NOT_SUPPORTED -> {
+                binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+                binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_text_muted))
+                binding.statusText.text = "NFC недоступен"
+                binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_muted))
+            }
+            com.example.kotlinroomdatabase.util.NfcHelper.NfcState.DISABLED -> {
+                binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+                binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_late_icon))
+                binding.statusText.text = "NFC выключен"
+                binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_late_text))
+            }
+            com.example.kotlinroomdatabase.util.NfcHelper.NfcState.ENABLED -> {
+                binding.statusIcon.setImageResource(R.drawable.ic_nfc)
+                binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_blue_primary))
+                binding.statusText.text = "Поднесите к чекеру"
+                binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+            }
+        }
     }
 
     private fun startStatusPolling() {
@@ -445,6 +500,9 @@ class User_Interface : Fragment() {
                 val cardEmulation = CardEmulation.getInstance(nfcAdapter)
                 cardEmulation.unsetPreferredService(requireActivity())
             }
+        } catch (_: Exception) {}
+        try {
+            requireActivity().unregisterReceiver(nfcStateReceiver)
         } catch (_: Exception) {}
         try {
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(requireContext())
@@ -505,10 +563,7 @@ class User_Interface : Fragment() {
                     binding.qrStatusText.text = "Отмечено через QR"
                     binding.qrStatusText.setTextColor(Color.parseColor("#10B981"))
 
-                    binding.statusIcon.setImageResource(R.drawable.ic_nfc)
-                    binding.statusIcon.colorFilter = null
-                    binding.statusText.text = "Поднесите к чекеру"
-                    binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+                    updateNfcCardUi()
                 }
             }
         } else {
@@ -594,9 +649,16 @@ class User_Interface : Fragment() {
             putLong(KEY_EXPIRES_AT, expiresAtMillis)
             putString(KEY_ATTENDANCE_METHOD, method)
         }.apply()
+
+        if (!RoleUtils.isTeacherOrHead(userRole)) {
+            StreakManager.recordAttendance(requireContext(), lessonId, lessonName)
+        }
     }
 
     fun showSuccessCheck(lessonName: String? = null, method: String = METHOD_QR) {
+        if (!RoleUtils.isTeacherOrHead(userRole) && isAdded) {
+            StreakManager.recordAttendance(requireContext(), lessonName = lessonName)
+        }
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             if (_binding == null) return@launch
             if (method == METHOD_NFC) {
@@ -621,10 +683,7 @@ class User_Interface : Fragment() {
                 binding.qrStatusText.setTextColor(Color.parseColor("#10B981"))
 
                 // Reset NFC card
-                binding.statusIcon.setImageResource(R.drawable.ic_nfc)
-                binding.statusIcon.colorFilter = null
-                binding.statusText.text = "Поднесите к чекеру"
-                binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+                updateNfcCardUi()
             }
             delay(1200)
             checkAndUpdateLessonState()
@@ -644,6 +703,14 @@ class User_Interface : Fragment() {
                     }
                 }
                 ACTION_LESSON_FINISHED -> {
+                    if (isAdded) {
+                        val attPrefs = requireContext().getSharedPreferences(PREFS_ATTENDANCE, Context.MODE_PRIVATE)
+                        val wasAttended = attPrefs.getBoolean(KEY_IS_ATTENDED, false)
+                        val lessonName = attPrefs.getString(KEY_LESSON_NAME, null)
+                        if (!wasAttended && !RoleUtils.isTeacherOrHead(userRole)) {
+                            StreakManager.recordMissedLesson(requireContext(), lessonName)
+                        }
+                    }
                     clearActiveLessonState()
                     checkAndUpdateLessonState()
                     Toast.makeText(requireContext(), "Преподаватель завершил занятие", Toast.LENGTH_SHORT).show()
@@ -655,10 +722,7 @@ class User_Interface : Fragment() {
     private fun setNeutralAttendanceState() {
         if (_binding == null) return
         // 1. Reset NFC Card
-        binding.statusIcon.setImageResource(R.drawable.ic_nfc)
-        binding.statusIcon.colorFilter = null
-        binding.statusText.text = "Поднесите к чекеру"
-        binding.statusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_secondary))
+        updateNfcCardUi()
 
         // 2. Reset QR Card
         binding.qrStatusIcon.setImageResource(R.drawable.ic_qr_code)
@@ -910,29 +974,40 @@ class User_Interface : Fragment() {
                 )
             }
 
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
-                    proceedWithLocation(location.latitude, location.longitude)
-                } else {
-                    fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
-                        .addOnSuccessListener { curLoc ->
-                            if (curLoc != null && (curLoc.latitude != 0.0 || curLoc.longitude != 0.0)) {
-                                proceedWithLocation(curLoc.latitude, curLoc.longitude)
-                            } else {
-                                Toast.makeText(requireContext(), "Не удалось определить координаты GPS. Попробуйте снова.", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(requireContext(), "Не удалось определить координаты GPS: ${it.message}", Toast.LENGTH_LONG).show()
-                        }
-                }
-            }.addOnFailureListener {
-                Toast.makeText(requireContext(), "Ошибка геопозиции: ${it.message}", Toast.LENGTH_SHORT).show()
-            }
+        val lm = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val lastGpsLoc = try {
+            lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
         } catch (e: SecurityException) {
-            Toast.makeText(requireContext(), "Нет разрешения на геолокацию", Toast.LENGTH_SHORT).show()
+            null
+        }
+
+        if (lastGpsLoc != null && (lastGpsLoc.latitude != 0.0 || lastGpsLoc.longitude != 0.0)) {
+            proceedWithLocation(lastGpsLoc.latitude, lastGpsLoc.longitude)
+        } else {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                    if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
+                        proceedWithLocation(location.latitude, location.longitude)
+                    } else {
+                        fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
+                            .addOnSuccessListener { curLoc ->
+                                if (curLoc != null && (curLoc.latitude != 0.0 || curLoc.longitude != 0.0)) {
+                                    proceedWithLocation(curLoc.latitude, curLoc.longitude)
+                                } else {
+                                    proceedWithLocation(0.0, 0.0)
+                                }
+                            }
+                            .addOnFailureListener {
+                                proceedWithLocation(0.0, 0.0)
+                            }
+                    }
+                }.addOnFailureListener {
+                    proceedWithLocation(0.0, 0.0)
+                }
+            } catch (e: SecurityException) {
+                proceedWithLocation(0.0, 0.0)
+            }
         }
     }
 
@@ -946,6 +1021,8 @@ class User_Interface : Fragment() {
     fun scrollToTop() {
         _binding?.scrollViewHome?.smoothScrollTo(0, 0)
     }
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()

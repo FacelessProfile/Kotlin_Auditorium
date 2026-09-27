@@ -64,7 +64,7 @@ jobs:
             BASE_VERSION=$(grep -E '^\s*versionName\s*=' app/build.gradle | cut -d'"' -f2)
           fi
           if [ -z "$BASE_VERSION" ]; then
-            BASE_VERSION="1.2"
+            BASE_VERSION="1.3"
           fi
           # Ensure base version is major.minor (e.g. 1.2)
           BASE_VERSION=$(echo "$BASE_VERSION" | awk -F. '{if (NF >= 2) print $1"."$2; else print $1".0"}')
@@ -81,25 +81,29 @@ jobs:
           echo " Dynamic Version: ${APP_VERSION_NAME} (code: ${APP_VERSION_CODE})"
           echo "========================================"
 
-      - name: Build Android APK
-        run: ./gradlew assembleDebug -PappVersionCode=${{ steps.calc_version.outputs.VERSION_CODE }} -PappVersionName="${{ steps.calc_version.outputs.VERSION_NAME }}" --stacktrace
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --continue
+
+      - name: Build Android Release APK
+        run: ./gradlew assembleRelease -PappVersionCode=${{ steps.calc_version.outputs.VERSION_CODE }} -PappVersionName="${{ steps.calc_version.outputs.VERSION_NAME }}" --stacktrace
 
       - name: Extract Version Info & Compute Checksum
         id: version_info
+        env:
+          INPUT_NOTES: ${{ github.event.inputs.release_notes }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CALC_VER_CODE: ${{ steps.calc_version.outputs.VERSION_CODE }}
+          CALC_VER_NAME: ${{ steps.calc_version.outputs.VERSION_NAME }}
         run: |
-          VERSION_CODE="${{ steps.calc_version.outputs.VERSION_CODE }}"
-          VERSION_NAME="${{ steps.calc_version.outputs.VERSION_NAME }}"
-
-          if [ -z "$VERSION_CODE" ]; then
-            VERSION_CODE=$(grep -E '^\s*versionCode\s*=' app/build.gradle | tr -dc '0-9')
+          APK_SOURCE="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_SOURCE" ]; then
+            echo "Release APK not found at default path, checking alternative output..."
+            APK_SOURCE=$(find app/build/outputs/apk -name "*release*.apk" | head -n 1)
           fi
-          if [ -z "$VERSION_NAME" ]; then
-            VERSION_NAME=$(grep -E '^\s*versionName\s*=' app/build.gradle | cut -d'"' -f2)
+          if [ -z "$APK_SOURCE" ] || [ ! -f "$APK_SOURCE" ]; then
+            echo "Falling back to debug APK if release APK was not generated..."
+            APK_SOURCE="app/build/outputs/apk/debug/app-debug.apk"
           fi
-          if [ -z "$VERSION_CODE" ]; then VERSION_CODE="1"; fi
-          if [ -z "$VERSION_NAME" ]; then VERSION_NAME="1.0"; fi
-
-          APK_SOURCE="app/build/outputs/apk/debug/app-debug.apk"
           if [ ! -f "$APK_SOURCE" ]; then
             echo "Error: APK not found at $APK_SOURCE"
             exit 1
@@ -108,31 +112,30 @@ jobs:
           mkdir -p release_package
           cp -f "$APK_SOURCE" release_package/app-release.apk
 
-          FILE_SIZE=$(stat -c%s release_package/app-release.apk)
-          SHA256=$(sha256sum release_package/app-release.apk | awk '{print $1}')
+          export FILE_SIZE=$(stat -c%s release_package/app-release.apk)
+          export SHA256_HASH=$(sha256sum release_package/app-release.apk | awk '{print $1}')
 
-          RAW_NOTES="${{ github.event.inputs.release_notes }}"
-          if [ -z "$RAW_NOTES" ]; then
-            RAW_NOTES="${{ github.event.head_commit.message }}"
-          fi
-          if [ -z "$RAW_NOTES" ]; then
-            RAW_NOTES="Обновление мобильного приложения v${VERSION_NAME} (сборка ${VERSION_CODE})"
-          fi
-          # Escape newlines and quotes for safe shell passing
-          CLEAN_NOTES=$(echo "$RAW_NOTES" | tr '\n' ' ' | sed 's/"/\\"/g')
+          # KA-13: Safely parse and sanitize release notes via Python without shell interpolation
+          python3 -c "
+          import os
+          v_code = os.environ.get('CALC_VER_CODE', '').strip() or '1'
+          v_name = os.environ.get('CALC_VER_NAME', '').strip() or '1.0'
+          input_notes = os.environ.get('INPUT_NOTES', '').strip()
+          commit_msg = os.environ.get('COMMIT_MSG', '').strip()
+          raw_notes = input_notes if input_notes else (commit_msg if commit_msg else f'Обновление мобильного приложения v{v_name} (сборка {v_code})')
+          # Escape newlines and double quotes safely
+          clean_notes = ' '.join(raw_notes.splitlines()).replace('\"', '\\\"')
 
-          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
-          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
-          echo "FILE_SIZE=${FILE_SIZE}" >> $GITHUB_OUTPUT
-          echo "SHA256=${SHA256}" >> $GITHUB_OUTPUT
-          echo "RELEASE_NOTES=${CLEAN_NOTES}" >> $GITHUB_OUTPUT
+          f_size = os.environ.get('FILE_SIZE', '0')
+          sha = os.environ.get('SHA256_HASH', '')
 
-          echo "========================================"
-          echo " Version:       ${VERSION_NAME} (${VERSION_CODE})"
-          echo " Size:          ${FILE_SIZE} bytes"
-          echo " SHA-256:       ${SHA256}"
-          echo " Release Notes: ${CLEAN_NOTES}"
-          echo "========================================"
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as gh_out:
+              gh_out.write(f'VERSION_CODE={v_code}\n')
+              gh_out.write(f'VERSION_NAME={v_name}\n')
+              gh_out.write(f'FILE_SIZE={f_size}\n')
+              gh_out.write(f'SHA256={sha}\n')
+              gh_out.write(f'RELEASE_NOTES={clean_notes}\n')
+          "
 
       - name: Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4
@@ -206,19 +209,22 @@ jobs:
                 mkdir -p ./downloads
                 cp -f "$SOURCE_APK" "$TARGET_APK"
                 chmod 644 "$TARGET_APK"
-                FILE_SIZE=$(stat -c%s "$TARGET_APK")
-                SHA256_HASH=$(sha256sum "$TARGET_APK" | awk '{print $1}')
-                cat <<EOF > "$VERSION_FILE"
-            {
-              "version_code": ${VERSION_CODE},
-              "version_name": "${VERSION_NAME}",
-              "download_url": "/downloads/app-release.apk",
-              "file_size": ${FILE_SIZE},
-              "sha256": "${SHA256_HASH}",
-              "release_notes": "${RELEASE_NOTES}",
-              "is_critical": false
-            }
-            EOF
+                export FILE_SIZE=$(stat -c%s "$TARGET_APK")
+                export SHA256_HASH=$(sha256sum "$TARGET_APK" | awk '{print $1}')
+                python3 -c "
+                import os, json
+                data = {
+                    'version_code': int(os.environ.get('VERSION_CODE', 1)),
+                    'version_name': os.environ.get('VERSION_NAME', '1.0'),
+                    'download_url': '/downloads/app-release.apk',
+                    'file_size': int(os.environ.get('FILE_SIZE', 0)),
+                    'sha256': os.environ.get('SHA256_HASH', ''),
+                    'release_notes': os.environ.get('RELEASE_NOTES', ''),
+                    'is_critical': False
+                }
+                with open('$VERSION_FILE', 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                "
                 chmod 644 "$VERSION_FILE"
               fi
               rm -f "$SOURCE_APK"

@@ -1,0 +1,1216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/sib_bg_app">
+
+    <!--
+        Тулбар MainActivity уже показывает заголовок "NFC Менеджер" и кнопку назад
+        через setupActionBarWithNavController. Здесь только TabLayout.
+    -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/sib_card_surface"
+        app:elevation="0dp">
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:tabIndicatorColor="@color/sib_blue_primary"
+            app:tabIndicatorHeight="3dp"
+            app:tabIndicatorFullWidth="false"
+            app:tabSelectedTextColor="@color/sib_blue_primary"
+            app:tabTextColor="@color/sib_text_secondary"
+            app:tabRippleColor="@color/sib_blue_active_bg"
+            app:tabMode="fixed"
+            app:tabGravity="fill">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Инспектор" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Пакетная запись" />
+
+        </com.google.android.material.tabs.TabLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/sib_border" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- ==================== ВКЛ 1: ИНСПЕКТОР ==================== -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/layoutInspectionTab"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="48dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- ═══ NFC Reader Prompt Card ═══ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardReaderStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_nfc_reader_gradient"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp">
+
+                        <ImageView
+                            android:id="@+id/ivNfcRadar"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:src="@drawable/ic_nfc"
+                            app:tint="@android:color/white" />
+
+                        <TextView
+                            android:id="@+id/tvReaderPromptTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:text="Приложите метку к телефону"
+                            android:textColor="@android:color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvReaderPromptSub"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:gravity="center"
+                            android:text="Считывание данных NTAG и досье студента"
+                            android:textColor="#B3FFFFFF"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ Диагностика чипа ═══ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardChipDiagnostics"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/sib_border"
+                    app:strokeWidth="1dp"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Заголовок диагностики: Row with Title and compact Pill -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="8dp"
+                                android:src="@drawable/ic_shield_check"
+                                app:tint="@color/sib_blue_primary" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text="Диагностика чипа"
+                                android:textColor="@color/sib_text_primary"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/chipChipType"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_nfc_stat_blue"
+                                android:paddingHorizontal="10dp"
+                                android:paddingVertical="4dp"
+                                android:text="NTAG 216"
+                                android:textColor="@color/sib_blue_primary"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginVertical="10dp"
+                            android:background="@color/sib_border" />
+
+                        <!-- UID + кнопка копировать -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvDiagUid"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="monospace"
+                                android:text="UID: 53:27:06:4E:74:00:01"
+                                android:textColor="@color/sib_blue_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <ImageButton
+                                android:id="@+id/btnCopyUid"
+                                android:layout_width="34dp"
+                                android:layout_height="34dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="Копировать UID"
+                                android:padding="5dp"
+                                android:src="@drawable/ic_copy"
+                                app:tint="@color/sib_blue_primary" />
+                        </LinearLayout>
+
+                        <!-- Память -->
+                        <TextView
+                            android:id="@+id/tvDiagMemory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Память: 888 байт (NDEF: 868 байт)"
+                            android:textColor="@color/sib_text_secondary"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/pbMemoryUsage"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:layout_marginTop="6dp"
+                            android:max="888"
+                            android:progress="68"
+                            app:indicatorColor="@color/sib_blue_primary"
+                            app:trackColor="@color/sib_border"
+                            app:trackCornerRadius="3dp" />
+
+                        <!-- Статус блокировки -->
+                        <TextView
+                            android:id="@+id/tvDiagLock"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Запись разрешена (Zero-Brick защита)"
+                            android:textColor="@color/sib_success"
+                            android:textSize="12sp" />
+
+                        <!-- NDEF Payload -->
+                        <TextView
+                            android:id="@+id/tvDiagPayload"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:ellipsize="end"
+                            android:fontFamily="monospace"
+                            android:maxLines="2"
+                            android:text=""
+                            tools:text="NDEF: EJ1:..."
+                            android:textColor="@color/sib_text_muted"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ Досье студента ═══ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardStudentDossier"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/sib_border"
+                    app:strokeWidth="1dp"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Профиль студента: Header -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <!-- Аватар студента (фото или инициалы) -->
+                            <FrameLayout
+                                android:id="@+id/layoutDossierAvatar"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:background="@drawable/bg_nfc_avatar_circle">
+
+                                <com.google.android.material.imageview.ShapeableImageView
+                                    android:id="@+id/ivDossierAvatar"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:visibility="gone"
+                                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Circle"
+                                    app:strokeColor="@color/sib_blue_primary"
+                                    app:strokeWidth="1.5dp"
+                                    tools:visibility="visible" />
+
+                                <TextView
+                                    android:id="@+id/tvDossierAvatar"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:textColor="@color/sib_blue_primary"
+                                    android:textSize="17sp"
+                                    android:textStyle="bold"
+                                    tools:text="ШН" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <!-- Верхний ряд: Фамилия И.О. + статус справа -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvDossierName"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="Шаламов Н.В."
+                                        android:textColor="@color/sib_text_primary"
+                                        android:textSize="17sp"
+                                        android:textStyle="bold" />
+
+                                    <!-- Статус метки (Компактный Pill справа) -->
+                                    <TextView
+                                        android:id="@+id/chipTagStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:background="@drawable/bg_nfc_stat_green"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="3dp"
+                                        android:text="АКТИВНА"
+                                        android:textColor="@color/sib_success"
+                                        android:textSize="10sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <!-- Группа и ID студента -->
+                                <TextView
+                                    android:id="@+id/tvDossierGroup"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="Группа ИКС-433 · ID #116"
+                                    android:textColor="@color/sib_blue_primary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Полное ФИО на ВСЮ ширину карточки: никогда не обрежется! -->
+                        <TextView
+                            android:id="@+id/tvDossierFullName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_nfc_section_header"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="7dp"
+                            android:text="Шаламов Никита Вячеславович"
+                            android:textColor="@color/sib_text_primary"
+                            android:textSize="13sp" />
+
+                        <!-- Теги академического профиля студента -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvDossierCourseTag"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_nfc_stat_blue"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp"
+                                android:text="4 курс"
+                                android:textColor="@color/sib_blue_primary"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDossierFacultyTag"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_nfc_stat_blue"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp"
+                                android:text="ИКС (Сети и связь)"
+                                android:textColor="@color/sib_blue_primary"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/tvDossierStudyFormTag"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_nfc_stat_green"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp"
+                                android:text="Очное (Бюджет)"
+                                android:textColor="@color/sib_success"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <!-- Баннер аннулирования -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/tvRevocationBanner"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:visibility="gone"
+                            app:cardBackgroundColor="@color/sib_error_bg"
+                            app:cardCornerRadius="10dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="@color/sib_error_border"
+                            app:strokeWidth="1dp">
+
+                            <TextView
+                                android:id="@+id/tvRevocationText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:padding="10dp"
+                                android:text="Внимание: метка аннулирована. Причина: Замена карты"
+                                android:textColor="@color/sib_danger"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- ═══ МЕТРИКИ СТУДЕНТА: 2x2 СЕТКА ═══ -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:orientation="vertical">
+
+                            <!-- Ряд 1: Посещаемость и Успеваемость -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <!-- 1. Посещаемость -->
+                                <LinearLayout
+                                    android:id="@+id/containerStatAttendance"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_nfc_stat_blue"
+                                    android:orientation="vertical"
+                                    android:padding="12dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Посещаемость"
+                                        android:textColor="@color/sib_text_muted"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatAttendance"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="25%"
+                                        android:textColor="@color/sib_blue_primary"
+                                        android:textSize="22sp"
+                                        android:textStyle="bold" />
+
+                                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                                        android:id="@+id/pbStatAttendance"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="4dp"
+                                        android:layout_marginTop="4dp"
+                                        android:max="100"
+                                        android:progress="25"
+                                        app:indicatorColor="@color/sib_blue_primary"
+                                        app:trackColor="@color/sib_border"
+                                        app:trackCornerRadius="2dp" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatAttendanceDetail"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="1 из 4 пар"
+                                        android:textColor="@color/sib_text_secondary"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+
+                                <!-- 2. Средний балл (GPA) -->
+                                <LinearLayout
+                                    android:id="@+id/containerStatGpa"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_nfc_stat_green"
+                                    android:orientation="vertical"
+                                    android:padding="12dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Средний балл"
+                                        android:textColor="@color/sib_text_muted"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatGpa"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="4.6"
+                                        android:textColor="@color/sib_success"
+                                        android:textSize="22sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatGpaStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="Аттестован"
+                                        android:textColor="@color/sib_success"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatGradesCount"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="5 предметов"
+                                        android:textColor="@color/sib_text_secondary"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Ряд 2: Пропуски и Антифрод -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="horizontal">
+
+                                <!-- 3. Пропуски -->
+                                <LinearLayout
+                                    android:id="@+id/containerStatAbsent"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_nfc_stat_yellow"
+                                    android:orientation="vertical"
+                                    android:padding="12dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Пропуски занятий"
+                                        android:textColor="@color/sib_text_muted"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatAbsent"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="3 пары"
+                                        android:textColor="@color/sib_warning"
+                                        android:textSize="22sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatAbsentDetail"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="75% от всех пар"
+                                        android:textColor="@color/sib_text_secondary"
+                                        android:textSize="11sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatAbsentStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="Зона риска"
+                                        android:textColor="@color/sib_warning"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <!-- 4. Антифрод / Безопасность -->
+                                <LinearLayout
+                                    android:id="@+id/containerStatFraud"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_nfc_stat_red"
+                                    android:orientation="vertical"
+                                    android:padding="12dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Инциденты фрода"
+                                        android:textColor="@color/sib_text_muted"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatFraud"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="0"
+                                        android:textColor="@color/sib_danger"
+                                        android:textSize="22sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatFraudStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="Нарушений нет"
+                                        android:textColor="@color/sib_text_secondary"
+                                        android:textSize="11sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvStatFraudSecurity"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="HMAC-SHA256 • Чист"
+                                        android:textColor="@color/sib_blue_primary"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- ═══ Учетная запись студента и Аппаратная метка ═══ -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_nfc_section_header"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <!-- Учетная запись -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:src="@drawable/ic_person"
+                                    app:tint="@color/sib_blue_primary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Учетная запись: "
+                                    android:textColor="@color/sib_text_muted"
+                                    android:textSize="12sp" />
+
+                                <TextView
+                                    android:id="@+id/tvDossierAccountEmail"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="student@sibsutis.ru"
+                                    android:textColor="@color/sib_text_primary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvDossierAccountInfo"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="24dp"
+                                android:layout_marginTop="2dp"
+                                android:text="Логин: Technoponk • Статус: Активен"
+                                android:textColor="@color/sib_text_secondary"
+                                android:textSize="12sp" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="8dp"
+                                android:background="@color/sib_border" />
+
+                            <!-- NFC Метка инфо -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:src="@drawable/ic_nfc"
+                                    app:tint="@color/sib_blue_primary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="NFC Чип: "
+                                    android:textColor="@color/sib_text_muted"
+                                    android:textSize="12sp" />
+
+                                <TextView
+                                    android:id="@+id/tvDossierNfcUid"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="monospace"
+                                    android:text="53:27:06:4E:74:00:01"
+                                    android:textColor="@color/sib_blue_primary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvDossierNfcInfo"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="24dp"
+                                android:layout_marginTop="2dp"
+                                android:text="Выдана: 25.09.2026 в 15:30 • HMAC-SHA256 активен"
+                                android:textColor="@color/sib_text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Последняя отметка -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_nfc_section_header"
+                            android:gravity="center_vertical"
+                            android:padding="10dp">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_marginEnd="8dp"
+                                android:src="@drawable/ic_history"
+                                app:tint="@color/sib_text_muted" />
+
+                            <TextView
+                                android:id="@+id/tvDossierLastAttendance"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:maxLines="2"
+                                android:text="Последняя пара: —"
+                                android:textColor="@color/sib_text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- ═══ СТАТИСТИКА ПРЕПОДАВАТЕЛЯ (ТОЛЬКО СВОИ ПРЕДМЕТЫ) ═══ -->
+                        <LinearLayout
+                            android:id="@+id/layoutTeacherSubjectsSection"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone"
+                            tools:visibility="visible">
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="12dp"
+                                android:background="@color/sib_border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:src="@drawable/ic_person"
+                                    app:tint="@color/sib_blue_primary" />
+
+                                <TextView
+                                    android:id="@+id/tvTeacherSubjectsTitle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Мои дисциплины у студента"
+                                    android:textColor="@color/sib_text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/chipTeacherFilterTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_nfc_stat_blue"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp"
+                                    android:text="Только мои предметы"
+                                    android:textColor="@color/sib_blue_primary"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/containerTeacherSubjects"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+                        </LinearLayout>
+
+                        <!-- Успеваемость (общая) -->
+                        <LinearLayout
+                            android:id="@+id/layoutDossierGradesSummarySection"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="12dp"
+                                android:background="@color/sib_border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:src="@drawable/ic_star"
+                                    app:tint="@color/sib_warning" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Успеваемость по предметам"
+                                    android:textColor="@color/sib_text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvDossierGradesSummary"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:layout_marginStart="24dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="Оценки отсутствуют"
+                                android:textColor="@color/sib_text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- История меток -->
+                        <LinearLayout
+                            android:id="@+id/layoutDossierTagHistorySection"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="12dp"
+                                android:background="@color/sib_border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:src="@drawable/ic_nfc"
+                                    app:tint="@color/sib_blue_primary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="История меток"
+                                    android:textColor="@color/sib_text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvDossierTagHistory"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:layout_marginStart="24dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="—"
+                                android:textColor="@color/sib_text_muted"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Кнопки действий -->
+                        <LinearLayout
+                            android:id="@+id/layoutDossierTagActions"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnReplaceTag"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:backgroundTint="@color/sib_blue_primary"
+                                android:text="Перевыпустить метку студенту"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                app:cornerRadius="12dp"
+                                app:icon="@drawable/ic_refresh"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@android:color/white" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnWipeTag"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:minHeight="48dp"
+                                android:text="Безопасная очистка чипа (Zero-Brick)"
+                                android:textAllCaps="false"
+                                android:textColor="@color/sib_text_primary"
+                                android:textSize="14sp"
+                                app:cornerRadius="12dp"
+                                app:icon="@drawable/ic_delete"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/sib_text_muted"
+                                app:strokeColor="@color/sib_border" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- ==================== ВКЛ 2: ПАКЕТНАЯ ЗАПИСЬ ==================== -->
+        <LinearLayout
+            android:id="@+id/layoutConveyorTab"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Фильтр и прогресс -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="12dp"
+                app:cardBackgroundColor="@color/sib_card_surface"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/sib_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <!-- Выбор группы -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Группа"
+                            android:textColor="@color/sib_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <Spinner
+                            android:id="@+id/spinnerConveyorGroup"
+                            android:layout_width="0dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_spinner_field" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchAutoAdvance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:checked="true"
+                            android:text="Авто"
+                            android:textColor="@color/sib_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="@color/sib_border" />
+
+                    <!-- Прогресс запись -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/pbConveyorProgress"
+                            android:layout_width="0dp"
+                            android:layout_height="8dp"
+                            android:layout_weight="1"
+                            android:max="100"
+                            android:progress="0"
+                            app:indicatorColor="@color/sib_blue_primary"
+                            app:trackColor="@color/sib_border"
+                            app:trackCornerRadius="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvConveyorProgressCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="0 / 0 (0%)"
+                            android:textColor="@color/sib_text_secondary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Активный студент на запись -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardConveyorActiveTarget"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginBottom="8dp"
+                app:cardBackgroundColor="@color/sib_blue_active_bg"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/sib_blue_primary"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_nfc_stat_blue"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:text="СЛЕДУЮЩИЙ НА ЗАПИСЬ"
+                        android:textColor="@color/sib_blue_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvActiveTargetName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:text="Выберите студента или группу"
+                        android:textAlignment="center"
+                        android:textColor="@color/sib_text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvActiveTargetDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:maxLines="3"
+                        android:text="Поднесите чистую метку NTAG 216"
+                        android:textColor="@color/sib_text_secondary"
+                        android:textSize="13sp" />
+
+                    <!-- Кнопки конвейера -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnConveyorSkip"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:text="Пропустить"
+                            android:textColor="@color/sib_text_primary"
+                            android:textSize="13sp"
+                            app:cornerRadius="10dp"
+                            app:strokeColor="@color/sib_border" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnConveyorWipe"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="Очистить чип"
+                            android:textColor="@color/sib_text_primary"
+                            android:textSize="13sp"
+                            app:cornerRadius="10dp"
+                            app:strokeColor="@color/sib_border" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Список студентов -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvConveyorQueue"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingBottom="16dp" />
+
+        </LinearLayout>
+    </FrameLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

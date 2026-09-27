@@ -109,4 +109,18 @@ object RoleUtils {
         val norm = normalizeRole(role)
         return norm == ROLE_TEACHER || norm == ROLE_HEAD
     }
+
+    /**
+     * Returns true if the role is 'head' (заведующий кафедрой).
+     */
+    fun isHead(role: String?): Boolean {
+        return normalizeRole(role) == ROLE_HEAD
+    }
+
+    /**
+     * Returns true if the role is 'dean' (декан).
+     */
+    fun isDean(role: String?): Boolean {
+        return normalizeRole(role) == ROLE_DEAN
+    }
 }

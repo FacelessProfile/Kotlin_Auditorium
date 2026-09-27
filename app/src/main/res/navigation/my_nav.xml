@@ -178,4 +178,10 @@
         android:name="com.example.kotlinroomdatabase.fragments.feedback.FeedbackFragment"
         android:label="Обратная связь"
         tools:layout="@layout/fragment_feedback" />
+
+    <fragment
+        android:id="@+id/nfcManagerFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.nfc.NfcManagerFragment"
+        android:label="NFC Менеджер"
+        tools:layout="@layout/fragment_nfc_manager" />
 </navigation>

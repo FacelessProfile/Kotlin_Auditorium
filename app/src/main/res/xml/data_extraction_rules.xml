@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Exclude sensitive authentication tokens and credentials -->
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
+        <exclude domain="sharedpref" path="secure_auth_prefs.xml" />
+        <exclude domain="sharedpref" path="secret_shared_prefs.xml" />
+        <exclude domain="sharedpref" path="student_prefs.xml" />
+        <exclude domain="sharedpref" path="student_attendance_state_prefs.xml" />
+        <!-- Exclude student room database -->
+        <exclude domain="database" path="student_database" />
+        <exclude domain="database" path="student_database-wal" />
+        <exclude domain="database" path="student_database-shm" />
+    </cloud-backup>
+    <device-transfer>
+        <!-- Exclude sensitive authentication tokens and credentials -->
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
+        <exclude domain="sharedpref" path="secure_auth_prefs.xml" />
+        <exclude domain="sharedpref" path="secret_shared_prefs.xml" />
+        <exclude domain="sharedpref" path="student_prefs.xml" />
+        <exclude domain="sharedpref" path="student_attendance_state_prefs.xml" />
+        <!-- Exclude student room database -->
+        <exclude domain="database" path="student_database" />
+        <exclude domain="database" path="student_database-wal" />
+        <exclude domain="database" path="student_database-shm" />
+    </device-transfer>
+</data-extraction-rules>

@@ -21,6 +21,7 @@ import com.example.kotlinroomdatabase.databinding.FragmentListBinding
 import com.example.kotlinroomdatabase.fragments.nfc.NFC_Tools
 import com.example.kotlinroomdatabase.model.Student
 import com.example.kotlinroomdatabase.repository.*
+import com.example.kotlinroomdatabase.util.SafeNdefManager
 import com.example.kotlinroomdatabase.data.ZmqSockets
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
 import kotlinx.coroutines.flow.first
@@ -145,22 +146,48 @@ class ListFragment : NFC_Tools() {
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     override fun processNfcTag(nfcId: String) {
+        processNfcTag(nfcId, "")
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override fun processNfcTag(nfcId: String, physicalUid: String) {
         lifecycleScope.launch {
-            val existingStudent = studentRepository.getStudentByNfc(nfcId)
+            val cleanPhysUid = SafeNdefManager.cleanUid(physicalUid)
+            val parsed = SafeNdefManager.parsePassPayload(nfcId, cleanPhysUid)
+
+            if (parsed != null && parsed.isCloneDetected) {
+                requireActivity().runOnUiThread {
+                    Toast.makeText(requireContext(), "ОБНАРУЖЕН КЛОН МЕТКИ! UID чипа не совпадает", Toast.LENGTH_LONG).show()
+                }
+                return@launch
+            }
+
+            val searchKey = when {
+                parsed != null && parsed.tagUid.isNotBlank() -> parsed.tagUid
+                cleanPhysUid.isNotBlank() -> cleanPhysUid
+                else -> nfcId.trim()
+            }
+
+            val existingStudent = studentRepository.getStudentByNfc(searchKey)
             requireActivity().runOnUiThread {
                 if (existingStudent != null) {
                     markStudentAttendance(existingStudent)
                 } else {
-                    Toast.makeText(requireContext(), "Студент с таким NFC не найден", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "Студент с таким NFC не найден: $searchKey", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
     override fun showNfcNotSupportedMessage() {
-        Toast.makeText(requireContext(), "NFC is not supported", Toast.LENGTH_LONG).show()
+        if (!isAdded) return
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("NFC не поддерживается")
+            .setIcon(R.drawable.ic_nfc)
+            .setMessage("На данном устройстве отсутствует модуль NFC.")
+            .setPositiveButton("Понятно", null)
+            .show()
     }
 
     override fun showNfcReadingStartedMessage() {
@@ -347,5 +374,18 @@ class ListFragment : NFC_Tools() {
 
         val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
         itemTouchHelper.attachToRecyclerView(binding.recyclerview)
+    }
+
+    override fun onPhysicalTagScanned(tag: android.nfc.Tag, payloadOrUid: String) {
+        lifecycleScope.launch {
+            val bundle = Bundle().apply {
+                putString("scanned_tag_uid", payloadOrUid)
+            }
+            try {
+                findNavController().navigate(R.id.nfcManagerFragment, bundle)
+            } catch (e: Exception) {
+                Log.e("ListFragment", "Failed to navigate to nfcManagerFragment with tag $payloadOrUid", e)
+            }
+        }
     }
 }

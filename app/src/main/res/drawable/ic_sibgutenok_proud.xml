@@ -1,0 +1,174 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Sparkle Stars of Achievement -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M14,32 L16,26 L22,24 L16,22 L14,16 L12,22 L6,24 L12,26 Z" />
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M82,32 L84,28 L88,26 L84,24 L82,20 L80,24 L76,26 L80,28 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M16,68 L17.5,65 L20.5,64 L17.5,63 L16,60 L14.5,63 L11.5,64 L14.5,65 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M80,68 L81.5,65 L84.5,64 L81.5,63 L80,60 L78.5,63 L75.5,64 L78.5,65 Z" />
+
+    <!-- Ground Shadow -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.2"
+        android:pathData="M26,88 C36,84 60,84 70,88 C64,91 32,91 26,88 Z" />
+
+    <!-- Duck Body Plumage -->
+    <!-- Base Shading -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M48,28 C30,28 18,40 18,58 C18,74 30,86 48,86 C66,86 78,74 78,58 C78,40 66,28 48,28 Z" />
+    <!-- Main Warm Golden Yellow Feather Coat -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M48,27 C31,27 20,39 20,57 C20,72 31,84 48,84 C65,84 76,72 76,57 C76,39 65,27 48,27 Z" />
+    <!-- Soft Highlights -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M48,30 C34,30 24,40 24,54 C24,66 32,76 48,76 C64,76 72,66 72,54 C72,40 62,30 48,30 Z" />
+
+    <!-- Academic Mortarboard Cap (SibSUTIS Navy Blue) -->
+    <!-- Cap Skull Skullcap -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M34,26 L34,35 C34,41 62,41 62,35 L62,26 L48,31 Z" />
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M35,27 L35,34 C35,39 61,39 61,34 L61,27 L48,31.5 Z" />
+    <!-- Flat Diamond Mortarboard Top (Perspective) -->
+    <path
+        android:fillColor="#172554"
+        android:pathData="M48,7 L82,18 L48,29 L14,18 Z" />
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M48,8 L80,18 L48,28 L16,18 Z" />
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M48,9 L76,18 L48,27 L20,18 Z" />
+    <!-- Center Button -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M48,20 A2.5,2.5 0 1,0 48,15 A2.5,2.5 0 1,0 48,20 Z" />
+    <!-- Gold Silk Tassel Hanging to the Side -->
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M48,18 C56,19 68,22 70,30" />
+    <!-- Tassel Fringe and Ribbon -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M68,30 L73,30 L75,40 L66,40 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M67,31 L74,31 L73,33 L68,33 Z" />
+    <path
+        android:strokeColor="#B45309"
+        android:strokeWidth="0.8"
+        android:pathData="M68,35 L68,39 M70,35 L70,39 M72,35 L72,39 M74,35 L74,39" />
+
+    <!-- Cute Cheeks (Rosy Blush) -->
+    <path
+        android:fillColor="#FCA5A5"
+        android:pathData="M22,58 A6,5 0 1,0 34,58 A6,5 0 1,0 22,58 Z" />
+    <path
+        android:fillColor="#FCA5A5"
+        android:pathData="M62,58 A6,5 0 1,0 74,58 A6,5 0 1,0 62,58 Z" />
+
+    <!-- Expressive Eyes: Joyful Wink on Left, Happy Curve on Right -->
+    <!-- Left Eye: Cute Playful Wink (Arched wink line with eyelashes) -->
+    <path
+        android:strokeColor="#1E293B"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,48 Q35,41 42,48" />
+    <path
+        android:strokeColor="#1E293B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M41,47 L44,45" />
+
+    <!-- Right Eye: Shiny Big Anime Happy Eye -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M56,48 A5,6 0 1,0 66,48 A5,6 0 1,0 56,48 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M57,49 A4,5 0 1,0 65,49 A4,5 0 1,0 57,49 Z" />
+    <!-- Big Glossy Specular Highlights -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,45 A2,2 0 1,0 62,45 A2,2 0 1,0 58,45 Z" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M62,50 A1,1 0 1,0 64,50 A1,1 0 1,0 62,50 Z" />
+
+    <!-- Broad Happy Orange Beak with Smile -->
+    <!-- Base Shadow -->
+    <path
+        android:fillColor="#C2410C"
+        android:pathData="M38,54 C38,54 43,51 48,51 C53,51 58,54 58,54 C61,61 58,69 48,69 C38,69 35,61 38,54 Z" />
+    <!-- Main Orange Bill -->
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M39,54 C39,54 43,52 48,52 C53,52 57,54 57,54 C60,60 57,67 48,67 C39,67 36,60 39,54 Z" />
+    <!-- Top Highlight -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M42,54.5 C44,53.5 46,53 48,53 C50,53 52,53.5 54,54.5 C53,56.5 50,57.5 48,57.5 C46,57.5 43,56.5 42,54.5 Z" />
+    <!-- Open Mouth Inside (Ruby Joy) -->
+    <path
+        android:fillColor="#BE123C"
+        android:pathData="M42,60 C44,65 52,65 54,60 C53,66 43,66 42,60 Z" />
+    <!-- Little Pink Tongue -->
+    <path
+        android:fillColor="#FB7185"
+        android:pathData="M45,63 C46,64.5 50,64.5 51,63 C50,65.5 46,65.5 45,63 Z" />
+
+    <!-- Right Wing Thumbs-Up of Approval -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M76,50 C80,44 86,46 84,54 L88,52 C91,55 89,62 82,66 L74,62 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M76,51 C79,46 84,48 83,54 L86,53 C89,56 87,61 82,65 L75,61 Z" />
+
+    <!-- Left Wing Holding SibSUTIS Gradebook ("ЗАЧЁТКА С ОТЛИЧНО") -->
+    <!-- Gradebook Cover (Blue Leather) -->
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M16,60 L32,54 L36,76 L20,82 Z" />
+    <!-- Open White Pages -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,62 L32,57 L34,74 L22,79 Z" />
+    <!-- Red "5 / ОТЛИЧНО" Teacher Grade Stamp -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M24,67 L30,65 L29,73 L23,75 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M25,69 L28,68 L27,70 L26,70 L26,72 L28,71 L27.5,73 L24.5,74 Z" />
+    <!-- Wing Clasping the Book -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M18,66 C14,64 12,70 16,74 L22,76 L24,70 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M18.5,67 C15.5,65 13.5,70 17,73 L22,75 L23.5,70 Z" />
+
+</vector>

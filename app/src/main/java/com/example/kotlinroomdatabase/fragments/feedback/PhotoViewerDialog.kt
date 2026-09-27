@@ -177,25 +177,59 @@ class PhotoViewerDialog : DialogFragment() {
                 val authPrefs = context.getSharedPreferences("auth_prefs", android.content.Context.MODE_PRIVATE)
                 val token = authPrefs.getString("auth_token", "") ?: ""
 
-                val req = Request.Builder()
-                    .url(finalUrl)
-                    .apply {
-                        if (token.isNotBlank()) header("Authorization", "Bearer $token")
-                    }
-                    .build()
+                val reqBuilder = Request.Builder().url(finalUrl)
+                // KA-04: Only attach Authorization header if destination matches trusted backend origin
+                if (ServerConfig.isTrustedOrigin(context, finalUrl) && token.isNotBlank()) {
+                    reqBuilder.header("Authorization", "Bearer $token")
+                }
 
-                val resp = client.newCall(req).execute()
+                val resp = client.newCall(reqBuilder.build()).execute()
                 if (resp.isSuccessful) {
-                    val bytes = resp.body?.bytes()
-                    if (bytes != null && bytes.isNotEmpty()) {
-                        FileOutputStream(cacheFile).use { it.write(bytes) }
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        withContext(Dispatchers.Main) {
-                            progressBar.visibility = View.GONE
-                            if (bitmap != null) {
-                                imageView.setImageBitmap(bitmap)
+                    // KA-14: Bounded stream read (max 15 MB)
+                    val maxBytes = 15 * 1024 * 1024L
+                    val body = resp.body
+                    var readBytes: ByteArray? = null
+                    if (body != null && (body.contentLength() <= 0 || body.contentLength() <= maxBytes)) {
+                        body.byteStream().use { input ->
+                            val out = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8192)
+                            var total = 0L
+                            var n: Int
+                            while (input.read(buffer).also { n = it } != -1) {
+                                total += n
+                                if (total > maxBytes) {
+                                    out.reset()
+                                    break
+                                }
+                                out.write(buffer, 0, n)
                             }
+                            if (out.size() > 0) readBytes = out.toByteArray()
                         }
+                    }
+
+                    if (readBytes != null && readBytes.isNotEmpty()) {
+                        FileOutputStream(cacheFile).use { it.write(readBytes) }
+                        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        BitmapFactory.decodeByteArray(readBytes, 0, readBytes.size, options)
+                        if (options.outWidth > 0 && options.outHeight > 0) {
+                            var sampleSize = 1
+                            while ((options.outWidth / sampleSize) > 4096 || (options.outHeight / sampleSize) > 4096) {
+                                sampleSize *= 2
+                            }
+                            options.inSampleSize = sampleSize
+                            options.inJustDecodeBounds = false
+                            val bitmap = BitmapFactory.decodeByteArray(readBytes, 0, readBytes.size, options)
+                            withContext(Dispatchers.Main) {
+                                progressBar.visibility = View.GONE
+                                if (bitmap != null) {
+                                    imageView.setImageBitmap(bitmap)
+                                }
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) { progressBar.visibility = View.GONE }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) { progressBar.visibility = View.GONE }
                     }
                 } else {
                     withContext(Dispatchers.Main) {

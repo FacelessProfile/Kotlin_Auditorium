@@ -11,43 +11,73 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Robust error and crash logger that captures critical diagnostic data,
+ * stacktraces, device information, and recent application logcat into
+ * structured .log files stored in the app's internal files directory.
+ */
 object AppErrorLogger {
 
     private const val TAG = "AppErrorLogger"
-    private const val LOGS_DIR_NAME = "logs"
+    private const val LOGS_DIR_NAME = "app_logs"
     private const val LATEST_LOG_NAME = "latest_errors.log"
-    private const val MAX_LOG_FILES = 15
-    private var isHandlerInstalled = false
+    private const val MAX_LOG_FILES = 10
+    private const val MAX_LOGCAT_LINES = 300
+
+    /**
+     * Scrubs sensitive data (passwords, JWT tokens, Bearer headers, TOTP secrets)
+     * from logs before saving or exporting (KA-03).
+     */
+    fun sanitizeLogText(input: String): String {
+        return input
+            // Redact Bearer JWT tokens
+            .replace(Regex("(?i)Bearer\\s+[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+"), "Bearer [REDACTED_JWT]")
+            // Redact Authorization headers
+            .replace(Regex("(?i)(Authorization:\\s*Bearer\\s*)[^\\r\\n]+"), "$1[REDACTED]")
+            .replace(Regex("(?i)(Authorization:\\s*)[^\\r\\n]+"), "$1[REDACTED]")
+            // Redact passwords in JSON or query params or form data
+            .replace(Regex("""(?i)("?password"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
+            .replace(Regex("""(?i)("?pass"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
+            // Redact tokens in JSON
+            .replace(Regex("""(?i)("?token"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
+            .replace(Regex("""(?i)("?auth_token"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
+            // Redact TOTP secret
+            .replace(Regex("""(?i)("?totp_secret"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
+            .replace(Regex("""(?i)(totp_secret\s*=\s*)[^\s,;&]+"""), "$1[REDACTED]")
+    }
+
     private var appContext: Context? = null
 
     /**
-     * Initializes AppErrorLogger with application context and installs crash handler.
+     * Initializes logger and crash handler with application context.
      */
     fun init(context: Context) {
         appContext = context.applicationContext
-        installCrashHandler(context.applicationContext)
+        initCrashHandler(context)
     }
 
     /**
-     * Overload to log errors without passing context directly.
+     * Overloaded logError that uses cached appContext or falls back to standard Log.e.
      */
-    fun logError(
-        tag: String,
-        message: String,
-        throwable: Throwable? = null
-    ): File? {
-        val ctx = appContext ?: return null
-        return logError(ctx, tag, message, throwable)
+    fun logError(tag: String, message: String, throwable: Throwable? = null): File? {
+        val ctx = appContext
+        return if (ctx != null) {
+            logError(ctx, tag, message, throwable)
+        } else {
+            try {
+                Log.e(tag, message, throwable)
+            } catch (_: Throwable) {
+                // In unmocked JVM unit test environment
+            }
+            null
+        }
     }
 
     /**
-     * Installs global uncaught exception handler to capture crashes into .log files.
+     * Initializes global uncaught exception handler so any crash automatically creates a .log file.
      */
-    fun installCrashHandler(context: Context) {
+    fun initCrashHandler(context: Context) {
         appContext = context.applicationContext
-        if (isHandlerInstalled) return
-        isHandlerInstalled = true
-
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
@@ -93,7 +123,7 @@ object AppErrorLogger {
             val osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
             val appVersion = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})"
 
-            val logContent = buildString {
+            val rawLogContent = buildString {
                 append("================================================================\n")
                 append("TIMESTAMP:   ").append(timestamp).append("\n")
                 append("TAG:         ").append(tag).append("\n")
@@ -110,6 +140,9 @@ object AppErrorLogger {
                 append("  ").append(SystemInfoHelper.getDiagnosticInfoMarkdown(context).replace("\n", "\n  ")).append("\n")
                 append("================================================================\n\n")
             }
+
+            // Sanitize sensitive info
+            val logContent = sanitizeLogText(rawLogContent)
 
             // Write individual timestamped log file
             val logFile = File(logsDir, "error_${fileDate}.log")
@@ -146,9 +179,9 @@ object AppErrorLogger {
     }
 
     /**
-     * Generates and returns a comprehensive diagnostic .log file containing
+     * Generates a comprehensive, self-contained diagnostic report file containing
      * system metrics, device specs, recent recorded errors, and recent app logcat.
-     * This guarantees developers ALWAYS receive a full actionable .log file.
+     * All sensitive tokens and credentials are scrubbed (KA-03).
      */
     fun getOrCreateDiagnosticLogFile(context: Context): File {
         val logsDir = File(context.filesDir, LOGS_DIR_NAME).apply {
@@ -162,12 +195,16 @@ object AppErrorLogger {
         val osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
         val appVersion = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})"
 
-        // Collect recent logcat for this app process
+        // Collect recent logcat for this app process and sanitize
         val logcatSnippet = try {
             val pid = android.os.Process.myPid()
-            val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "time", "--pid=$pid", "-t", "300"))
+            val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "time", "--pid=$pid", "-t", "$MAX_LOGCAT_LINES"))
             val lines = process.inputStream.bufferedReader(Charsets.UTF_8).readLines()
-            if (lines.isNotEmpty()) lines.joinToString("\n") else "No recent logcat output available"
+            if (lines.isNotEmpty()) {
+                sanitizeLogText(lines.joinToString("\n"))
+            } else {
+                "No recent logcat output available"
+            }
         } catch (e: Exception) {
             "Failed to collect logcat: ${e.message}"
         }
@@ -186,10 +223,10 @@ object AppErrorLogger {
             append("  ").append(SystemInfoHelper.getDiagnosticInfoMarkdown(context).replace("\n", "\n  ")).append("\n")
             if (cumulative.exists() && cumulative.length() > 0) {
                 append("\n--- RECENT RECORDED APP ERRORS (CUMULATIVE LOG) ---\n")
-                append(cumulative.readText(Charsets.UTF_8).takeLast(6000))
+                append(sanitizeLogText(cumulative.readText(Charsets.UTF_8).takeLast(6000)))
                 append("\n")
             }
-            append("\n--- RECENT LOGCAT OUTPUT (LAST 300 ENTRIES) ---\n")
+            append("\n--- RECENT LOGCAT OUTPUT (LAST 300 ENTRIES - SANITIZED) ---\n")
             append(logcatSnippet)
             append("\n================================================================\n")
         }
@@ -209,16 +246,20 @@ object AppErrorLogger {
             ?: emptyList()
     }
 
+    /**
+     * Keeps only the newest MAX_LOG_FILES to prevent unbounded disk usage.
+     */
     private fun cleanOldLogs(logsDir: File) {
-        val files = logsDir.listFiles { file -> file.name != LATEST_LOG_NAME && file.extension == "log" }
-            ?.sortedByDescending { it.lastModified() } ?: return
+        try {
+            val files = logsDir.listFiles { file -> file.extension == "log" && file.name != LATEST_LOG_NAME }
+                ?.sortedByDescending { it.lastModified() }
+                ?: return
 
-        if (files.size > MAX_LOG_FILES) {
-            for (i in MAX_LOG_FILES until files.size) {
-                try {
-                    files[i].delete()
-                } catch (_: Exception) {}
+            if (files.size > MAX_LOG_FILES) {
+                files.drop(MAX_LOG_FILES).forEach { it.delete() }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cleaning old logs", e)
         }
     }
 }

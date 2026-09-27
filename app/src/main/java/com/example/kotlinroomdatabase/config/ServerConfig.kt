@@ -2,16 +2,20 @@ package com.example.kotlinroomdatabase.config
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.example.kotlinroomdatabase.BuildConfig
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 object ServerConfig {
 
+    private const val TAG = "ServerConfig"
+
     // =========================================================================
-    // SINGLE LINE CODE TOGGLE: Set to true for local debug (127.0.0.1:9001)
-    // or false for external production server (https://lms.signal.qlabs.pro:9001)
+    // PRODUCTION DEFAULT: Set to false for external production server (https://lms.signal.qlabs.pro:9001)
     // =========================================================================
     const val USE_LOCAL_SERVER_BY_DEFAULT: Boolean = false
 
@@ -32,7 +36,25 @@ object ServerConfig {
         try {
             context.applicationContext.getSharedPreferences("student_attendance_state_prefs", Context.MODE_PRIVATE)
                 .edit().clear().apply()
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing attendance state", e)
+        }
+    }
+
+    fun getOrigin(url: String): String {
+        val httpUrl = url.toHttpUrlOrNull() ?: return url
+        return "${httpUrl.scheme}://${httpUrl.host}:${httpUrl.port}"
+    }
+
+    private fun handleServerOriginChangeIfDifferent(context: Context, oldBaseUrl: String, newBaseUrl: String) {
+        val oldOrigin = getOrigin(oldBaseUrl)
+        val newOrigin = getOrigin(newBaseUrl)
+        if (!oldOrigin.equals(newOrigin, ignoreCase = true)) {
+            clearAttendanceState(context)
+            com.example.kotlinroomdatabase.util.JwtUtils.clearAllSessionData(context)
+            com.example.kotlinroomdatabase.crypto.BiometricAuthManager.clearCredentials(context)
+            Log.w(TAG, "Server origin changed from $oldOrigin to $newOrigin. Session tokens and credentials cleared.")
+        }
     }
 
     fun isLocalServer(context: Context): Boolean {
@@ -45,13 +67,15 @@ object ServerConfig {
     }
 
     fun setLocalServerEnabled(context: Context, enabled: Boolean) {
-        clearAttendanceState(context)
+        val oldBase = getBaseUrl(context)
         getPrefs(context).edit().putBoolean(KEY_USE_LOCAL_OVERRIDE, enabled).apply()
+        handleServerOriginChangeIfDifferent(context, oldBase, getBaseUrl(context))
     }
 
     fun resetToDefault(context: Context) {
-        clearAttendanceState(context)
+        val oldBase = getBaseUrl(context)
         getPrefs(context).edit().remove(KEY_USE_LOCAL_OVERRIDE).remove(KEY_CUSTOM_URL).apply()
+        handleServerOriginChangeIfDifferent(context, oldBase, getBaseUrl(context))
     }
 
     fun getBaseUrl(context: Context): String {
@@ -68,16 +92,40 @@ object ServerConfig {
     }
 
     fun setCustomServerUrl(context: Context, url: String?) {
-        clearAttendanceState(context)
+        val oldBase = getBaseUrl(context)
         if (url.isNullOrBlank()) {
             getPrefs(context).edit().remove(KEY_CUSTOM_URL).apply()
         } else {
-            getPrefs(context).edit().putString(KEY_CUSTOM_URL, url.trim().removeSuffix("/")).apply()
+            val trimmed = url.trim().removeSuffix("/")
+            val httpUrl = trimmed.toHttpUrlOrNull()
+            if (httpUrl == null) {
+                Toast.makeText(context, "Некорректный URL сервера", Toast.LENGTH_SHORT).show()
+                return
+            }
+            // Enforce HTTPS in non-debug mode unless localhost/emulator
+            if (!BuildConfig.DEBUG && !httpUrl.isHttps) {
+                val host = httpUrl.host
+                if (host != "localhost" && host != "127.0.0.1" && host != "10.0.2.2") {
+                    Toast.makeText(context, "В релизной версии разрешён только HTTPS", Toast.LENGTH_SHORT).show()
+                    return
+                }
+            }
+            getPrefs(context).edit().putString(KEY_CUSTOM_URL, trimmed).apply()
         }
+        handleServerOriginChangeIfDifferent(context, oldBase, getBaseUrl(context))
     }
 
     fun isDebugSwitcherAllowedForUser(loginOrRole: String?): Boolean {
         return true // Always allow server switching on test/debug users and by long press
+    }
+
+    fun isTrustedOrigin(context: Context, url: String?): Boolean {
+        if (url.isNullOrBlank()) return false
+        val targetHttpUrl = url.toHttpUrlOrNull() ?: return false
+        val baseHttpUrl = getBaseUrl(context).toHttpUrlOrNull() ?: return false
+        return targetHttpUrl.scheme.equals(baseHttpUrl.scheme, ignoreCase = true) &&
+                targetHttpUrl.host.equals(baseHttpUrl.host, ignoreCase = true) &&
+                targetHttpUrl.port == baseHttpUrl.port
     }
 
     fun showServerSwitcherDialog(context: Context, onServerChanged: (() -> Unit)? = null) {
@@ -175,7 +223,7 @@ object ServerConfig {
 
     private fun showServerChangedToast(context: Context) {
         val newUrl = getBaseUrl(context)
-        Toast.makeText(context, "Сервер переключен на:\n$newUrl", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Сервер переключен на:\n$newUrl\nСессия сброшена в целях безопасности.", Toast.LENGTH_LONG).show()
     }
 
     fun resolveMediaUrl(context: Context, url: String?): String {

@@ -216,19 +216,21 @@ class FeedbackFragment : Fragment() {
                 }
             }
 
-            // 2. Always generate & upload diagnostic .log file with system metrics & error logs for developers
-            try {
-                val logFile = com.example.kotlinroomdatabase.util.AppErrorLogger.getOrCreateDiagnosticLogFile(requireContext())
-                if (logFile.exists() && logFile.length() > 0) {
-                    val logUploadRes = repository.uploadFeedbackAttachment(logFile)
-                    if (logUploadRes is GenericResult.Success) {
-                        uploadedUrls.add(logUploadRes.data)
-                    } else {
-                        android.util.Log.e("FEEDBACK", "Failed to upload log file: ${(logUploadRes as? GenericResult.Error)?.message}")
+            // 2. Only generate & upload diagnostic .log file if user explicitly opted in
+            if (binding.switchDiagnostics.isChecked) {
+                try {
+                    val logFile = com.example.kotlinroomdatabase.util.AppErrorLogger.getOrCreateDiagnosticLogFile(requireContext())
+                    if (logFile.exists() && logFile.length() > 0) {
+                        val logUploadRes = repository.uploadFeedbackAttachment(logFile)
+                        if (logUploadRes is GenericResult.Success) {
+                            uploadedUrls.add(logUploadRes.data)
+                        } else {
+                            android.util.Log.e("FEEDBACK", "Failed to upload log file: ${(logUploadRes as? GenericResult.Error)?.message}")
+                        }
                     }
+                } catch (e: Exception) {
+                    com.example.kotlinroomdatabase.util.AppErrorLogger.logError(requireContext(), "FEEDBACK_SUBMIT", "Failed to upload log file", e)
                 }
-            } catch (e: Exception) {
-                com.example.kotlinroomdatabase.util.AppErrorLogger.logError(requireContext(), "FEEDBACK_SUBMIT", "Failed to upload log file", e)
             }
 
             // Append readable diagnostic info to description if switch is checked

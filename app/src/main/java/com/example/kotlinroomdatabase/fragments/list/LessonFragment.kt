@@ -42,6 +42,7 @@ import com.example.kotlinroomdatabase.repository.IStudentRepository
 import com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS
 import com.example.kotlinroomdatabase.settings.LessonsConfig
 import com.example.kotlinroomdatabase.settings.RepositoryZMQ
+import com.example.kotlinroomdatabase.util.CellTowerHelper
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
@@ -152,6 +153,9 @@ class LessonFragment : NFC_Tools() {
         binding.recyclerViewAttendance.adapter = rosterAdapter
         binding.recyclerViewAttendance.layoutManager = LinearLayoutManager(requireContext())
 
+        binding.layoutNfcStatusPill.setOnClickListener {
+            com.example.kotlinroomdatabase.util.NfcHelper.showTeacherNfcDialog(requireContext())
+        }
         binding.btnCreateLessonHero.setOnClickListener { showCreateLessonSheet() }
         binding.btnNoLessonAllStudents.setOnClickListener {
             findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
@@ -427,61 +431,140 @@ class LessonFragment : NFC_Tools() {
     }
 
     @OptIn(InternalSerializationApi::class)
-    override fun processNfcTag(nfcId: String) {
+    private var lastNfcTag: String = ""
+    private var lastNfcTimestamp: Long = 0L
+
+    @OptIn(InternalSerializationApi::class)
+    override fun processNfcTag(nfcId: String, physicalUid: String) {
         val lessonId = currentLessonId
         if (lessonId == null) {
             Log.e("NFC_DEBUG", "Ошибка: нет активного занятия")
+            Toast.makeText(context, "Нет активного занятия для отметки", Toast.LENGTH_SHORT).show()
             return
         }
 
         val cleanTag = nfcId.trim()
-        val parsedId = if (cleanTag.startsWith("STUDENT:")) {
-            cleanTag.split(":").getOrNull(1)?.toIntOrNull()
-        } else {
-            cleanTag.toIntOrNull()
+        val cleanPhysical = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(physicalUid)
+        val now = System.currentTimeMillis()
+        if (cleanTag == lastNfcTag && now - lastNfcTimestamp < 1500L) {
+            Log.d("NFC_DEBUG", "Debounced duplicate tag tap")
+            return
+        }
+        lastNfcTag = cleanTag
+        lastNfcTimestamp = now
+
+        // Check if physical tag was cloned (physical UID != payload.tag_uid)
+        if (cleanTag.startsWith("EJ1:")) {
+            val parsed = com.example.kotlinroomdatabase.util.SafeNdefManager.parsePassPayload(cleanTag, cleanPhysical)
+            if (parsed != null && parsed.isCloneDetected) {
+                try {
+                    val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 100, 50, 200), -1))
+                    }
+                } catch (_: Exception) {}
+
+                binding.tvLessonStatus.text = "Клон метки!"
+                binding.statusIcon.setColorFilter(Color.RED)
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Обнаружен клон метки")
+                    .setIcon(R.drawable.ic_cross)
+                    .setMessage("Аппаратный кремниевый UID чипа ($cleanPhysical) не совпадает с криптограммой (${parsed.tagUid}).\n\nДанные скопированы на другую метку-болванку. Отметка отклонена системой антифрода.")
+                    .setPositiveButton("Понятно", null)
+                    .show()
+                return
+            }
+        }
+
+        // Haptic feedback
+        try {
+            val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(60, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(60)
+            }
+        } catch (_: Exception) {}
+
+        val parsedId = when {
+            cleanTag.startsWith("EJ1:") -> {
+                com.example.kotlinroomdatabase.util.SafeNdefManager.parsePassPayload(cleanTag, cleanPhysical)?.studentId
+            }
+            cleanTag.startsWith("STUDENT:") -> {
+                cleanTag.split(":").getOrNull(1)?.toIntOrNull()
+            }
+            cleanTag.startsWith("HCE1:") -> {
+                cleanTag.split(":").getOrNull(1)?.toIntOrNull()
+            }
+            else -> {
+                cleanTag.toIntOrNull()
+            }
         }
 
         if (parsedId != null && currentRosterList.any { it.student_id == parsedId && it.status.lowercase() in listOf("present", "ontime") }) {
-            Toast.makeText(context, "Студент уже отмечен!", Toast.LENGTH_SHORT).show()
+            val stName = currentRosterList.firstOrNull { it.student_id == parsedId }?.student_name ?: "Студент"
+            Toast.makeText(context, "$stName уже отмечен(а)", Toast.LENGTH_SHORT).show()
+            binding.tvLessonStatus.text = "✓ Уже отмечен"
+            binding.statusIcon.setColorFilter(Color.GREEN)
+            binding.statusIcon.postDelayed({ if (_binding != null) updateNfcStatusUI() }, 1500)
             return
         }
 
+        // Visual indicator that tag is being processed
+        binding.tvLessonStatus.text = "Обработка..."
+        binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_blue_primary))
+
         lifecycleScope.launch {
-            val result = studentRepository.markAttendanceInLesson(lessonId, cleanTag)
+            val markType = if (cleanTag.startsWith("EJ1:")) "nfc_tag" else "nfc_hce"
+            val result = studentRepository.markAttendanceSmart(lessonId, markType, cleanTag, cleanPhysical)
 
-            requireActivity().runOnUiThread {
-                when (result) {
-                    is AttendanceResult.Success -> {
-                        val student = result.student
-                        Toast.makeText(context, "Отмечен: ${student.studentName}", Toast.LENGTH_SHORT).show()
+            if (_binding == null || !isAdded) return@launch
 
-                        binding.statusIcon.setColorFilter(Color.GREEN)
-                        binding.statusIcon.postDelayed({ updateNfcStatusUI() }, 1000)
+            when (result) {
+                is AttendanceResult.Success -> {
+                    val student = result.student
+                    Toast.makeText(context, "✓ Отмечен: ${student.studentName}", Toast.LENGTH_SHORT).show()
 
-                        // Immediately refresh session roster
-                        val updatedStudent = AttendanceRosterStudent(
-                            student_id = student.id,
-                            student_name = student.studentName,
-                            group_name = student.studentGroup,
-                            status = "present",
-                            marked_by = "nfc",
-                            marked_at = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-                        )
-                        val idx = currentRosterList.indexOfFirst { it.student_id == student.id }
-                        if (idx != -1) {
-                            currentRosterList[idx] = updatedStudent
-                        } else {
-                            currentRosterList.add(0, updatedStudent)
-                        }
-                        rosterAdapter.setData(currentRosterList)
-                        updateRosterCounts(currentRosterList)
+                    binding.tvLessonStatus.text = "✓ ${student.studentName.split(" ").firstOrNull() ?: "Отмечен"}"
+                    binding.statusIcon.setColorFilter(Color.GREEN)
+                    binding.statusIcon.postDelayed({ if (_binding != null) updateNfcStatusUI() }, 2000)
+
+                    // Immediately refresh session roster
+                    val updatedStudent = AttendanceRosterStudent(
+                        student_id = student.id,
+                        student_name = student.studentName,
+                        group_name = student.studentGroup,
+                        status = "present",
+                        marked_by = markType,
+                        marked_at = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                    )
+                    val idx = currentRosterList.indexOfFirst { it.student_id == student.id }
+                    if (idx != -1) {
+                        currentRosterList[idx] = updatedStudent
+                    } else {
+                        currentRosterList.add(0, updatedStudent)
                     }
-                    is AttendanceResult.Error -> {
-                        Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
-                    }
+                    rosterAdapter.setData(currentRosterList)
+                    updateRosterCounts(currentRosterList)
+
+                    // Scroll to newly marked student
+                    val scrollIdx = if (idx != -1) idx else 0
+                    binding.recyclerViewAttendance.smoothScrollToPosition(scrollIdx)
+                }
+                is AttendanceResult.Error -> {
+                    Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                    binding.tvLessonStatus.text = "Ошибка"
+                    binding.statusIcon.setColorFilter(Color.RED)
+                    binding.statusIcon.postDelayed({ if (_binding != null) updateNfcStatusUI() }, 2000)
                 }
             }
         }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override fun processNfcTag(nfcId: String) {
+        processNfcTag(nfcId, "")
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -596,6 +679,10 @@ class LessonFragment : NFC_Tools() {
             }
         }
 
+        val switchRequireLoc = sheetView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchRequireLocation)
+        val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        switchRequireLoc?.isChecked = authPrefs.getBoolean("pref_require_location", false)
+
         acGroupSearch.setOnItemClickListener { parent, _, position, _ ->
             val group = parent.getItemAtPosition(position).toString()
             if (selectedGroups.add(group)) {
@@ -623,6 +710,9 @@ class LessonFragment : NFC_Tools() {
                 return@setOnClickListener
             }
 
+            val requireLocation = switchRequireLoc?.isChecked ?: false
+            authPrefs.edit().putBoolean("pref_require_location", requireLocation).apply()
+
             val executeCreate = { lat: Double, lon: Double ->
                 val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                 val teacherId = prefs.getInt("current_student_id", 0)
@@ -635,8 +725,9 @@ class LessonFragment : NFC_Tools() {
                             currentSubject = subject
                             saveLessonState(id, subject, selectedGroups.toList())
 
-                            val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                            authPrefs.edit().putFloat("last_lat", lat.toFloat()).putFloat("last_lon", lon.toFloat()).apply()
+                            if (lat != 0.0 || lon != 0.0) {
+                                authPrefs.edit().putFloat("last_lat", lat.toFloat()).putFloat("last_lon", lon.toFloat()).apply()
+                            }
 
                             val students = studentRepository.getAllStudents().first()
                             students.forEach { student ->
@@ -653,45 +744,102 @@ class LessonFragment : NFC_Tools() {
                 }
             }
 
+            // If teacher chose NOT to require geolocation, start immediately
+            if (!requireLocation) {
+                Log.i("LessonFragment", "Starting lesson without geolocation collection")
+                executeCreate(0.0, 0.0)
+                return@setOnClickListener
+            }
+
+            // Geolocation is required: query satellite GPS and collect cell towers
             val checkAndExecute: () -> Unit = {
+                try {
+                    val towerSummary = CellTowerHelper.getCellTowersSummary(requireContext())
+                    Log.i("LessonFragment", "Cell Tower Telemetry: $towerSummary")
+                } catch (e: Exception) {
+                    Log.w("LessonFragment", "Failed to log cell towers", e)
+                }
+
                 val locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                val isGpsEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
-                                   locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+                val isGpsEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
                 if (!isGpsEnabled) {
                     com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Геолокация отключена")
-                        .setMessage("Включите службы геолокации (GPS) на устройстве для создания занятия.")
-                        .setPositiveButton("Включить") { _, _ ->
+                        .setTitle("Спутниковый GPS отключен")
+                        .setMessage("Включите службы геолокации (GPS спутники) для фиксации координат, либо снимите галочку 'Проверять геолокацию'.")
+                        .setPositiveButton("Включить GPS") { _, _ ->
                             startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                         }
-                        .setNegativeButton("Отмена", null)
+                        .setNegativeButton("Без гео") { _, _ ->
+                            executeCreate(0.0, 0.0)
+                        }
+                        .setNeutralButton("Отмена", null)
                         .show()
                 } else {
-                    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-                    try {
-                        fusedLocationClient.lastLocation
-                            .addOnSuccessListener { location: Location? ->
-                                if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
-                                    executeCreate(location.latitude, location.longitude)
-                                } else {
-                                    fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
-                                        .addOnSuccessListener { curLoc ->
-                                            if (curLoc != null && (curLoc.latitude != 0.0 || curLoc.longitude != 0.0)) {
-                                                executeCreate(curLoc.latitude, curLoc.longitude)
-                                            } else {
-                                                Toast.makeText(requireContext(), "Не удалось определить координаты GPS. Попробуйте снова.", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                        .addOnFailureListener {
-                                            Toast.makeText(requireContext(), "Не удалось определить координаты GPS: ${it.message}", Toast.LENGTH_LONG).show()
-                                        }
+                    val lastGpsLoc = try {
+                        locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    } catch (e: SecurityException) {
+                        null
+                    }
+
+                    val isRecentGps = lastGpsLoc != null &&
+                            (System.currentTimeMillis() - lastGpsLoc.time < 300_000L) &&
+                            (lastGpsLoc.latitude != 0.0 || lastGpsLoc.longitude != 0.0)
+
+                    if (isRecentGps && lastGpsLoc != null) {
+                        Log.i("LessonFragment", "Using recent satellite GPS fix: ${lastGpsLoc.latitude}, ${lastGpsLoc.longitude}")
+                        executeCreate(lastGpsLoc.latitude, lastGpsLoc.longitude)
+                    } else {
+                        val progressDialog = android.app.ProgressDialog(requireContext()).apply {
+                            setMessage("Поиск спутников GPS...")
+                            setCancelable(true)
+                            show()
+                        }
+
+                        var fixObtained = false
+                        val gpsListener = object : android.location.LocationListener {
+                            override fun onLocationChanged(loc: Location) {
+                                if (fixObtained) return
+                                fixObtained = true
+                                try { locationManager?.removeUpdates(this) } catch (e: Exception) {}
+                                if (progressDialog.isShowing) {
+                                    try { progressDialog.dismiss() } catch (e: Exception) {}
                                 }
+                                Log.i("LessonFragment", "Satellite GPS fix acquired: ${loc.latitude}, ${loc.longitude}")
+                                executeCreate(loc.latitude, loc.longitude)
                             }
-                            .addOnFailureListener {
-                                Toast.makeText(requireContext(), "Ошибка получения геолокации: ${it.message}", Toast.LENGTH_SHORT).show()
+                            override fun onProviderEnabled(provider: String) {}
+                            override fun onProviderDisabled(provider: String) {}
+                        }
+
+                        try {
+                            locationManager?.requestLocationUpdates(
+                                LocationManager.GPS_PROVIDER,
+                                1000L,
+                                0f,
+                                gpsListener,
+                                android.os.Looper.getMainLooper()
+                            )
+                        } catch (e: Exception) {
+                            Log.e("LessonFragment", "GPS update request failed", e)
+                        }
+
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (!fixObtained) {
+                                fixObtained = true
+                                try { locationManager?.removeUpdates(gpsListener) } catch (e: Exception) {}
+                                if (progressDialog.isShowing) {
+                                    try { progressDialog.dismiss() } catch (e: Exception) {}
+                                }
+                                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                                    .setTitle("GPS спутники не найдены")
+                                    .setMessage("В помещении не удается поймать спутники GPS. Запустить занятие без геолокации?")
+                                    .setPositiveButton("Запустить без гео") { _, _ ->
+                                        executeCreate(0.0, 0.0)
+                                    }
+                                    .setNegativeButton("Отмена", null)
+                                    .show()
                             }
-                    } catch (e: Exception) {
-                        Toast.makeText(requireContext(), "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }, 12000L)
                     }
                 }
             }
@@ -774,19 +922,28 @@ class LessonFragment : NFC_Tools() {
     }
 
     private fun updateNfcStatusUI() {
-        if (_binding == null) return
-        val adapterNfc = NfcAdapter.getDefaultAdapter(requireContext())
+        if (_binding == null || !isAdded) return
+        val nfcState = com.example.kotlinroomdatabase.util.NfcHelper.getNfcState(requireContext())
 
-        if (adapterNfc == null || !adapterNfc.isEnabled) {
-            binding.tvLessonStatus.text = "NFC выкл."
-            binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_absent_text))
-            binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_absent)
-            binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_absent_icon))
-        } else {
-            binding.tvLessonStatus.text = "NFC готов"
-            binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_ontime_text))
-            binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_ontime)
-            binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_ontime_icon))
+        when (nfcState) {
+            com.example.kotlinroomdatabase.util.NfcHelper.NfcState.NOT_SUPPORTED -> {
+                binding.tvLessonStatus.text = "NFC недоступен"
+                binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.sib_text_muted))
+                binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_absent)
+                binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.sib_text_muted))
+            }
+            com.example.kotlinroomdatabase.util.NfcHelper.NfcState.DISABLED -> {
+                binding.tvLessonStatus.text = "NFC выкл."
+                binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_absent_text))
+                binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_absent)
+                binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_absent_icon))
+            }
+            com.example.kotlinroomdatabase.util.NfcHelper.NfcState.ENABLED -> {
+                binding.tvLessonStatus.text = "NFC готов"
+                binding.tvLessonStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.badge_ontime_text))
+                binding.layoutNfcStatusPill.setBackgroundResource(R.drawable.bg_badge_ontime)
+                binding.statusIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.badge_ontime_icon))
+            }
         }
     }
 
@@ -810,7 +967,13 @@ class LessonFragment : NFC_Tools() {
     }
 
     override fun showNfcNotSupportedMessage() {
-        Toast.makeText(requireContext(), "NFC не поддерживается", Toast.LENGTH_SHORT).show()
+        if (!isAdded) return
+        com.example.kotlinroomdatabase.util.NfcHelper.showTeacherNfcDialog(requireContext())
+    }
+
+    override fun showNfcDisabledMessage() {
+        if (!isAdded) return
+        com.example.kotlinroomdatabase.util.NfcHelper.showTeacherNfcDialog(requireContext())
     }
 
     override fun showNfcReadingStartedMessage() {

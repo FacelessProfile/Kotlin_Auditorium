@@ -398,13 +398,30 @@ class ProfileFragment : Fragment() {
                 val requestBuilder = okhttp3.Request.Builder()
                     .url(finalUrl)
                     .header("Cache-Control", "no-cache")
-                if (token.isNotBlank()) {
+                if (ServerConfig.isTrustedOrigin(ctx, finalUrl) && token.isNotBlank()) {
                     requestBuilder.header("Authorization", "Bearer $token")
                 }
                 val response = client.newCall(requestBuilder.build()).execute()
 
                 if (response.isSuccessful) {
-                    val bytes = response.body?.bytes()
+                    val maxBytes = 10 * 1024 * 1024L
+                    val body = response.body
+                    var readBytes: ByteArray? = null
+                    if (body != null && (body.contentLength() <= 0 || body.contentLength() <= maxBytes)) {
+                        body.byteStream().use { input ->
+                            val out = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8192)
+                            var total = 0L
+                            var n: Int
+                            while (input.read(buffer).also { n = it } != -1) {
+                                total += n
+                                if (total > maxBytes) { out.reset(); break }
+                                out.write(buffer, 0, n)
+                            }
+                            if (out.size() > 0) readBytes = out.toByteArray()
+                        }
+                    }
+                    val bytes = readBytes
                     if (bytes != null && bytes.isNotEmpty()) {
                         val file = File(ctx.filesDir, "current_avatar.jpg")
                         FileOutputStream(file).use { it.write(bytes) }
@@ -515,7 +532,24 @@ class ProfileFragment : Fragment() {
                 val response = client.newCall(request).execute()
 
                 if (response.isSuccessful) {
-                    val bytes = response.body?.bytes() ?: return@launch
+                    val maxBytes = 10 * 1024 * 1024L
+                    val body = response.body
+                    var readBytes: ByteArray? = null
+                    if (body != null && (body.contentLength() <= 0 || body.contentLength() <= maxBytes)) {
+                        body.byteStream().use { input ->
+                            val out = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8192)
+                            var total = 0L
+                            var n: Int
+                            while (input.read(buffer).also { n = it } != -1) {
+                                total += n
+                                if (total > maxBytes) { out.reset(); break }
+                                out.write(buffer, 0, n)
+                            }
+                            if (out.size() > 0) readBytes = out.toByteArray()
+                        }
+                    }
+                    val bytes = readBytes ?: return@launch
                     val file = File(requireContext().filesDir, "current_avatar.jpg")
                     try {
                         FileOutputStream(file).use { it.write(bytes) }

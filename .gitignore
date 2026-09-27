@@ -23,3 +23,19 @@ user_database
 *.xlsx
 *.xls
 *.csv
+
+# Security audits and internal vulnerability reports
+*SECURITY_AUDIT*
+SECURITY_AUDIT*.md
+*audit*
+*Audit*
+
+# Release keystores and private keys
+app/keystore/release.keystore
+*.keystore
+!app/keystore/debug.keystore
+*.jks
+*.p12
+*.key
+*.pem
+

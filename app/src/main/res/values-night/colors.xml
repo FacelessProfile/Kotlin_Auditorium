@@ -29,11 +29,20 @@
     <color name="sib_warning">#FBBF24</color>
     <color name="sib_warning_bg">#78350F</color>
     <color name="sib_warning_border">#92400E</color>
+    <color name="sib_orange">#FB923C</color>
+    <color name="sib_orange_bg">#7C2D12</color>
+    <color name="sib_orange_border">#9A3412</color>
+    <color name="sib_brown">#D97706</color>
+    <color name="sib_brown_bg">#451A03</color>
+    <color name="sib_brown_border">#78350F</color>
 
     <!-- Hero Gradient Tokens (Dark) -->
     <color name="sib_hero_gradient_start">#115EE8</color>
     <color name="sib_hero_gradient_mid">#0B43BD</color>
     <color name="sib_hero_gradient_end">#082C91</color>
+
+    <color name="sib_dialog_bubble_bg">#18203E</color>
+    <color name="sib_dialog_bubble_border">#2C3B6E</color>
 
     <!-- Legacy Compatibility Aliases (re-routed to SibSUTIS blue dark tokens) -->
     <color name="photo_dark_background">#080E1C</color>

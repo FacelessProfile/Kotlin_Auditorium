@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardConveyorStudent"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="4dp"
+    app:cardBackgroundColor="@color/sib_card_surface"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/sib_border"
+    app:strokeWidth="1dp"
+    android:foreground="?attr/selectableItemBackground">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="14dp">
+
+        <!-- Index Badge -->
+        <TextView
+            android:id="@+id/tvConveyorIndex"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_nfc_avatar_circle"
+            android:gravity="center"
+            android:textColor="@color/sib_blue_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="1" />
+
+        <!-- Student Name -->
+        <TextView
+            android:id="@+id/tvConveyorStudentName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/sib_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/chipConveyorStatus"
+            app:layout_constraintStart_toEndOf="@id/tvConveyorIndex"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Иванов Иван Иванович" />
+
+        <!-- Student Details -->
+        <TextView
+            android:id="@+id/tvConveyorStudentDetails"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/sib_text_secondary"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/chipConveyorStatus"
+            app:layout_constraintStart_toEndOf="@id/tvConveyorIndex"
+            app:layout_constraintTop_toBottomOf="@id/tvConveyorStudentName"
+            tools:text="ПИ-21 • UID: 53:27:06:4E:74:00:01" />
+
+        <!-- Status Pill -->
+        <TextView
+            android:id="@+id/chipConveyorStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_nfc_stat_blue"
+            android:gravity="center"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:textColor="@color/sib_blue_primary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Записан" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

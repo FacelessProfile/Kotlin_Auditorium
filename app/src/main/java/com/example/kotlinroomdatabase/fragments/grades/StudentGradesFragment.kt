@@ -22,6 +22,10 @@ import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlinx.coroutines.launch
 
+import android.widget.ImageView
+import com.example.kotlinroomdatabase.streak.StreakDialogHelper
+import com.example.kotlinroomdatabase.streak.StreakManager
+
 class StudentGradesFragment : Fragment() {
 
     private lateinit var progressScore: CircularProgressIndicator
@@ -30,6 +34,12 @@ class StudentGradesFragment : Fragment() {
     private lateinit var tvStatus: TextView
     private lateinit var actvSemester: MaterialAutoCompleteTextView
     
+    private lateinit var cardGradesStreak: View
+    private lateinit var ivGradesMascot: ImageView
+    private lateinit var tvGradesStreakTitle: TextView
+    private lateinit var tvGradesStreakSubtitle: TextView
+    private lateinit var tvGradesStreakCount: TextView
+
     private lateinit var rvSubjects: RecyclerView
     private lateinit var adapter: SubjectGradesAdapter
     private lateinit var repository: IStudentRepository
@@ -46,6 +56,20 @@ class StudentGradesFragment : Fragment() {
         actvSemester = view.findViewById(R.id.actvSemester)
         rvSubjects = view.findViewById(R.id.rvSubjects)
 
+        cardGradesStreak = view.findViewById(R.id.cardGradesStreak)
+        ivGradesMascot = view.findViewById(R.id.ivGradesMascot)
+        tvGradesStreakTitle = view.findViewById(R.id.tvGradesStreakTitle)
+        tvGradesStreakSubtitle = view.findViewById(R.id.tvGradesStreakSubtitle)
+        tvGradesStreakCount = view.findViewById(R.id.tvGradesStreakCount)
+
+        updateStreakBanner()
+
+        cardGradesStreak.setOnClickListener {
+            StreakDialogHelper.showStreakInfoDialog(requireContext()) {
+                updateStreakBanner()
+            }
+        }
+
         rvSubjects.layoutManager = LinearLayoutManager(requireContext())
         adapter = SubjectGradesAdapter(emptyList())
         rvSubjects.adapter = adapter
@@ -56,6 +80,24 @@ class StudentGradesFragment : Fragment() {
         loadSemestersAndData()
 
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateStreakBanner()
+    }
+
+    private fun updateStreakBanner() {
+        if (!isAdded) return
+        val context = requireContext()
+        val streak = StreakManager.getCurrentStreak(context)
+        val mascot = StreakManager.getCurrentMascotType(context)
+        val emotion = StreakManager.getMascotEmotion(context)
+
+        ivGradesMascot.setImageResource(mascot.getIconResId(emotion))
+        tvGradesStreakTitle.text = "Ударный стрик: $streak ${StreakDialogHelper.getPluralPairs(streak)}"
+        tvGradesStreakSubtitle.text = "${mascot.displayName} • ${mascot.description}"
+        tvGradesStreakCount.text = if (streak <= 0) "😴 0 пар" else "🔥 $streak ${StreakDialogHelper.getPluralPairs(streak)}"
     }
 
     private fun loadSemestersAndData() {

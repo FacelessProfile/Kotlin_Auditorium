@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Trophy / Record Icon -->
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M19,5 H17 V3 H7 V5 H5 C3.9,5 3,5.9 3,7 C3,9.5 4.8,11.5 7.2,11.9 C7.8,13.4 9,14.6 10.5,14.9 V18 H8 V20 H16 V18 H13.5 V14.9 C15,14.6 16.2,13.4 16.8,11.9 C19.2,11.5 21,9.5 21,7 C21,5.9 20.1,5 19,5 Z M5,7 H7 V10 C5.9,10 5,9.1 5,8 V7 Z M19,8 C19,9.1 18.1,10 17,10 V7 H19 V8 Z" />
+</vector>

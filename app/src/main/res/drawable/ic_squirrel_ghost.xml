@@ -1,0 +1,218 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Spectral Ghostly Glow Halo -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:fillAlpha="0.16"
+        android:pathData="M48,8 C22,8 10,26 10,50 C10,72 26,88 48,88 C70,88 86,72 86,50 C86,26 74,8 48,8 Z" />
+    <path
+        android:fillColor="#A78BFA"
+        android:fillAlpha="0.22"
+        android:pathData="M48,16 C28,16 18,30 18,50 C18,68 32,82 48,82 C64,82 78,68 78,50 C78,30 68,16 48,16 Z" />
+
+    <!-- Ghostly Floating Mist Wisps at bottom -->
+    <path
+        android:fillColor="#DDD6FE"
+        android:fillAlpha="0.4"
+        android:pathData="M24,84 C30,78 40,86 48,82 C56,78 66,86 72,82 C66,88 56,86 48,90 C40,86 30,88 24,84 Z" />
+
+    <!-- Translucent Ghostly Bushy Tail (Ethereal Violet / Lavender) -->
+    <!-- Tail Deep Shadow -->
+    <path
+        android:fillColor="#5B21B6"
+        android:pathData="M52,74 C72,74 88,60 88,38 C88,20 76,14 66,14 C58,14 54,20 56,26 C62,22 68,22 74,28 C80,36 78,52 64,62 C56,66 48,68 42,70 Z" />
+    <!-- Tail Mid Violet -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M54,70 C70,70 82,58 82,38 C82,24 74,18 66,18 C60,18 58,22 60,26 C64,32 66,44 56,54 C50,58 44,60 40,62 Z" />
+    <!-- Tail Lavender Fluff Highlight -->
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M56,66 C68,66 76,56 76,40 C76,28 70,24 66,24 C62,24 61,28 62,32 C65,38 64,48 56,54 C50,58 45,60 42,62 Z" />
+    <!-- Tail Ghost Wisps at Tip -->
+    <path
+        android:fillColor="#C4B5FD"
+        android:pathData="M66,22 C64,18 67,14 70,12 C69,16 73,18 72,22 Z" />
+
+    <!-- Floating Ghost Squirrel Body -->
+    <!-- Base Deep Violet Layer -->
+    <path
+        android:fillColor="#6D28D9"
+        android:pathData="M32,46 C32,32 40,26 50,26 C60,26 68,32 68,46 C68,58 66,72 60,80 C56,84 40,84 36,80 C33,72 32,58 32,46 Z" />
+    <!-- Mid Spectral Lavender Fur -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M34,46 C34,34 42,28 50,28 C58,28 66,34 66,46 C66,56 64,70 59,78 C55,82 41,82 37,78 C35,70 34,56 34,46 Z" />
+    <!-- Ghost Highlight -->
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M36,46 C36,36 43,30 50,30 C57,30 64,36 64,46 C64,54 62,66 58,74 C54,78 42,78 39,74 C37,66 36,54 36,46 Z" />
+
+    <!-- Pale Ghost Belly (Ethereal Cream / Lavender) -->
+    <path
+        android:fillColor="#EDE9FE"
+        android:pathData="M43,52 C43,44 46,40 50,40 C54,40 57,44 57,52 C57,63 55,72 50,72 C45,72 43,63 43,52 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M45,52 C45,46 47,43 50,43 C53,43 55,46 55,52 C55,61 53,68 50,68 C47,68 45,61 45,52 Z" />
+
+    <!-- Ghost Ears with Spiderwebs Draped -->
+    <!-- Left Ear -->
+    <path
+        android:fillColor="#5B21B6"
+        android:pathData="M32,32 L22,14 L36,22 Z" />
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M33,30 L24,16 L35,23 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M31,28 L26,19 L32,24 Z" />
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M22,14 L18,8 L24,12 Z" />
+
+    <!-- Right Ear -->
+    <path
+        android:fillColor="#5B21B6"
+        android:pathData="M66,32 L76,14 L62,22 Z" />
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M65,30 L74,16 L63,23 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M67,28 L72,19 L66,24 Z" />
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M76,14 L80,8 L74,12 Z" />
+
+    <!-- Cobweb Draped Between Ears and Tail -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.6"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:pathData="M24,18 Q49,26 74,18 M30,17 Q49,22 68,17 M49,20 L49,28 M38,20 L42,26 M60,20 L56,26" />
+    <!-- Cobweb on Tail -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.5"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M66,24 Q76,34 76,46 M70,28 Q78,36 74,42 M70,36 L76,34" />
+
+    <!-- Spooky Hollow Ghost Eyes (Glowing Cyan / Pale Lavender) -->
+    <!-- Left Eye Outer Glow -->
+    <path
+        android:fillColor="#38BDF8"
+        android:fillAlpha="0.4"
+        android:pathData="M41,40 A5,5 0 1,0 51,40 A5,5 0 1,0 41,40 Z" />
+    <!-- Left Eye Hollow Socket -->
+    <path
+        android:fillColor="#2E1065"
+        android:pathData="M42,40 A4,4 0 1,0 50,40 A4,4 0 1,0 42,40 Z" />
+    <!-- Left Glowing Ghost Pupil -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M44.5,40 A1.5,1.5 0 1,0 47.5,40 A1.5,1.5 0 1,0 44.5,40 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M45.5,39 A0.6,0.6 0 1,0 45.5,40.2 A0.6,0.6 0 1,0 45.5,39 Z" />
+
+    <!-- Right Eye Outer Glow -->
+    <path
+        android:fillColor="#38BDF8"
+        android:fillAlpha="0.4"
+        android:pathData="M55,40 A5,5 0 1,0 65,40 A5,5 0 1,0 55,40 Z" />
+    <!-- Right Eye Hollow Socket -->
+    <path
+        android:fillColor="#2E1065"
+        android:pathData="M56,40 A4,4 0 1,0 64,40 A4,4 0 1,0 56,40 Z" />
+    <!-- Right Glowing Ghost Pupil -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M58.5,40 A1.5,1.5 0 1,0 61.5,40 A1.5,1.5 0 1,0 58.5,40 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M59.5,39 A0.6,0.6 0 1,0 59.5,40.2 A0.6,0.6 0 1,0 59.5,39 Z" />
+
+    <!-- Ghost Muzzle / Drooped Hollow Mouth -->
+    <path
+        android:fillColor="#C4B5FD"
+        android:pathData="M48,46 C48,44 49,43 51,43 C53,43 54,44 54,46 C54,49 53,51 51,51 C49,51 48,49 48,46 Z" />
+    <path
+        android:fillColor="#5B21B6"
+        android:pathData="M50,44.5 A1,1 0 1,0 52,44.5 A1,1 0 1,0 50,44.5 Z" />
+    <!-- Little O-shaped Ghost Mouth (Spooky "Ooo") -->
+    <path
+        android:fillColor="#2E1065"
+        android:pathData="M49,50 A2,2.8 0 1,0 53,50 A2,2.8 0 1,0 49,50 Z" />
+
+    <!-- Ghost Paws Holding Dusty Unplugged RJ-45 Connector -->
+    <path
+        android:fillColor="#6D28D9"
+        android:pathData="M41,60 C39,58 37,62 39,66 L44,68 L46,62 Z" />
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M41.5,61 C40,59 38.5,62 40,65 L44,67 L45.5,62 Z" />
+    <path
+        android:fillColor="#6D28D9"
+        android:pathData="M59,60 C61,58 63,62 61,66 L56,68 L54,62 Z" />
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M58.5,61 C60,59 61.5,62 60,65 L56,67 L54.5,62 Z" />
+
+    <!-- Dusty Unplugged RJ-45 Connector with Dangling Cobweb -->
+    <path
+        android:fillColor="#94A3B8"
+        android:fillAlpha="0.8"
+        android:pathData="M45,63 L55,63 L55,71 L45,71 Z" />
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M47,71 L53,71 L53,73 L47,73 Z" />
+    <!-- Gold Pins (Oxidized / Dusty) -->
+    <path
+        android:fillColor="#FBBF24"
+        android:fillAlpha="0.7"
+        android:pathData="M46,64 L47,64 L47,66 L46,66 Z M48,64 L49,64 L49,66 L48,66 Z M50,64 L51,64 L51,66 L50,66 Z M52,64 L53,64 L53,66 L52,66 Z" />
+    <!-- Cobweb Dangling from Plug -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.6"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M47,73 C46,78 44,82 43,86 M53,73 C54,78 56,82 57,86 M45,78 Q50,81 55,78" />
+
+    <!-- Floating Ghost Sparks / Dust Motes -->
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M22,46 L24,43 L26,46 L24,49 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M78,42 L80,39 L82,42 L80,45 Z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M28,66 L29,64 L30,66 L29,68 Z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M72,66 L73,64 L74,66 L73,68 Z" />
+
+    <!-- "404 / OFFLINE" Miniature Ghostly Cloud Tag -->
+    <path
+        android:fillColor="#5B21B6"
+        android:fillAlpha="0.85"
+        android:pathData="M38,6 C34,6 32,9 34,12 C32,13 32,16 35,17 C35,19 38,20 42,20 L58,20 C62,20 65,19 65,17 C68,16 68,13 66,12 C68,9 66,6 62,6 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M43,10 L43,14 L45,14 L45,16 L43,16 L43,17 L41.5,17 L41.5,14 L40,14 L40,12.5 L41.5,10 Z M41.5,12.5 L41.5,11.2 L40.7,12.5 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M47,10 C48.5,10 49.5,11.2 49.5,13.5 C49.5,15.8 48.5,17 47,17 C45.5,17 44.5,15.8 44.5,13.5 C44.5,11.2 45.5,10 47,10 Z M47,11.5 C46.2,11.5 45.8,12.3 45.8,13.5 C45.8,14.7 46.2,15.5 47,15.5 C47.8,15.5 48.2,14.7 48.2,13.5 C48.2,12.3 47.8,11.5 47,11.5 Z" />
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M54,10 L54,14 L56,14 L56,16 L54,16 L54,17 L52.5,17 L52.5,14 L51,14 L51,12.5 L52.5,10 Z M52.5,12.5 L52.5,11.2 L51.7,12.5 Z" />
+
+</vector>

@@ -46,6 +46,9 @@ interface StudentDao {
     @Query("UPDATE student SET attendance = :attendance WHERE id = :id")
     suspend fun updateAttendance(id: Int, attendance: Boolean)
 
+    @Query("UPDATE student SET studentNFC = :nfcId WHERE id = :id")
+    suspend fun updateNfc(id: Int, nfcId: String)
+
     @OptIn(InternalSerializationApi::class)
     @Query("SELECT * FROM student WHERE studentName = :name AND studentGroup = :group")
     suspend fun getStudentByNameAndGroup(name: String, group: String): Student?
@@ -59,6 +62,9 @@ interface StudentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOfflineGradeAction(action: OfflineGradeAction): Long
 
+    @Query("SELECT * FROM offline_grade_actions WHERE isSynced = 0 AND authorId = :authorId AND serverOrigin = :serverOrigin ORDER BY timestamp ASC")
+    suspend fun getUnsyncedGradeActions(authorId: String, serverOrigin: String): List<OfflineGradeAction>
+
     @Query("SELECT * FROM offline_grade_actions WHERE isSynced = 0 ORDER BY timestamp ASC")
     suspend fun getUnsyncedGradeActions(): List<OfflineGradeAction>
 
@@ -68,9 +74,21 @@ interface StudentDao {
     @Delete
     suspend fun deleteOfflineGradeAction(action: OfflineGradeAction)
 
+    @Query("DELETE FROM offline_grade_actions WHERE id = :id")
+    suspend fun deleteOfflineGradeActionById(id: Int)
+
+    @Query("DELETE FROM offline_grade_actions")
+    suspend fun clearAllOfflineGradeActions()
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCachedSchedule(schedule: CachedDayScheduleEntity)
 
     @Query("SELECT * FROM cached_day_schedule WHERE date = :date LIMIT 1")
     suspend fun getCachedSchedule(date: String): CachedDayScheduleEntity?
+
+    @Query("DELETE FROM cached_day_schedule")
+    suspend fun clearScheduleCache()
+
+    @Query("DELETE FROM lessons_table")
+    suspend fun deleteAllLessons()
 }

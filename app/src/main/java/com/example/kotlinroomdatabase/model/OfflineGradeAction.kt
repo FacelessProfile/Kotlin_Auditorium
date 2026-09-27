@@ -1,5 +1,6 @@
 package com.example.kotlinroomdatabase.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -12,5 +13,9 @@ data class OfflineGradeAction(
     val score: Int,
     val comment: String?,
     val timestamp: Long = System.currentTimeMillis(),
-    val isSynced: Boolean = false
+    val isSynced: Boolean = false,
+    @ColumnInfo(defaultValue = "")
+    val authorId: String = "",
+    @ColumnInfo(defaultValue = "")
+    val serverOrigin: String = ""
 )

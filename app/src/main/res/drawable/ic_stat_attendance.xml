@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Academic / Total Attendance Icon -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M12,3 L1,9 L12,15 L21,10.09 V17 H23 V9 L12,3 Z M5,13.18 V17.18 C5,19.39 8.13,21.18 12,21.18 C15.87,21.18 19,19.39 19,17.18 V13.18 L12,17 L5,13.18 Z" />
+</vector>

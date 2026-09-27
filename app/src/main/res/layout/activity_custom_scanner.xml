@@ -244,8 +244,8 @@
                 android:max="1000"
                 android:progress="0"
                 android:progressBackgroundTint="#4DFFFFFF"
-                android:progressTint="#FFC48E17"
-                android:thumbTint="#FFC48E17" />
+                android:progressTint="@color/sib_blue_primary"
+                android:thumbTint="@color/sib_blue_primary" />
 
             <ImageView
                 android:id="@+id/ivZoomMax"

@@ -88,6 +88,11 @@ class LessonReminderReceiver : BroadcastReceiver() {
                 startMillis
             )
         }
+
+        // 4. Notify Sibgutenok widget
+        try {
+            com.example.kotlinroomdatabase.streak.StreakManager.notifyWidgetUpdate(context)
+        } catch (_: Exception) {}
     }
 
     private fun triggerVibration(context: Context) {

@@ -22,6 +22,11 @@
             android:icon="@drawable/ic_feedback"
             android:title="Обратная связь" />
         <item
+            android:id="@+id/nfcManagerFragment"
+            android:icon="@drawable/ic_nfc"
+            android:title="NFC Менеджер"
+            android:visible="false" />
+        <item
             android:id="@+id/settingsFragment"
             android:icon="@drawable/ic_settings"
             android:title="Настройки" />

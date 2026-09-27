@@ -3,6 +3,9 @@ package com.example.kotlinroomdatabase.util
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 object JwtUtils {
@@ -104,13 +107,63 @@ object JwtUtils {
     }
 
     /**
-     * Clears all session and attendance preferences on logout.
+     * Clears all session, credentials, TOTP, Room cache, and attendance preferences on logout (KA-08).
      */
     fun clearAllSessionData(context: Context) {
         try {
+            val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).getString("auth_token", null)
+            val fcmToken = context.getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE).getString("fcm_token", null)
+
+            // 1. Try to unregister FCM device token on backend if available
+            if (!token.isNullOrBlank() && !fcmToken.isNullOrBlank()) {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(context)
+                        val repo = com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS(context, db.studentDao())
+                        repo.deleteDeviceToken(fcmToken)
+                    } catch (e: Exception) {
+                        Log.w("JwtUtils", "Failed to revoke device token on backend: ${e.message}")
+                    }
+                }
+            }
+
+            // 2. Clear all authentication and user preferences
             context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).edit().clear().apply()
             context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE).edit().clear().apply()
             context.getSharedPreferences("student_attendance_state_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+
+            // 3. Clear quick login credentials (KA-08)
+            com.example.kotlinroomdatabase.crypto.BiometricAuthManager.clearCredentials(context)
+
+            // 4. Clear TOTP secret shared prefs (KA-08)
+            try {
+                context.getSharedPreferences("secret_shared_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+            } catch (e: Exception) {
+                Log.e("JwtUtils", "Error clearing secret_shared_prefs", e)
+            }
+
+            // 5. Clear Room database in background (KA-08)
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(context)
+                    val dao = db.studentDao()
+                    dao.deleteAllStudents()
+                    dao.clearScheduleCache()
+                    dao.clearAllOfflineGradeActions()
+                    dao.deleteAllLessons()
+                } catch (e: Exception) {
+                    Log.e("JwtUtils", "Error clearing Room DB on logout", e)
+                }
+            }
+
+            // 6. Clear local avatar and media cache files (KA-08)
+            try {
+                com.example.kotlinroomdatabase.util.AvatarManager.getCachedAvatarFile(context).delete()
+                val avatarCacheDir = java.io.File(context.cacheDir, "avatars")
+                if (avatarCacheDir.exists()) avatarCacheDir.deleteRecursively()
+            } catch (e: Exception) {
+                Log.e("JwtUtils", "Error deleting avatar cache files", e)
+            }
         } catch (e: Exception) {
             Log.e("JwtUtils", "Error clearing session data", e)
         }

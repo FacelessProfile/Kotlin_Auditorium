@@ -37,10 +37,8 @@ class BiometricAuthHelper(private val fragment: Fragment) {
         }
 
         if (signature == null) {
-            // If hardware KeyStore is not available on emulator or strongbox not configured,
-            // fallback gracefully without blocking
-            Log.w(TAG, "Hardware KeyStore signature not available, proceeding with empty signature")
-            onSuccess("")
+            Log.e(TAG, "Hardware KeyStore signature not available")
+            onError("Аппаратный ключ биометрии недоступен на данном устройстве")
             return
         }
 
@@ -79,8 +77,7 @@ class BiometricAuthHelper(private val fragment: Fragment) {
                     } else if (errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS ||
                                errorCode == BiometricPrompt.ERROR_HW_NOT_PRESENT ||
                                errorCode == BiometricPrompt.ERROR_HW_UNAVAILABLE) {
-                        // Allow pass-through if device has no biometric hardware (e.g. Android Emulator)
-                        onSuccess("")
+                        onError("Биометрическая аутентификация недоступна: $errString")
                     } else {
                         onError("Ошибка биометрии: $errString")
                     }
@@ -97,7 +94,7 @@ class BiometricAuthHelper(private val fragment: Fragment) {
             biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(signature))
         } catch (e: Exception) {
             Log.e(TAG, "BiometricPrompt launch failed", e)
-            onSuccess("")
+            onError("Не удалось запустить биометрическую аутентификацию: ${e.message}")
         }
     }
 }

@@ -145,6 +145,11 @@ class StudentRepository(
     }
 
     @OptIn(InternalSerializationApi::class)
+    override suspend fun markAttendanceSmart(lessonId: Int, markType: String, payload: String, physicalUid: String): AttendanceResult {
+        return markAttendanceInLesson(lessonId, payload)
+    }
+
+    @OptIn(InternalSerializationApi::class)
     override suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult {
         return try {
             val jsonRequest = JSONObject().apply {
@@ -531,4 +536,12 @@ class StudentRepository(
     override suspend fun getMyFeedbackTickets(): GenericResult<List<com.example.kotlinroomdatabase.model.FeedbackTicket>> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun getFeedbackTicketDetails(ticketId: Int): GenericResult<com.example.kotlinroomdatabase.model.FeedbackTicketDetails> = GenericResult.Error("Not supported in ZMQ")
     override suspend fun replyFeedbackTicket(ticketId: Int, content: String, attachments: List<String>): GenericResult<Boolean> = GenericResult.Error("Not supported in ZMQ")
+
+    // NFC stubs
+    override suspend fun generateNfcPayload(studentId: Int, tagUid: String): GenericResult<com.example.kotlinroomdatabase.model.NfcPayloadResult> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun bindNfcTag(studentId: Int, tagUid: String, signature: String?): GenericResult<com.example.kotlinroomdatabase.model.NfcBindResult> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun replaceNfcTag(studentId: Int, newTagUid: String, reason: String): GenericResult<com.example.kotlinroomdatabase.model.NfcReplaceResult> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun revokeNfcTag(tagUid: String, reason: String): GenericResult<com.example.kotlinroomdatabase.model.NfcRevokeResult> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getStudentDossier(tagUid: String?, studentId: Int?): GenericResult<com.example.kotlinroomdatabase.model.StudentDossier> = GenericResult.Error("Not supported in ZMQ")
+    override suspend fun getNfcConveyorStudents(): GenericResult<List<com.example.kotlinroomdatabase.model.NfcConveyorStudent>> = GenericResult.Error("Not supported in ZMQ")
 }

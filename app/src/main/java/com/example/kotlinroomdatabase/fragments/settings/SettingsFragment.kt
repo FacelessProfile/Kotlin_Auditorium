@@ -116,10 +116,19 @@ class SettingsFragment : Fragment() {
                 if (isChecked) {
                     val currentSecret = encPrefs.getString("totp_secret", null)
                     if (currentSecret.isNullOrBlank()) {
-                        val fallbackSecret = "JBSWY3DPEHPK3PXP"
-                        encPrefs.edit().putString("totp_secret", fallbackSecret).apply()
+                        // KA-09: Do not silently set a hardcoded fallback demo secret!
+                        buttonView.isChecked = false
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Настройка 2FA")
+                            .setMessage("Для включения двухфакторной аутентификации необходимо отсканировать QR-код или ввести секретный ключ из личного кабинета.")
+                            .setPositiveButton("Сканировать QR") { _, _ ->
+                                binding.btnScan2FaQr.performClick()
+                            }
+                            .setNegativeButton("Отмена", null)
+                            .show()
+                    } else {
+                        Toast.makeText(context, "2FA включена", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(context, "2FA включена", Toast.LENGTH_SHORT).show()
                 } else {
                     MaterialAlertDialogBuilder(requireContext())
                         .setTitle("Отключить 2FA?")

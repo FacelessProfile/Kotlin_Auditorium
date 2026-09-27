@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.content.pm.PackageManager
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -44,6 +45,8 @@ data class AppVersionInfo(
 
 object AppUpdateManager {
     private const val TAG = "AppUpdateManager"
+
+    private const val MAX_APK_SIZE = 150 * 1024 * 1024L // 150 MB (KA-14)
 
     private fun getOkHttpClient(): OkHttpClient {
         return try {
@@ -189,6 +192,9 @@ object AppUpdateManager {
 
             val body = response.body ?: return@withContext Result.failure(Exception("Пустой ответ сервера"))
             val totalBytes = if (body.contentLength() > 0) body.contentLength() else info.fileSize
+            if (totalBytes > MAX_APK_SIZE) {
+                return@withContext Result.failure(SecurityException("Размер APK превышает максимальный лимит (150 МБ)"))
+            }
 
             val tempFile = File(updateDir, "downloading.tmp")
             if (tempFile.exists()) tempFile.delete()
@@ -201,8 +207,12 @@ object AppUpdateManager {
                     var lastPercent = -1
 
                     while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
                         totalRead += bytesRead
+                        if (totalRead > MAX_APK_SIZE) {
+                            tempFile.delete()
+                            return@withContext Result.failure(SecurityException("Размер загружаемого файла превысил 150 МБ"))
+                        }
+                        output.write(buffer, 0, bytesRead)
                         if (totalBytes > 0) {
                             val percent = ((totalRead * 100) / totalBytes).toInt().coerceIn(0, 100)
                             if (percent != lastPercent) {
@@ -225,6 +235,13 @@ object AppUpdateManager {
                         return@withContext Result.failure(SecurityException("Контрольная сумма SHA-256 не совпадает! Файл поврежден."))
                     }
                 }
+
+                // KA-02: Verify APK package name and signature certificate before completing
+                if (!verifyApkPackageAndSignature(context, targetFile)) {
+                    targetFile.delete()
+                    return@withContext Result.failure(SecurityException("Проверка подписи APK не пройдена: сертификат не совпадает с установленным приложением!"))
+                }
+
                 withContext(Dispatchers.Main) {
                     onProgress(100, targetFile.length(), targetFile.length())
                 }
@@ -256,10 +273,126 @@ object AppUpdateManager {
         }
     }
 
+    private fun getAppSignatures(context: Context): List<String> {
+        return try {
+            val pm = context.packageManager
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val pInfo = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                val signingInfo = pInfo.signingInfo ?: return emptyList()
+                if (signingInfo.hasMultipleSigners()) {
+                    signingInfo.apkContentsSigners
+                } else {
+                    signingInfo.signingCertificateHistory
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val pInfo = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+                @Suppress("DEPRECATION")
+                pInfo.signatures
+            } ?: return emptyList()
+
+            signatures.map { sig ->
+                val md = MessageDigest.getInstance("SHA-256")
+                md.digest(sig.toByteArray()).joinToString("") { "%02x".format(it) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting app signatures", e)
+            emptyList()
+        }
+    }
+
+    private fun getApkSignatures(context: Context, apkFile: File): List<String> {
+        return try {
+            val pm = context.packageManager
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                @Suppress("DEPRECATION")
+                PackageManager.GET_SIGNATURES
+            }
+            val archiveInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, flags) ?: return emptyList()
+
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val signingInfo = archiveInfo.signingInfo ?: return emptyList()
+                if (signingInfo.hasMultipleSigners()) {
+                    signingInfo.apkContentsSigners
+                } else {
+                    signingInfo.signingCertificateHistory
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                archiveInfo.signatures
+            } ?: return emptyList()
+
+            signatures.map { sig ->
+                val md = MessageDigest.getInstance("SHA-256")
+                md.digest(sig.toByteArray()).joinToString("") { "%02x".format(it) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting APK signatures", e)
+            emptyList()
+        }
+    }
+
+    fun verifyApkPackageAndSignature(context: Context, apkFile: File): Boolean {
+        return try {
+            val pm = context.packageManager
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                @Suppress("DEPRECATION")
+                PackageManager.GET_SIGNATURES
+            }
+            val archiveInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, flags)
+            if (archiveInfo == null) {
+                Log.e(TAG, "Cannot parse downloaded APK package archive info")
+                return false
+            }
+
+            if (archiveInfo.packageName != context.packageName) {
+                Log.e(TAG, "Package name mismatch: ${archiveInfo.packageName} != ${context.packageName}")
+                return false
+            }
+
+            val currentCode = getCurrentVersionCode(context)
+            val apkCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                archiveInfo.longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                archiveInfo.versionCode
+            }
+            if (apkCode < currentCode) {
+                Log.e(TAG, "APK version code $apkCode is older than current app $currentCode")
+                return false
+            }
+
+            val currentSignatures = getAppSignatures(context)
+            val apkSignatures = getApkSignatures(context, apkFile)
+            if (currentSignatures.isNotEmpty() && apkSignatures.isNotEmpty()) {
+                val matching = currentSignatures.any { currentSig -> apkSignatures.contains(currentSig) }
+                if (!matching) {
+                    Log.e(TAG, "APK signature mismatch! Current signatures: $currentSignatures, APK signatures: $apkSignatures")
+                    return false
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "verifyApkPackageAndSignature error", e)
+            false
+        }
+    }
+
     fun installApk(context: Context, file: File): Boolean {
         try {
             if (!file.exists()) {
                 Toast.makeText(context, "APK файл не найден", Toast.LENGTH_SHORT).show()
+                return false
+            }
+
+            // KA-02: Verify APK package name and signing certificate before launching installer
+            if (!verifyApkPackageAndSignature(context, file)) {
+                file.delete()
+                Toast.makeText(context, "Ошибка безопасности: подпись APK не совпадает!", Toast.LENGTH_LONG).show()
                 return false
             }
 

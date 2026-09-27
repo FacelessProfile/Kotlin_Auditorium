@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/sib_card_surface"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_zoom_badge"
+        android:backgroundTint="@color/sib_border" />
+
+    <!-- Student Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_nfc_avatar_circle">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivDialogStudentAvatar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Circle"
+                app:strokeColor="@color/sib_blue_primary"
+                app:strokeWidth="1.5dp"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/tvDialogStudentAvatar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="С"
+                android:textColor="@color/sib_blue_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvDialogStudentName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="Иванов Иван Иванович"
+                android:textColor="@color/sib_text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDialogStudentGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Группа ИВ-121 • ID: #10"
+                android:textColor="@color/sib_text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Tag Details Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="@color/sib_block_bg"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/sib_border"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_nfc"
+                    app:tint="@color/sib_blue_primary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:text="ПРИВЯЗАННАЯ МЕТКА"
+                    android:textColor="@color/sib_text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDialogTagStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_nfc_stat_green"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="АКТИВНА"
+                    android:textColor="@color/sib_success"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvDialogTagUid"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="monospace"
+                android:text="04:A2:3B:11:4C:5D:80"
+                android:textColor="@color/sib_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Main Actions Container -->
+    <LinearLayout
+        android:id="@+id/layoutMainActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTagActionSelect"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:gravity="center_vertical|start"
+            android:paddingStart="16dp"
+            android:text="Выбрать для перезаписи (в конвейер)"
+            android:textColor="@color/sib_text_primary"
+            android:textSize="14sp"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_rotate_right"
+            app:iconGravity="textStart"
+            app:iconPadding="10dp"
+            app:iconTint="@color/sib_blue_primary"
+            app:strokeColor="@color/sib_border" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTagActionDossier"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical|start"
+            android:paddingStart="16dp"
+            android:text="Открыть досье студента"
+            android:textColor="@color/sib_text_primary"
+            android:textSize="14sp"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_clipboard"
+            app:iconGravity="textStart"
+            app:iconPadding="10dp"
+            app:iconTint="@color/sib_blue_primary"
+            app:strokeColor="@color/sib_border" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTagActionRevokePrompt"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical|start"
+            android:paddingStart="16dp"
+            android:text="Отозвать метку от студента"
+            android:textColor="@color/sib_danger"
+            android:textSize="14sp"
+            app:backgroundTint="@color/sib_error_bg"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_delete"
+            app:iconGravity="textStart"
+            app:iconPadding="10dp"
+            app:iconTint="@color/sib_danger"
+            app:strokeColor="@color/sib_error_border" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTagActionCancel"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="44dp"
+            android:layout_marginTop="6dp"
+            android:text="Закрыть"
+            android:textColor="@color/sib_text_muted" />
+    </LinearLayout>
+
+    <!-- Revocation Sub-View (Appears when clicking "Отозвать метку") -->
+    <LinearLayout
+        android:id="@+id/layoutRevokeForm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Укажите причину отзыва:"
+            android:textColor="@color/sib_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- Quick Reason Chips -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupRevokeReasons"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleLine="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipReasonLost"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Утеряна"
+                    app:chipBackgroundColor="@color/sib_block_bg"
+                    app:chipStrokeColor="@color/sib_border"
+                    app:chipStrokeWidth="1dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipReasonDamaged"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Повреждена"
+                    app:chipBackgroundColor="@color/sib_block_bg"
+                    app:chipStrokeColor="@color/sib_border"
+                    app:chipStrokeWidth="1dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipReasonReplace"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Перевыпуск"
+                    app:chipBackgroundColor="@color/sib_block_bg"
+                    app:chipStrokeColor="@color/sib_border"
+                    app:chipStrokeWidth="1dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipReasonDevice"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Смена телефона"
+                    app:chipBackgroundColor="@color/sib_block_bg"
+                    app:chipStrokeColor="@color/sib_border"
+                    app:chipStrokeWidth="1dp" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Текст причины"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxStrokeColor="@color/sib_blue_primary">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRevokeReason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapSentences"
+                android:maxLines="2"
+                android:text="Метка утеряна студентом"
+                android:textColor="@color/sib_text_primary"
+                android:textSize="14sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/cbPrepareWipe"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Физически стереть чип после отвязки (Safe Wipe)"
+            android:textColor="@color/sib_text_secondary"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRevokeBack"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Назад"
+                android:textColor="@color/sib_text_secondary"
+                app:cornerRadius="10dp"
+                app:strokeColor="@color/sib_border" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConfirmRevoke"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1.4"
+                android:backgroundTint="@color/sib_danger"
+                android:text="Отозвать"
+                android:textColor="@android:color/white"
+                app:cornerRadius="10dp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

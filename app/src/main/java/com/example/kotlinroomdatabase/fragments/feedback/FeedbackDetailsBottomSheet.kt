@@ -388,17 +388,39 @@ class FeedbackDetailsBottomSheet : BottomSheetDialogFragment() {
                 val authPrefs = context.getSharedPreferences("auth_prefs", android.content.Context.MODE_PRIVATE)
                 val token = authPrefs.getString("auth_token", "") ?: ""
 
-                val req = Request.Builder()
-                    .url(finalUrl)
-                    .apply { if (token.isNotBlank()) header("Authorization", "Bearer $token") }
-                    .build()
+                val reqBuilder = Request.Builder().url(finalUrl)
+                // KA-04: Only attach Authorization header if destination matches trusted backend origin
+                if (ServerConfig.isTrustedOrigin(context, finalUrl) && token.isNotBlank()) {
+                    reqBuilder.header("Authorization", "Bearer $token")
+                }
 
-                val resp = repo.getUnsafeOkHttpClient().newCall(req).execute()
+                val resp = repo.getUnsafeOkHttpClient().newCall(reqBuilder.build()).execute()
                 if (resp.isSuccessful) {
-                    val bytes = resp.body?.bytes()
-                    if (bytes != null && bytes.isNotEmpty()) {
-                        FileOutputStream(cacheFile).use { it.write(bytes) }
-                        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    // KA-14: Bounded stream read (max 15 MB)
+                    val maxBytes = 15 * 1024 * 1024L
+                    val body = resp.body
+                    var readBytes: ByteArray? = null
+                    if (body != null && (body.contentLength() <= 0 || body.contentLength() <= maxBytes)) {
+                        body.byteStream().use { input ->
+                            val out = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8192)
+                            var total = 0L
+                            var n: Int
+                            while (input.read(buffer).also { n = it } != -1) {
+                                total += n
+                                if (total > maxBytes) {
+                                    out.reset()
+                                    break
+                                }
+                                out.write(buffer, 0, n)
+                            }
+                            if (out.size() > 0) readBytes = out.toByteArray()
+                        }
+                    }
+
+                    if (readBytes != null && readBytes.isNotEmpty()) {
+                        FileOutputStream(cacheFile).use { it.write(readBytes) }
+                        val bmp = BitmapFactory.decodeByteArray(readBytes, 0, readBytes.size)
                         withContext(Dispatchers.Main) {
                             if (iv.tag == finalUrl && bmp != null) {
                                 iv.setPadding(0, 0, 0, 0)
@@ -468,13 +490,26 @@ class FeedbackDetailsBottomSheet : BottomSheetDialogFragment() {
                 val authPrefs = context.getSharedPreferences("auth_prefs", android.content.Context.MODE_PRIVATE)
                 val token = authPrefs.getString("auth_token", "") ?: ""
 
-                val req = Request.Builder()
-                    .url(finalUrl)
-                    .apply { if (token.isNotBlank()) header("Authorization", "Bearer $token") }
-                    .build()
+                val reqBuilder = Request.Builder().url(finalUrl)
+                // KA-04: Only attach Authorization header if destination matches trusted backend origin
+                if (ServerConfig.isTrustedOrigin(context, finalUrl) && token.isNotBlank()) {
+                    reqBuilder.header("Authorization", "Bearer $token")
+                }
 
-                val resp = repo.getUnsafeOkHttpClient().newCall(req).execute()
-                val content = resp.body?.string() ?: "Файл пуст"
+                val resp = repo.getUnsafeOkHttpClient().newCall(reqBuilder.build()).execute()
+                // KA-14: Bounded stream read for log viewer (max 10000 characters)
+                val reader = resp.body?.charStream()?.buffered()
+                val charBuf = CharArray(2048)
+                val sb = java.lang.StringBuilder()
+                var totalChars = 0
+                val maxChars = 10000
+                while (reader != null && totalChars < maxChars) {
+                    val read = reader.read(charBuf, 0, kotlin.math.min(charBuf.size, maxChars - totalChars))
+                    if (read == -1) break
+                    sb.append(charBuf, 0, read)
+                    totalChars += read
+                }
+                val content = if (sb.isNotEmpty()) sb.toString() else "Файл пуст"
                 withContext(Dispatchers.Main) {
                     progressDialog.dismiss()
                     AlertDialog.Builder(context)

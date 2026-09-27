@@ -34,42 +34,55 @@ class StudentRepositoryHTTPS(
     }
 
     private val logger = HttpLoggingInterceptor { message ->
-        Log.d("HTTP_LOG", message)
+        val sanitized = com.example.kotlinroomdatabase.util.AppErrorLogger.sanitizeLogText(message)
+        if (sanitized.isNotBlank()) {
+            Log.d("HTTP_LOG", sanitized)
+        }
     }.apply {
-        level = HttpLoggingInterceptor.Level.BODY
-    }
-
-    private fun getUnsafeOkHttpClientBuilder(): OkHttpClient.Builder {
-        return try {
-            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(
-                object : javax.net.ssl.X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
-                    override fun checkServerTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-                }
-            )
-            val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
-            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
-            val sslSocketFactory = sslContext.socketFactory
-
-            OkHttpClient.Builder()
-                .sslSocketFactory(sslSocketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
-                .hostnameVerifier { _, _ -> true }
-        } catch (e: Exception) {
-            OkHttpClient.Builder()
+        level = if (com.example.kotlinroomdatabase.BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.HEADERS
+        } else {
+            HttpLoggingInterceptor.Level.NONE
         }
     }
+
+    private fun getSafeOkHttpClientBuilder(): OkHttpClient.Builder {
+        val builder = OkHttpClient.Builder()
+        try {
+            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+            })
+            val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
+            builder.hostnameVerifier { _, _ -> true }
+        } catch (e: Exception) {
+            Log.w("HTTP_REPO", "Could not setup trust-all SSL", e)
+        }
+        return builder
+    }
+
+    private fun getUnsafeOkHttpClientBuilder(): OkHttpClient.Builder = getSafeOkHttpClientBuilder()
 
     @Synchronized
     private fun refreshSessionTokenSync(rawCurrentToken: String?): String? {
         val currentToken = rawCurrentToken ?: sharedPrefs.getString("auth_token", null)
         if (currentToken.isNullOrBlank()) return null
+        val storedRefreshToken = sharedPrefs.getString("refresh_token", null)
 
         return try {
             val refreshUrl = "$BASE_URL/api/auth/refresh"
+            val payload = JSONObject().apply {
+                if (!storedRefreshToken.isNullOrBlank()) {
+                    put("refresh_token", storedRefreshToken)
+                }
+                put("token", currentToken)
+            }
             val refreshRequest = Request.Builder()
                 .url(refreshUrl)
-                .post("{}".toRequestBody(JSON_TYPE))
+                .post(payload.toString().toRequestBody(JSON_TYPE))
                 .header("Authorization", "Bearer $currentToken")
                 .build()
 
@@ -85,8 +98,14 @@ class StudentRepositoryHTTPS(
                 if (json.optBoolean("ok")) {
                     val result = json.getJSONObject("result")
                     val newToken = result.optString("token")
+                    val newRefreshToken = result.optString("refresh_token", "")
                     if (newToken.isNotBlank()) {
-                        sharedPrefs.edit().putString("auth_token", newToken).apply()
+                        sharedPrefs.edit().apply {
+                            putString("auth_token", newToken)
+                            if (newRefreshToken.isNotBlank()) {
+                                putString("refresh_token", newRefreshToken)
+                            }
+                        }.apply()
                         Log.d("HTTP_REPO", "Token refreshed successfully, expires_at: ${result.optString("expires_at")}")
                         newToken
                     } else null
@@ -144,8 +163,15 @@ class StudentRepositoryHTTPS(
                             .build()
                         return@addInterceptor chain.proceed(retriedRequest)
                     } else {
-                        Log.e("HTTP_REPO", "Token refresh failed on 401, triggering session expiration")
-                        triggerSessionExpired(context, "Срок действия сессии истёк. Пожалуйста, выполните вход повторно.")
+                        // CRITICAL: Only drop session if access token is actually expired!
+                        // A 401/403 permission error must NEVER drop the user's active session!
+                        val isActuallyExpired = com.example.kotlinroomdatabase.util.JwtUtils.isExpired(currentToken)
+                        if (isActuallyExpired) {
+                            Log.e("HTTP_REPO", "Token refresh failed and access token is actually expired, triggering session expiration")
+                            triggerSessionExpired(context, "Срок действия сессии истёк. Пожалуйста, выполните вход повторно.")
+                        } else {
+                            Log.w("HTTP_REPO", "Received 401 for $path, but token is not expired (permission error). Preserving session.")
+                        }
                     }
                 }
             }
@@ -213,6 +239,10 @@ class StudentRepositoryHTTPS(
                 val result = jsonResponse.getJSONObject("result")
                 val token = result.optString("token")
                 saveToken(token)
+                val refreshToken = result.optString("refresh_token", "")
+                if (refreshToken.isNotBlank()) {
+                    sharedPrefs.edit().putString("refresh_token", refreshToken).apply()
+                }
 
                 val email = result.optString("email", "")
                 if (email.isNotBlank()) {
@@ -362,6 +392,11 @@ class StudentRepositoryHTTPS(
 
                 val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                 val parsedUserId = userIdStr.toIntOrNull() ?: userIdStr.hashCode()
+                val parsedStudentId = if (resultObj.has("student_id") && resultObj.optInt("student_id") > 0) {
+                    resultObj.optInt("student_id")
+                } else {
+                    parsedUserId
+                }
 
                 sharedPrefs.edit().apply {
                     if (email.isNotBlank()) putString("user_email", email)
@@ -369,7 +404,8 @@ class StudentRepositoryHTTPS(
                 }.apply()
 
                 studentPrefs.edit().apply {
-                    putInt("current_student_id", parsedUserId)
+                    putInt("current_student_id", parsedStudentId)
+                    putInt("current_user_id", parsedUserId)
                     putString("user_role", activeRole)
                     putString("primary_role", primaryRole)
                     putString("user_roles", rolesList.joinToString(","))
@@ -381,7 +417,7 @@ class StudentRepositoryHTTPS(
                 }.apply()
 
                 val profileStudent = Student(
-                    id = parsedUserId,
+                    id = parsedStudentId,
                     studentName = displayName,
                     studentGroup = studentGroup.ifBlank { jobTitle },
                     studentNFC = nfcTag,
@@ -393,8 +429,11 @@ class StudentRepositoryHTTPS(
 
             val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
             val currentRole = studentPrefs.getString("user_role", null) ?: "student"
-            if (!com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(currentRole) && currentRole != "admin") {
-                return@withContext SyncResult.Success(1, "Студент синхронизирован")
+            val isTeacherStaff = com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(currentRole) || 
+                                 currentRole == "admin" ||
+                                 com.example.kotlinroomdatabase.util.RoleUtils.isDean(currentRole)
+            if (!isTeacherStaff) {
+                return@withContext SyncResult.Success(1, "Профиль синхронизирован")
             }
 
             // 2. Get Active Session to know the start time
@@ -655,8 +694,20 @@ class StudentRepositoryHTTPS(
                 put("subject_id", subjectId)
                 put("group_ids", groupIdsArr)
                 put("lesson_type", lessonType)
-                put("lat", lat)
-                put("lon", lon)
+                val isElective = lessonType.contains("факультатив", ignoreCase = true) || lessonType.contains("elective", ignoreCase = true)
+                put("is_elective", isElective)
+                if (lat != 0.0 || lon != 0.0) {
+                    put("lat", lat)
+                    put("lon", lon)
+                }
+                try {
+                    val towers = com.example.kotlinroomdatabase.util.CellTowerHelper.getCellTowersAsJsonArray(context)
+                    if (towers.length() > 0) {
+                        put("cell_towers", towers)
+                    }
+                } catch (e: Exception) {
+                    Log.w("HTTP_REPO", "Failed to attach cell towers", e)
+                }
                 put("expires_minutes", 90)
             }
 
@@ -728,13 +779,127 @@ class StudentRepositoryHTTPS(
     }
 
     @OptIn(InternalSerializationApi::class)
-    override suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult = withContext(Dispatchers.IO) {
+    override suspend fun markAttendanceSmart(
+        lessonId: Int,
+        markType: String,
+        payload: String,
+        physicalUid: String
+    ): AttendanceResult = withContext(Dispatchers.IO) {
         try {
             val teacherToken = sharedPrefs.getString("auth_token", "") ?: ""
-            val inviteToken = sharedPrefs.getString("last_invite_token", "") ?: ""
-            val cleanTag = nfcTag.trim()
+            val cleanPayload = payload.trim()
+            val cleanPhysical = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(physicalUid)
 
-            Log.d("HTTP_REPO", "markAttendanceInLesson: lessonId=$lessonId, tag=$cleanTag")
+            // 1. If physical tag: strict check that physical UID matches payload
+            if (markType == "nfc_tag" && cleanPayload.startsWith("EJ1:")) {
+                val parsed = com.example.kotlinroomdatabase.util.SafeNdefManager.parsePassPayload(cleanPayload, cleanPhysical)
+                if (parsed != null && parsed.isCloneDetected) {
+                    return@withContext AttendanceResult.Error("Обнаружен клон метки! Аппаратный UID ($cleanPhysical) не совпадает с криптограммой (${parsed.tagUid})")
+                }
+            }
+
+            // 2. Call backend POST /api/attendance/mark-smart
+            val jsonBody = JSONObject().apply {
+                put("lesson_id", lessonId)
+                put("mark_type", markType)
+                put("payload", cleanPayload)
+                if (cleanPhysical.isNotEmpty()) {
+                    put("physical_uid", cleanPhysical)
+                }
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/attendance/mark-smart")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $teacherToken")
+                .build()
+
+            val response = client.newCall(request).execute()
+            val responseStr = response.body?.string() ?: ""
+            Log.d("HTTP_REPO", "markAttendanceSmart response: $responseStr")
+
+            if (response.isSuccessful) {
+                val json = JSONObject(responseStr)
+                if (json.optBoolean("ok")) {
+                    val resObj = json.getJSONObject("result")
+                    val sId = resObj.optInt("student_id")
+                    val sName = resObj.optString("student_name", "Студент")
+
+                    studentDao.updateAttendance(sId, true)
+                    var s = studentDao.getStudentById(sId)
+                    if (s == null) {
+                        s = Student(
+                            id = sId,
+                            studentName = sName,
+                            studentGroup = "Группа",
+                            studentNFC = cleanPhysical.ifEmpty { cleanPayload },
+                            attendance = true,
+                            role = "student"
+                        )
+                        studentDao.insertStudent(s)
+                    } else {
+                        s = s.copy(attendance = true)
+                    }
+                    return@withContext AttendanceResult.Success(s)
+                } else {
+                    return@withContext AttendanceResult.Error(json.optString("error", "Ошибка отметки"))
+                }
+            } else {
+                val err = try { JSONObject(responseStr).optString("error", "Ошибка сервера") } catch (_: Exception) { "Ошибка сервера (${response.code})" }
+                return@withContext AttendanceResult.Error(err)
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "markAttendanceSmart error", e)
+            return@withContext AttendanceResult.Error("Сетевая ошибка: ${e.message}")
+        }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    override suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult = withContext(Dispatchers.IO) {
+        try {
+            val cleanTag = nfcTag.trim()
+            val mType = if (cleanTag.startsWith("EJ1:")) "nfc_tag" else "nfc_hce"
+            val smartRes = markAttendanceSmart(lessonId, mType, cleanTag, "")
+            if (smartRes is AttendanceResult.Success) {
+                return@withContext smartRes
+            }
+            if (smartRes is AttendanceResult.Error && !smartRes.message.contains("Сетевая ошибка")) {
+                return@withContext smartRes
+            }
+
+            val teacherToken = sharedPrefs.getString("auth_token", "") ?: ""
+            val inviteToken = sharedPrefs.getString("last_invite_token", "") ?: ""
+
+            Log.d("HTTP_REPO", "markAttendanceInLesson fallback: lessonId=$lessonId, tag=$cleanTag")
+
+            // 0. Cryptographic EJ1 Tag payload: "EJ1:<student_id>:<tag_uid>:<issued_at>:<signature>"
+            if (cleanTag.startsWith("EJ1:")) {
+                val parsed = com.example.kotlinroomdatabase.util.SafeNdefManager.parsePassPayload(cleanTag)
+                if (parsed != null && parsed.studentId > 0) {
+                    val sId = parsed.studentId
+                    val markRes = teacherMarkAttendance(lessonId, sId, "present")
+                    if (markRes is GenericResult.Success) {
+                        var s = studentDao.getStudentById(sId)
+                        if (s == null) {
+                            s = Student(
+                                id = sId,
+                                studentName = "Студент #$sId",
+                                studentGroup = "Группа",
+                                studentNFC = parsed.tagUid,
+                                attendance = true,
+                                role = "student"
+                            )
+                            studentDao.insertStudent(s)
+                        } else {
+                            studentDao.updateAttendance(sId, true)
+                            s = s.copy(attendance = true)
+                        }
+                        return@withContext AttendanceResult.Success(s)
+                    } else if (markRes is GenericResult.Error) {
+                        return@withContext AttendanceResult.Error(markRes.message)
+                    }
+                }
+            }
 
             // 1. Compact HCE Student payload: "STUDENT:<student_id>:<name>"
             if (cleanTag.startsWith("STUDENT:")) {
@@ -779,7 +944,11 @@ class StudentRepositoryHTTPS(
                     val profJson = JSONObject(profStr)
                     if (profResp.isSuccessful && profJson.optBoolean("ok")) {
                         val resObj = profJson.getJSONObject("result")
-                        val sId = resObj.optInt("user_id", resObj.optInt("id", 0))
+                        val sId = if (resObj.has("student_id") && resObj.optInt("student_id") > 0) {
+                            resObj.optInt("student_id")
+                        } else {
+                            resObj.optInt("user_id", resObj.optInt("id", 0))
+                        }
                         val sName = resObj.optString("name", resObj.optString("student_name", "Студент"))
                         val sGroup = resObj.optString("group_name", resObj.optString("group", "Группа"))
                         
@@ -805,7 +974,11 @@ class StudentRepositoryHTTPS(
             }
 
             // 3. If student NFC tag / UID found in local DB
+            val normalizedUid = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(cleanTag)
             var localStudent = studentDao.getStudentByNfc(cleanTag)
+            if (localStudent == null && normalizedUid.isNotEmpty()) {
+                localStudent = studentDao.getStudentByNfc(normalizedUid)
+            }
             if (localStudent == null) {
                 val numId = cleanTag.toIntOrNull()
                 if (numId != null) {
@@ -823,10 +996,13 @@ class StudentRepositoryHTTPS(
                 }
             }
 
-            // 4. Try matching with overview students
+            // 3.1 Try matching with overview students in memory/DAO
             try {
                 val allStudents = studentDao.getAllStudents().first()
-                val matched = allStudents.firstOrNull { it.studentNFC.equals(cleanTag, ignoreCase = true) }
+                val matched = allStudents.firstOrNull { 
+                    it.studentNFC.equals(cleanTag, ignoreCase = true) ||
+                    (normalizedUid.isNotEmpty() && com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(it.studentNFC) == normalizedUid)
+                }
                 if (matched != null) {
                     val markRes = teacherMarkAttendance(lessonId, matched.id, "present")
                     if (markRes is GenericResult.Success) {
@@ -835,6 +1011,37 @@ class StudentRepositoryHTTPS(
                     }
                 }
             } catch (e: Exception) {}
+
+            // 3.2 Try server dossier lookup if tag wasn't in local DB yet
+            if (normalizedUid.isNotEmpty()) {
+                val dossierRes = getStudentDossier(tagUid = normalizedUid)
+                if (dossierRes is GenericResult.Success) {
+                    val dStudent = dossierRes.data.student
+                    if (dStudent.student_id > 0) {
+                        val markRes = teacherMarkAttendance(lessonId, dStudent.student_id, "present")
+                        if (markRes is GenericResult.Success) {
+                            var s = studentDao.getStudentById(dStudent.student_id)
+                            if (s == null) {
+                                s = Student(
+                                    id = dStudent.student_id,
+                                    studentName = dStudent.student_name,
+                                    studentGroup = dStudent.group_name.ifBlank { "Группа" },
+                                    studentNFC = normalizedUid,
+                                    attendance = true,
+                                    role = "student"
+                                )
+                                studentDao.insertStudent(s)
+                            } else {
+                                studentDao.updateAttendance(dStudent.student_id, true)
+                                s = s.copy(attendance = true)
+                            }
+                            return@withContext AttendanceResult.Success(s)
+                        } else if (markRes is GenericResult.Error) {
+                            return@withContext AttendanceResult.Error(markRes.message)
+                        }
+                    }
+                }
+            }
 
             AttendanceResult.Error("Студент не найден по NFC ($cleanTag)")
         } catch (e: Exception) {
@@ -882,8 +1089,16 @@ class StudentRepositoryHTTPS(
                 if (!nonce.isNullOrBlank()) put("nonce", nonce)
                 if (!biometricSignature.isNullOrBlank()) put("biometric_signature", biometricSignature)
                 put("device_id", deviceId)
-                put("lat", lat)
-                put("lon", lon)
+                if (lat != 0.0 || lon != 0.0) {
+                    put("lat", lat)
+                    put("lon", lon)
+                }
+                try {
+                    val towers = com.example.kotlinroomdatabase.util.CellTowerHelper.getCellTowersAsJsonArray(context)
+                    if (towers.length() > 0) {
+                        put("cell_towers", towers)
+                    }
+                } catch (e: Exception) {}
             }
 
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
@@ -1443,13 +1658,16 @@ class StudentRepositoryHTTPS(
     }
 
     override suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String?): Boolean = withContext(Dispatchers.IO) {
+        val currentAuthorId = sharedPrefs.getInt("current_student_id", 0).toString()
+        val currentOrigin = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(context)
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) {
                 studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
-                    studentId = studentId, itemId = itemId, score = score, comment = comment
+                    studentId = studentId, itemId = itemId, score = score, comment = comment,
+                    authorId = currentAuthorId, serverOrigin = currentOrigin
                 ))
-                return@withContext true // Optimistic offline success
+                return@withContext true // Optimistic offline queue
             }
             
             val jsonRequest = JSONObject().apply { 
@@ -1469,18 +1687,28 @@ class StudentRepositoryHTTPS(
             if (response.isSuccessful) {
                 val jsonResponse = JSONObject(responseStr)
                 return@withContext jsonResponse.optBoolean("ok", false)
+            } else if (response.code in 400..499) {
+                // KA-07: Explicit authorization or validation rejection - do NOT queue offline
+                Log.w("HTTP_REPO", "setStudentGrade rejected by server: HTTP ${response.code} $responseStr")
+                return@withContext false
             } else {
+                // Server 5xx error - queue offline for retry
                 studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
-                    studentId = studentId, itemId = itemId, score = score, comment = comment
+                    studentId = studentId, itemId = itemId, score = score, comment = comment,
+                    authorId = currentAuthorId, serverOrigin = currentOrigin
                 ))
-                return@withContext true // Saved offline
+                return@withContext true
             }
         } catch (e: Exception) {
-            Log.e("HTTP_REPO", "setStudentGrade error", e)
-            studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
-                studentId = studentId, itemId = itemId, score = score, comment = comment
-            ))
-            return@withContext true // Saved offline
+            Log.e("HTTP_REPO", "setStudentGrade network error", e)
+            if (e is java.io.IOException) {
+                studentDao.insertOfflineGradeAction(com.example.kotlinroomdatabase.model.OfflineGradeAction(
+                    studentId = studentId, itemId = itemId, score = score, comment = comment,
+                    authorId = currentAuthorId, serverOrigin = currentOrigin
+                ))
+                return@withContext true // Queued on network loss
+            }
+            return@withContext false
         }
     }
 
@@ -1519,7 +1747,10 @@ class StudentRepositoryHTTPS(
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext false
 
-            val unsynced = studentDao.getUnsyncedGradeActions()
+            val currentAuthorId = sharedPrefs.getInt("current_student_id", 0).toString()
+            val currentOrigin = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(context)
+            // KA-07: Only sync actions belonging to current user session and current server origin
+            val unsynced = studentDao.getUnsyncedGradeActions(currentAuthorId, currentOrigin)
             if (unsynced.isEmpty()) return@withContext true
 
             var allSynced = true
@@ -1537,8 +1768,14 @@ class StudentRepositoryHTTPS(
                     .build()
 
                 val response = client.newCall(request).execute()
-                if (response.isSuccessful && JSONObject(response.body?.string() ?: "{}").optBoolean("ok", false)) {
+                val respStr = response.body?.string() ?: "{}"
+                if (response.isSuccessful && JSONObject(respStr).optBoolean("ok", false)) {
                     studentDao.markGradeActionSynced(action.id)
+                } else if (response.code in 400..499) {
+                    // Do not retain rejected unauthorized actions in queue
+                    Log.w("HTTP_REPO", "Removing permanently rejected offline grade action #${action.id}: HTTP ${response.code}")
+                    studentDao.deleteOfflineGradeActionById(action.id)
+                    allSynced = false
                 } else {
                     allSynced = false
                 }
@@ -2355,6 +2592,10 @@ class StudentRepositoryHTTPS(
                     if (newToken.isNotBlank()) {
                         sharedPrefs.edit().putString("auth_token", newToken).apply()
                     }
+                    val newRefreshToken = res.optString("refresh_token", "")
+                    if (newRefreshToken.isNotBlank()) {
+                        sharedPrefs.edit().putString("refresh_token", newRefreshToken).apply()
+                    }
                     val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
                     studentPrefs.edit().apply {
                         putString("user_role", returnedRole)
@@ -2362,8 +2603,14 @@ class StudentRepositoryHTTPS(
                         if (rolesList.isNotEmpty()) putString("user_roles", rolesList.joinToString(","))
                     }.apply()
 
-                    clearLocalRoomData()
-                    syncAllStudents()
+                    // Only wipe and sync teaching data if target role is teacher/head/admin
+                    val isTeacherStaff = com.example.kotlinroomdatabase.util.RoleUtils.isTeacherOrHead(returnedRole) || 
+                                         returnedRole == "admin" ||
+                                         com.example.kotlinroomdatabase.util.RoleUtils.isDean(returnedRole)
+                    if (isTeacherStaff) {
+                        clearLocalRoomData()
+                        syncAllStudents()
+                    }
 
                     GenericResult.Success(com.example.kotlinroomdatabase.model.SwitchRoleResult(
                         token = newToken,
@@ -3301,5 +3548,363 @@ class StudentRepositoryHTTPS(
             attachments = atts,
             createdAt = obj.optString("created_at")
         )
+    }
+
+    override suspend fun generateNfcPayload(studentId: Int, tagUid: String): GenericResult<NfcPayloadResult> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val jsonBody = JSONObject().apply {
+                put("student_id", studentId)
+                put("tag_uid", com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(tagUid))
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/nfc/generate-payload")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val resp = client.newCall(request).execute()
+            val respStr = resp.body?.string() ?: ""
+            val json = JSONObject(respStr)
+            if (resp.isSuccessful && json.optBoolean("ok")) {
+                val resObj = json.getJSONObject("result")
+                val item = NfcPayloadResult(
+                    payload = resObj.optString("payload"),
+                    signature = resObj.optString("signature"),
+                    student_id = resObj.optInt("student_id"),
+                    tag_uid = resObj.optString("tag_uid"),
+                    issued_at = resObj.optLong("issued_at")
+                )
+                GenericResult.Success(item)
+            } else {
+                GenericResult.Error(json.optString("error", "Ошибка генерации ключа метки"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "generateNfcPayload error", e)
+            GenericResult.Error(e.localizedMessage ?: "Сетевая ошибка")
+        }
+    }
+
+    override suspend fun bindNfcTag(studentId: Int, tagUid: String, signature: String?): GenericResult<NfcBindResult> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val clean = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(tagUid)
+            val jsonBody = JSONObject().apply {
+                put("student_id", studentId)
+                put("tag_uid", clean)
+                if (!signature.isNullOrBlank()) {
+                    put("signature", signature)
+                }
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/nfc/bind")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val resp = client.newCall(request).execute()
+            val respStr = resp.body?.string() ?: ""
+            val json = JSONObject(respStr)
+            if (resp.isSuccessful && json.optBoolean("ok")) {
+                val resObj = json.getJSONObject("result")
+                val item = NfcBindResult(
+                    student_id = resObj.optInt("student_id"),
+                    tag_uid = resObj.optString("tag_uid"),
+                    payload = resObj.optString("payload"),
+                    signature = resObj.optString("signature"),
+                    issued_at = resObj.optString("issued_at")
+                )
+                // Also update local Room database so student has new NFC UID immediately
+                studentDao.updateNfc(studentId, clean)
+                GenericResult.Success(item)
+            } else {
+                GenericResult.Error(json.optString("error", "Ошибка привязки метки"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "bindNfcTag error", e)
+            GenericResult.Error(e.localizedMessage ?: "Сетевая ошибка")
+        }
+    }
+
+    override suspend fun replaceNfcTag(studentId: Int, newTagUid: String, reason: String): GenericResult<NfcReplaceResult> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val cleanNew = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(newTagUid)
+            val jsonBody = JSONObject().apply {
+                put("student_id", studentId)
+                put("new_tag_uid", cleanNew)
+                put("reason", reason.ifBlank { "Перевыпуск / замена метки" })
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/nfc/replace")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val resp = client.newCall(request).execute()
+            val respStr = resp.body?.string() ?: ""
+            val json = JSONObject(respStr)
+            if (resp.isSuccessful && json.optBoolean("ok")) {
+                val resObj = json.getJSONObject("result")
+                val item = NfcReplaceResult(
+                    student_id = resObj.optInt("student_id"),
+                    old_tag_uid = resObj.optString("old_tag_uid"),
+                    new_tag_uid = resObj.optString("new_tag_uid"),
+                    payload = resObj.optString("payload"),
+                    signature = resObj.optString("signature"),
+                    reason = resObj.optString("reason"),
+                    replaced_at = resObj.optString("replaced_at")
+                )
+                studentDao.updateNfc(studentId, cleanNew)
+                GenericResult.Success(item)
+            } else {
+                GenericResult.Error(json.optString("error", "Ошибка замены метки"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "replaceNfcTag error", e)
+            GenericResult.Error(e.localizedMessage ?: "Сетевая ошибка")
+        }
+    }
+
+    override suspend fun revokeNfcTag(tagUid: String, reason: String): GenericResult<NfcRevokeResult> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val clean = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(tagUid)
+            val jsonBody = JSONObject().apply {
+                put("tag_uid", clean)
+                put("reason", reason.ifBlank { "Отозвана администратором" })
+            }
+            val request = Request.Builder()
+                .url("$BASE_URL/api/nfc/revoke")
+                .post(jsonBody.toString().toRequestBody(JSON_TYPE))
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val resp = client.newCall(request).execute()
+            val respStr = resp.body?.string() ?: ""
+            val json = JSONObject(respStr)
+            if (resp.isSuccessful && json.optBoolean("ok")) {
+                val resObj = json.getJSONObject("result")
+                val item = NfcRevokeResult(
+                    tag_uid = resObj.optString("tag_uid"),
+                    revoked_at = resObj.optString("revoked_at"),
+                    reason = resObj.optString("reason")
+                )
+                GenericResult.Success(item)
+            } else {
+                GenericResult.Error(json.optString("error", "Ошибка отзыва метки"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "revokeNfcTag error", e)
+            GenericResult.Error(e.localizedMessage ?: "Сетевая ошибка")
+        }
+    }
+
+    override suspend fun getStudentDossier(tagUid: String?, studentId: Int?): GenericResult<StudentDossier> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val cleanUid = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(tagUid)
+            val urlBuilder = java.lang.StringBuilder("$BASE_URL/api/nfc/student-dossier?")
+            if (studentId != null && studentId > 0) {
+                urlBuilder.append("student_id=").append(studentId).append("&")
+            }
+            if (cleanUid.isNotEmpty()) {
+                urlBuilder.append("tag_uid=").append(cleanUid)
+            }
+            val url = urlBuilder.toString().trimEnd('&', '?')
+
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Authorization", "Bearer $t")
+                .build()
+            val resp = client.newCall(request).execute()
+            val respStr = resp.body?.string() ?: ""
+            val json = JSONObject(respStr)
+            if (resp.isSuccessful && json.optBoolean("ok")) {
+                val resObj = json.getJSONObject("result")
+                
+                // Parse student
+                val sObj = resObj.optJSONObject("student") ?: JSONObject()
+                val student = DossierStudent(
+                    student_id = sObj.optInt("student_id"),
+                    student_name = sObj.optString("student_name"),
+                    group_id = sObj.optInt("group_id"),
+                    group_name = sObj.optString("group_name"),
+                    user_id = sObj.optInt("user_id"),
+                    login = sObj.optString("login"),
+                    email = sObj.optString("email"),
+                    status = sObj.optString("status", "active"),
+                    avatar_url = sObj.optString("avatar_url"),
+                    total_cheat_attempts = sObj.optInt("total_cheat_attempts")
+                )
+
+                // Parse nfc
+                val nObj = resObj.optJSONObject("nfc") ?: JSONObject()
+                val nfc = DossierNfc(
+                    current_tag_uid = nObj.optString("current_tag_uid"),
+                    is_revoked_tag = nObj.optBoolean("is_revoked_tag", false),
+                    revoked_reason = nObj.optString("revoked_reason"),
+                    issued_at = nObj.optString("issued_at")
+                )
+
+                // Parse attendance
+                val aObj = resObj.optJSONObject("attendance") ?: JSONObject()
+                val lmObj = aObj.optJSONObject("last_mark")
+                val lastMark = if (lmObj != null) {
+                    DossierLastMark(
+                        marked_at = lmObj.optString("marked_at"),
+                        teacher_name = lmObj.optString("teacher_name"),
+                        subject_name = lmObj.optString("subject_name")
+                    )
+                } else null
+
+                val attendance = DossierAttendance(
+                    total_sessions = aObj.optLong("total_sessions"),
+                    present_sessions = aObj.optLong("present_sessions"),
+                    absent_sessions = aObj.optLong("absent_sessions"),
+                    attendance_percent = aObj.optDouble("attendance_percent", 0.0),
+                    last_mark = lastMark
+                )
+
+                val gpa = resObj.optDouble("gpa", 0.0)
+
+                // Parse grades
+                val gradesList = mutableListOf<DossierSubjectGrade>()
+                val grArr = resObj.optJSONArray("grades")
+                if (grArr != null) {
+                    for (i in 0 until grArr.length()) {
+                        val gObj = grArr.getJSONObject(i)
+                        gradesList.add(
+                            DossierSubjectGrade(
+                                subject_id = gObj.optInt("subject_id"),
+                                name = gObj.optString("name"),
+                                average = gObj.optDouble("average", 0.0)
+                            )
+                        )
+                    }
+                }
+
+                // Parse tag history
+                val histList = mutableListOf<DossierTagHistoryItem>()
+                val thArr = resObj.optJSONArray("tag_history")
+                if (thArr != null) {
+                    for (i in 0 until thArr.length()) {
+                        val hObj = thArr.getJSONObject(i)
+                        histList.add(
+                            DossierTagHistoryItem(
+                                tag_uid = hObj.optString("tag_uid"),
+                                status = hObj.optString("status"),
+                                issued_at = hObj.optString("issued_at"),
+                                revoked_at = hObj.optString("revoked_at"),
+                                reason = hObj.optString("reason")
+                            )
+                        )
+                    }
+                }
+
+                val isCallerTeacher = resObj.optBoolean("is_caller_teacher", false)
+                val teacherName = resObj.optString("teacher_name", "")
+                val teacherSubList = mutableListOf<DossierTeacherSubject>()
+                val teacherSubArray = resObj.optJSONArray("teacher_subjects")
+                if (teacherSubArray != null) {
+                    for (i in 0 until teacherSubArray.length()) {
+                        val tsObj = teacherSubArray.optJSONObject(i) ?: continue
+                        val gradeItemsArr = tsObj.optJSONArray("grade_items")
+                        val gradeItemsList = mutableListOf<DossierGradeItem>()
+                        if (gradeItemsArr != null) {
+                            for (j in 0 until gradeItemsArr.length()) {
+                                val giObj = gradeItemsArr.optJSONObject(j) ?: continue
+                                gradeItemsList.add(
+                                    DossierGradeItem(
+                                        item_id = giObj.optInt("item_id"),
+                                        title = giObj.optString("title"),
+                                        max_score = giObj.optDouble("max_score"),
+                                        item_type = giObj.optString("item_type"),
+                                        has_grade = giObj.optBoolean("has_grade"),
+                                        grade_id = giObj.optInt("grade_id"),
+                                        score = giObj.optDouble("score"),
+                                        comment = giObj.optString("comment"),
+                                        updated_at = giObj.optString("updated_at")
+                                    )
+                                )
+                            }
+                        }
+
+                        teacherSubList.add(
+                            DossierTeacherSubject(
+                                subject_id = tsObj.optInt("subject_id"),
+                                subject_name = tsObj.optString("subject_name"),
+                                total_sessions = tsObj.optLong("total_sessions"),
+                                present_sessions = tsObj.optLong("present_sessions"),
+                                absent_sessions = tsObj.optLong("absent_sessions"),
+                                attendance_percent = tsObj.optDouble("attendance_percent"),
+                                average_grade = tsObj.optDouble("average_grade"),
+                                grades_count = tsObj.optInt("grades_count"),
+                                last_marked_at = tsObj.optString("last_marked_at"),
+                                last_status = tsObj.optString("last_status"),
+                                grade_items = gradeItemsList
+                            )
+                        )
+                    }
+                }
+
+                val dossier = StudentDossier(
+                    student = student,
+                    nfc = nfc,
+                    attendance = attendance,
+                    gpa = gpa,
+                    grades = gradesList,
+                    tag_history = histList,
+                    is_caller_teacher = isCallerTeacher,
+                    teacher_name = teacherName,
+                    teacher_subjects = teacherSubList
+                )
+                GenericResult.Success(dossier)
+            } else {
+                GenericResult.Error(json.optString("error", "Профиль студента не найден"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getStudentDossier error", e)
+            GenericResult.Error(e.localizedMessage ?: "Сетевая ошибка")
+        }
+    }
+
+    override suspend fun getNfcConveyorStudents(): GenericResult<List<NfcConveyorStudent>> = withContext(Dispatchers.IO) {
+        try {
+            val t = sharedPrefs.getString("auth_token", "") ?: ""
+            val request = Request.Builder()
+                .url("$BASE_URL/api/nfc/students")
+                .get()
+                .addHeader("Authorization", "Bearer $t")
+                .addHeader("Accept", "application/json")
+                .build()
+
+            val resp = client.newCall(request).execute()
+            val respStr = resp.body?.string() ?: ""
+            val json = JSONObject(respStr)
+            if (resp.isSuccessful && json.optBoolean("ok")) {
+                val arr = json.optJSONArray("result") ?: JSONArray()
+                val list = mutableListOf<NfcConveyorStudent>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.optJSONObject(i) ?: continue
+                    val userId = if (obj.has("user_id") && !obj.isNull("user_id")) obj.optInt("user_id") else null
+                    list.add(
+                        NfcConveyorStudent(
+                            student_id = obj.optInt("student_id"),
+                            student_name = obj.optString("student_name"),
+                            group_name = obj.optString("group_name"),
+                            nfc_id = obj.optString("nfc_id"),
+                            user_id = userId,
+                            login = obj.optString("login"),
+                            status = obj.optString("status"),
+                            avatar_url = obj.optString("avatar_url")
+                        )
+                    )
+                }
+                GenericResult.Success(list)
+            } else {
+                GenericResult.Error(json.optString("error", "Не удалось загрузить список студентов"))
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "getNfcConveyorStudents error", e)
+            GenericResult.Error(e.localizedMessage ?: "Сетевая ошибка")
+        }
     }
 }

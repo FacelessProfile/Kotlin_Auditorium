@@ -1,0 +1,172 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Emergency Siren Beam Rays (Pulsing Red Alert) -->
+    <path
+        android:fillColor="#EF4444"
+        android:fillAlpha="0.25"
+        android:pathData="M48,16 L12,4 L28,26 Z" />
+    <path
+        android:fillColor="#EF4444"
+        android:fillAlpha="0.25"
+        android:pathData="M48,16 L84,4 L68,26 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:fillAlpha="0.2"
+        android:pathData="M48,16 L4,36 L18,48 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:fillAlpha="0.2"
+        android:pathData="M48,16 L92,36 L78,48 Z" />
+
+    <!-- Red Flashing Alarm Beacon on Top -->
+    <!-- Beacon Base -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M40,16 L56,16 L54,20 L42,20 Z" />
+    <!-- Beacon Red Glass Dome -->
+    <path
+        android:fillColor="#DC2626"
+        android:pathData="M41,16 C41,8 44,4 48,4 C52,4 55,8 55,16 Z" />
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M43,15 C43,9 45,6 48,6 C51,6 53,9 53,15 Z" />
+    <!-- Bright Flare Center -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,8 A2,2 0 1,0 50,8 A2,2 0 1,0 46,8 Z" />
+
+    <!-- Ground Shadow -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.25"
+        android:pathData="M26,88 C36,84 60,84 70,88 C64,91 32,91 26,88 Z" />
+
+    <!-- Duck Body Plumage (Trembling with Fear) -->
+    <!-- Base Shadow -->
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M48,26 C30,26 18,38 18,56 C18,74 30,86 48,86 C66,86 78,74 78,56 C78,38 66,26 48,26 Z" />
+    <!-- Main Yellow Plumage -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M48,25 C31,25 20,37 20,55 C20,72 31,84 48,84 C65,84 76,72 76,55 C76,37 65,25 48,25 Z" />
+    <!-- Shading on bottom -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M24,70 C30,80 38,86 48,86 C58,86 66,80 72,70 C66,76 58,80 48,80 C38,80 30,76 24,70 Z" />
+
+    <!-- Wings Clutching Head in Absolute Panic ("Home Alone" / Scream) -->
+    <!-- Left Wing on Head -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M24,34 C18,36 16,46 22,54 L28,52 L26,40 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M24.5,35 C19.5,37 17.5,45 23,53 L27.5,51.5 L26,41 Z" />
+    <!-- Wing Feathers Gripping Cheek -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M24,42 A2,2 0 1,0 28,42 A2,2 0 1,0 24,42 Z" />
+
+    <!-- Right Wing on Head -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M72,34 C78,36 80,46 74,54 L68,52 L70,40 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M71.5,35 C76.5,37 78.5,45 73,53 L68.5,51.5 L70,41 Z" />
+    <!-- Wing Feathers Gripping Cheek -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M68,42 A2,2 0 1,0 72,42 A2,2 0 1,0 68,42 Z" />
+
+    <!-- Dramatic Anime Despair Vertical Forehead Lines -->
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M42,26 L42,32 M46,25 L46,33 M50,25 L50,33 M54,26 L54,32" />
+
+    <!-- Wide Open Screaming Panic Spiral Eyes -->
+    <!-- Left Eye Sclera -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,42 A6,6 0 1,0 46,42 A6,6 0 1,0 34,42 Z" />
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M38.5,42 A2,2 0 1,0 42.5,42 A2,2 0 1,0 38.5,42 Z" />
+    <!-- Left Eye Red Panic Spiral -->
+    <path
+        android:strokeColor="#EF4444"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M40.5,38.5 A3.5,3.5 0 1,0 40.5,45.5 A3.5,3.5 0 1,0 40.5,38.5 Z" />
+
+    <!-- Right Eye Sclera -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,42 A6,6 0 1,0 62,42 A6,6 0 1,0 50,42 Z" />
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M54.5,42 A2,2 0 1,0 58.5,42 A2,2 0 1,0 54.5,42 Z" />
+    <!-- Right Eye Red Panic Spiral -->
+    <path
+        android:strokeColor="#EF4444"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M56.5,38.5 A3.5,3.5 0 1,0 56.5,45.5 A3.5,3.5 0 1,0 56.5,38.5 Z" />
+
+    <!-- Screaming Open Bill ("КРЯЯЯЯЯ!") -->
+    <!-- Upper Bill -->
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M40,50 C40,50 44,48 48,48 C52,48 56,50 56,50 C58,54 56,58 48,58 C40,58 38,54 40,50 Z" />
+    <!-- Wide Screaming Cavity (Dark ruby) -->
+    <path
+        android:fillColor="#450A0A"
+        android:pathData="M41,54 C41,68 55,68 55,54 Z" />
+    <!-- Trembling Tongue Inside -->
+    <path
+        android:fillColor="#F43F5E"
+        android:pathData="M44,63 C46,66 50,66 52,63 C51,67 45,67 44,63 Z" />
+    <!-- Lower Bill Lip -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M40,64 C42,70 54,70 56,64 C54,72 42,72 40,64 Z" />
+
+    <!-- Official University Expulsion Decree Notice Fluttering ("ПРИКАЗ: ОТЧИСЛИТЬ") -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1"
+        android:pathData="M14,64 L30,60 L34,80 L18,84 Z" />
+    <!-- Text Lines on Document -->
+    <path
+        android:strokeColor="#94A3B8"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M18,66 L28,64 M17,69 L29,66 M17,72 L30,69 M17,75 L26,73" />
+    <!-- Red Official Seal on Document -->
+    <path
+        android:fillColor="#EF4444"
+        android:fillAlpha="0.85"
+        android:pathData="M24,77 A3,3 0 1,0 30,77 A3,3 0 1,0 24,77 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M27,75.5 L27,78.5 M25.5,77 L28.5,77" />
+
+    <!-- Red Hazard Caution Triangle Exclamation in Right Corner -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M80,68 L86,78 L74,78 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M79.5,71 L80.5,71 L80.5,74.5 L79.5,74.5 Z M79.5,75.5 L80.5,75.5 L80.5,76.5 L79.5,76.5 Z" />
+
+</vector>

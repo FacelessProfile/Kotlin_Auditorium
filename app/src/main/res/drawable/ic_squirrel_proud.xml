@@ -1,0 +1,203 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Big Bushy Tail with Shading & Texture -->
+    <!-- Tail Deep Shadow Base -->
+    <path
+        android:fillColor="#7C2D12"
+        android:pathData="M60,82 C80,82 92,72 92,44 C92,26 82,18 70,18 C64,18 60,22 62,28 C66,24 72,24 76,30 C80,38 78,54 66,64 C60,70 54,76 48,78 Z" />
+    <!-- Tail Mid-Tone Ginger -->
+    <path
+        android:fillColor="#C2410C"
+        android:pathData="M62,78 C78,78 88,68 88,46 C88,32 80,24 70,24 C65,24 62,28 64,34 C68,30 73,30 76,36 C80,44 76,56 64,66 C58,72 52,76 48,76 Z" />
+    <!-- Tail Highlights -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M64,74 C74,74 84,64 84,48 C84,36 78,30 70,30 C67,30 65,33 66,38 C70,34 74,36 76,42 C78,50 72,60 62,68 C58,72 52,75 48,74 Z" />
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M80,36 C83,42 81,50 76,56 C74,52 76,44 74,38 C76,36 78,34 80,36 Z" />
+
+    <!-- Squirrel Body (Torso with Rich Orange Shading) -->
+    <path
+        android:fillColor="#C2410C"
+        android:pathData="M34,48 C32,38 40,30 50,30 C60,30 68,38 66,48 C64,58 64,72 60,80 C54,86 38,86 34,78 C32,70 34,58 34,48 Z" />
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M36,48 C35,40 42,33 50,33 C58,33 65,40 63,48 C61,57 61,70 57,77 C52,82 39,82 36,75 C34,68 36,57 36,48 Z" />
+
+    <!-- Cream Belly / Chest Fur -->
+    <path
+        android:fillColor="#FEF3C7"
+        android:pathData="M42,50 C42,42 46,38 50,38 C54,38 58,42 58,50 C58,60 56,72 50,72 C44,72 42,60 42,50 Z" />
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M44,52 C44,46 47,42 50,42 C53,42 56,46 56,52 C56,60 54,68 50,68 C46,68 44,60 44,52 Z" />
+
+    <!-- Feet -->
+    <path
+        android:fillColor="#9A3412"
+        android:pathData="M34,80 C32,80 30,86 32,90 C34,92 40,92 42,88 C40,84 38,80 34,80 Z" />
+    <path
+        android:fillColor="#9A3412"
+        android:pathData="M56,80 C54,80 52,86 54,90 C56,92 62,92 64,88 C62,84 60,80 56,80 Z" />
+
+    <!-- Squirrel Head & Face -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M32,40 C30,32 38,24 50,24 C62,24 70,32 68,40 C68,48 62,54 50,54 C38,54 32,48 32,40 Z" />
+    <!-- Fluffy Cheeks -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M32,42 C28,44 28,50 34,52 C38,52 40,48 40,44 Z" />
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M68,42 C72,44 72,50 66,52 C62,52 60,48 60,44 Z" />
+    <!-- Rosy Blush on Cheeks -->
+    <path
+        android:fillColor="#FCA5A5"
+        android:pathData="M35,46 A3,2.5 0 1,0 41,46 A3,2.5 0 1,0 35,46 Z" />
+    <path
+        android:fillColor="#FCA5A5"
+        android:pathData="M59,46 A3,2.5 0 1,0 65,46 A3,2.5 0 1,0 59,46 Z" />
+
+    <!-- Expressive Eyes -->
+    <!-- Eye Whites -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,36 A4,5 0 1,0 46,36 A4,5 0 1,0 38,36 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,36 A4,5 0 1,0 62,36 A4,5 0 1,0 54,36 Z" />
+    <!-- Pupil / Iris (Dark with Blue Shimmer) -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M41,36 A2.5,3.5 0 1,0 46,36 A2.5,3.5 0 1,0 41,36 Z" />
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M54,36 A2.5,3.5 0 1,0 59,36 A2.5,3.5 0 1,0 54,36 Z" />
+    <!-- Specular White Glint in Eyes -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,34 A1,1 0 1,0 45,34 A1,1 0 1,0 43,34 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,34 A1,1 0 1,0 58,34 A1,1 0 1,0 56,34 Z" />
+
+    <!-- Cute Squirrel Muzzle -->
+    <path
+        android:fillColor="#FEF3C7"
+        android:pathData="M44,45 C44,42 47,40 50,40 C53,40 56,42 56,45 C56,49 53,52 50,52 C47,52 44,49 44,45 Z" />
+    <!-- Nose & Confident Smile -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M48.5,42.5 C48.5,41.5 51.5,41.5 51.5,42.5 C51.5,43.5 50,44.5 50,44.5 C50,44.5 48.5,43.5 48.5,42.5 Z" />
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M47,47 C48,49 49.5,49 50,49 C50.5,49 52,49 53,47" />
+
+    <!-- SibSUTIS Engineering Hardhat (3D Curved Construction Helmet) -->
+    <!-- Helmet Crown (SibSUTIS Blue) -->
+    <path
+        android:fillColor="#1E40AF"
+        android:pathData="M32,24 C32,10 40,4 50,4 C60,4 68,10 68,24 Z" />
+    <!-- Helmet Shading / Highlight Ridge -->
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M34,22 C35,12 42,6 50,6 C58,6 65,12 66,22 C60,16 48,16 34,22 Z" />
+    <!-- Center Reinforcement Ridge -->
+    <path
+        android:fillColor="#1D4ED8"
+        android:pathData="M48,4 H52 V22 H48 Z" />
+    <!-- Helmet Visor Brim -->
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M28,23 C28,21 34,21 50,21 C66,21 72,21 72,23 C72,26 66,26 50,26 C34,26 28,26 28,23 Z" />
+    <!-- Reflective Safety Strip on Helmet -->
+    <path
+        android:strokeColor="#FDE047"
+        android:strokeWidth="2"
+        android:pathData="M33,18 C40,14 60,14 67,18" />
+    <!-- SibSUTIS Lightning Bolt Emblem on Helmet -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M51,7 L47,13 L50,13 L48,19 L54,12 L51,12 Z" />
+
+    <!-- Tufted Ears peeking out from under hardhat -->
+    <path
+        android:fillColor="#9A3412"
+        android:pathData="M30,22 L24,10 L32,18 Z" />
+    <path
+        android:fillColor="#7C2D12"
+        android:pathData="M24,10 L22,4 L27,8 Z" />
+    <path
+        android:fillColor="#9A3412"
+        android:pathData="M70,22 L76,10 L68,18 Z" />
+    <path
+        android:fillColor="#7C2D12"
+        android:pathData="M76,10 L78,4 L73,8 Z" />
+
+    <!-- Right Paw: Proud Thumbs Up -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M60,56 C64,54 68,54 72,56 C74,58 74,62 70,64 C66,66 62,64 60,56 Z" />
+    <!-- Thumb Up -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M68,54 C68,48 72,48 72,52 C72,54 70,56 68,56 Z" />
+
+    <!-- Left Paw: Holding Crimped RJ-45 Connector & Patch Cord -->
+    <!-- Blue Twisted-Pair Cable Loop -->
+    <path
+        android:strokeColor="#2563EB"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M16,84 C12,74 16,60 26,62 C32,64 34,70 38,72" />
+    <path
+        android:strokeColor="#60A5FA"
+        android:strokeWidth="1.5"
+        android:pathData="M16,84 C12,74 16,60 26,62 C32,64 34,70 38,72" />
+    <!-- Left Paw holding connector -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M24,62 C22,60 26,56 30,58 C32,60 32,64 28,66 C26,66 24,64 24,62 Z" />
+    <!-- RJ-45 Modular Plug (8P8C Transparent Shell) -->
+    <path
+        android:fillColor="#E2E8F0"
+        android:strokeColor="#94A3B8"
+        android:strokeWidth="1"
+        android:pathData="M24,52 H34 V60 H24 Z" />
+    <!-- Retaining Latch Clip -->
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M28,48 L32,48 L31,52 L27,52 Z" />
+    <!-- 8 Gold-Plated Contact Pins -->
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="butt"
+        android:pathData="M25,53 H33" />
+    <!-- Colored Conductor Wires inside connector -->
+    <path
+        android:strokeColor="#F97316"
+        android:strokeWidth="1"
+        android:pathData="M26,56 V59" />
+    <path
+        android:strokeColor="#3B82F6"
+        android:strokeWidth="1"
+        android:pathData="M28,56 V59" />
+    <path
+        android:strokeColor="#10B981"
+        android:strokeWidth="1"
+        android:pathData="M30,56 V59" />
+    <path
+        android:strokeColor="#8B5CF6"
+        android:strokeWidth="1"
+        android:pathData="M32,56 V59" />
+
+</vector>

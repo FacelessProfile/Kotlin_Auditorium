@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Shield / Freeze Protection Icon -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M12,2 L4,5 V11 C4,16.5 7.4,21.7 12,23 C16.6,21.7 20,16.5 20,11 V5 L12,2 Z M12,11.99 H18 C17.5,15.6 15.2,18.8 12,20 V12 H6 V6.3 L12,4.1 V11.99 Z" />
+</vector>

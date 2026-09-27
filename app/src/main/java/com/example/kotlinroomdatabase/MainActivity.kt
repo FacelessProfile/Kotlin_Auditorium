@@ -82,7 +82,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                     val token = authPrefs.getString("auth_token", null)
-                    if (!token.isNullOrBlank()) {
+                    if (!token.isNullOrBlank() && JwtUtils.needsRefresh(token, 5L)) {
                         lifecycleScope.launch(Dispatchers.IO) {
                             val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity)
                             val repo = StudentRepositoryHTTPS(this@MainActivity, db.studentDao())
@@ -165,6 +165,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.devBugsFragment,
                 R.id.devSprintFragment,
                 R.id.feedbackFragment
+                // nfcManagerFragment НЕ top-level: NavController покажет ← автоматически
             ),
             binding.drawerLayout
         )
@@ -422,6 +423,10 @@ class MainActivity : AppCompatActivity() {
         menu.findItem(R.id.scheduleFragment)?.isVisible = true
         menu.findItem(R.id.listFragment)?.isVisible = isTeacher
         menu.findItem(R.id.feedbackFragment)?.isVisible = !isDev
+        val canManageNfc = isTeacher || isDev || userRole == "admin" || 
+                           com.example.kotlinroomdatabase.util.RoleUtils.isHead(userRole) || 
+                           com.example.kotlinroomdatabase.util.RoleUtils.isDean(userRole)
+        menu.findItem(R.id.nfcManagerFragment)?.isVisible = canManageNfc
         updateNavHeader()
         registerDeviceToken()
     }

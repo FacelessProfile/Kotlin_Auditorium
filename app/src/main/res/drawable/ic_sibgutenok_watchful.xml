@@ -1,0 +1,197 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- University Wall Clock in Background (Ticking down to class) -->
+    <!-- Clock Outer Rim -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M80,8 A12,12 0 1,0 80,32 A12,12 0 1,0 80,8 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M80,10 A10,10 0 1,0 80,30 A10,10 0 1,0 80,10 Z" />
+    <!-- Clock Hour Marks -->
+    <path
+        android:strokeColor="#64748B"
+        android:strokeWidth="1"
+        android:pathData="M80,11 L80,13 M80,27 L80,29 M89,20 L87,20 M71,20 L73,20" />
+    <!-- Clock Hands (Showing 7:55 - 5 minutes before 8:00 AM class!) -->
+    <path
+        android:strokeColor="#EF4444"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M80,20 L80,14" />
+    <path
+        android:strokeColor="#0F172A"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M80,20 L74,18" />
+    <!-- Center Dot -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M80,21 A1,1 0 1,0 80,19 A1,1 0 1,0 80,21 Z" />
+
+    <!-- Ground Shadow -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.2"
+        android:pathData="M26,88 C36,84 60,84 70,88 C64,91 32,91 26,88 Z" />
+
+    <!-- Duck Body & Head Plumage -->
+    <!-- Base Shadow -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M48,26 C30,26 18,38 18,56 C18,74 30,86 48,86 C66,86 78,74 78,56 C78,38 66,26 48,26 Z" />
+    <!-- Warm Golden Yellow Coat -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M48,25 C31,25 20,37 20,55 C20,72 31,84 48,84 C65,84 76,72 76,55 C76,37 65,25 48,25 Z" />
+    <!-- Feather Highlights -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M48,28 C34,28 24,38 24,52 C24,64 32,74 48,74 C64,74 72,64 72,52 C72,38 62,28 48,28 Z" />
+
+    <!-- Cute Feather Tufts on Head (Perked up attentively) -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M44,26 C42,18 45,14 48,12 C49,16 52,18 52,26 Z" />
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M45,25 C43,19 46,15 48,14 C49,17 51,19 51,25 Z" />
+
+    <!-- Inspector Gold Spectacles / Glasses (Peering over them) -->
+    <!-- Left Glass Rim -->
+    <path
+        android:strokeColor="#D97706"
+        android:strokeWidth="2.5"
+        android:fillColor="#E0F2FE"
+        android:fillAlpha="0.4"
+        android:pathData="M34,48 A7,7 0 1,0 48,48 A7,7 0 1,0 34,48 Z" />
+    <!-- Right Glass Rim -->
+    <path
+        android:strokeColor="#D97706"
+        android:strokeWidth="2.5"
+        android:fillColor="#E0F2FE"
+        android:fillAlpha="0.4"
+        android:pathData="M48,48 A7,7 0 1,0 62,48 A7,7 0 1,0 48,48 Z" />
+    <!-- Spectacle Bridge -->
+    <path
+        android:strokeColor="#B45309"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M46,47 L50,47" />
+    <!-- Glasses Specular Glare -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.75"
+        android:pathData="M37,44 L41,44 L39,47 L35,47 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.75"
+        android:pathData="M51,44 L55,44 L53,47 L49,47 Z" />
+
+    <!-- Suspicious Eyes (Glancing over the top of the glasses directly at student) -->
+    <!-- Left Eye -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M36,44 A4.5,5 0 1,0 45,44 A4.5,5 0 1,0 36,44 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M37,45 A3.5,4 0 1,0 44,45 A3.5,4 0 1,0 37,45 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,42 A1.5,1.5 0 1,0 41,42 A1.5,1.5 0 1,0 38,42 Z" />
+
+    <!-- Right Eye -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M51,44 A4.5,5 0 1,0 60,44 A4.5,5 0 1,0 51,44 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M52,45 A3.5,4 0 1,0 59,45 A3.5,4 0 1,0 52,45 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M53,42 A1.5,1.5 0 1,0 56,42 A1.5,1.5 0 1,0 53,42 Z" />
+
+    <!-- Suspicious / Inquisitive Eyebrows -->
+    <!-- Raised Left Eyebrow (Doubtful) -->
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M33,36 C36,33 41,33 44,35" />
+    <!-- Lowered Right Eyebrow (Stern) -->
+    <path
+        android:strokeColor="#78350F"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M52,36 C55,37 59,38 62,39" />
+
+    <!-- Focused Orange Beak (Slightly pursed / thoughtful) -->
+    <path
+        android:fillColor="#C2410C"
+        android:pathData="M40,54 C40,54 44,52 48,52 C52,52 56,54 56,54 C58,60 56,67 48,67 C40,67 38,60 40,54 Z" />
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M41,54 C41,54 44,53 48,53 C52,53 55,54 55,54 C57,59 55,65 48,65 C41,65 39,59 41,54 Z" />
+    <!-- Top Highlight -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M43,54.5 C45,54 47,53.5 48,53.5 C49,53.5 51,54 53,54.5 C52,56 50,56.5 48,56.5 C46,56.5 44,56 43,54.5 Z" />
+
+    <!-- Inspector Necktie (SibSUTIS Blue with Gold Diagonal Stripes) -->
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M46,66 L50,66 L52,78 L48,82 L44,78 Z" />
+    <!-- Gold Stripes -->
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="1.2"
+        android:pathData="M45,69 L51,71 M44,74 L51,76" />
+
+    <!-- Wooden Attendance Clipboard Held in Wings -->
+    <!-- Clipboard Board -->
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M16,56 L32,50 L36,78 L20,84 Z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M17,57 L31,52 L35,77 L21,82 Z" />
+    <!-- White Paper Sheet -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M19,59 L29,55 L32,74 L22,78 Z" />
+    <!-- Top Metal Clamp -->
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M22,55 L27,53 L28,57 L23,59 Z" />
+    <!-- Attendance Checklist Items ([✓] [✓] [?]) -->
+    <path
+        android:strokeColor="#16A34A"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M22,62 L23.5,63.5 L26,60 M21.5,66 L23,67.5 L25.5,64" />
+    <!-- Question mark for missing student -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M22,69 C22,68 23.5,68 23.5,69 C23.5,70 22.5,70.5 22.5,71.5 L22,71.5 Z M22,72.5 L22.8,72.5 L22.8,73.3 L22,73.3 Z" />
+
+    <!-- Red Pen Tucked in Wing -->
+    <path
+        android:strokeColor="#EF4444"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M14,64 L24,76" />
+    <!-- Wing Clasping Clipboard -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M24,66 C22,64 26,60 29,64 L31,70 L26,71 Z" />
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M24.5,66.5 C23,65 26,61 28.5,64.5 L30.5,69.5 L26,70.5 Z" />
+
+</vector>

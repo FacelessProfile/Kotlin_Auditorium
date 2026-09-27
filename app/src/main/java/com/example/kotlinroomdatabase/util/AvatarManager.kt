@@ -18,15 +18,70 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.ResponseBody
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
 object AvatarManager {
     private const val TAG = "AvatarManager"
     private const val AVATAR_FILE_NAME = "current_avatar.jpg"
+    private const val MAX_AVATAR_BYTES = 10 * 1024 * 1024L // 10 MB limit (KA-14)
 
     fun getCachedAvatarFile(context: Context): File {
         return File(context.filesDir, AVATAR_FILE_NAME)
+    }
+
+    /**
+     * Reads response body safely up to maxBytes to prevent memory or DoS exhaustion.
+     */
+    private fun readLimitedBody(body: ResponseBody?, maxBytes: Long = MAX_AVATAR_BYTES): ByteArray? {
+        if (body == null) return null
+        val contentLength = body.contentLength()
+        if (contentLength > maxBytes) {
+            Log.w(TAG, "Avatar response size exceeds limit: $contentLength > $maxBytes")
+            return null
+        }
+        return try {
+            body.byteStream().use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                var totalRead = 0L
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    totalRead += bytesRead
+                    if (totalRead > maxBytes) {
+                        Log.w(TAG, "Aborting avatar read: stream exceeded $maxBytes bytes")
+                        return null
+                    }
+                    output.write(buffer, 0, bytesRead)
+                }
+                output.toByteArray()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading avatar stream", e)
+            null
+        }
+    }
+
+    private fun decodeSampledBitmap(data: ByteArray, maxDim: Int = 4096): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(data, 0, data.size, options)
+            if (options.outWidth <= 0 || options.outHeight <= 0) return null
+            if (options.outWidth > maxDim || options.outHeight > maxDim) {
+                var sampleSize = 1
+                while ((options.outWidth / sampleSize) > maxDim || (options.outHeight / sampleSize) > maxDim) {
+                    sampleSize *= 2
+                }
+                options.inSampleSize = sampleSize
+            }
+            options.inJustDecodeBounds = false
+            BitmapFactory.decodeByteArray(data, 0, data.size, options)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error decoding bitmap", e)
+            null
+        }
     }
 
     /**
@@ -98,30 +153,14 @@ object AvatarManager {
 
                 val profile = profileResult.data
                 val studentPrefs = appContext.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-                val localFile = getCachedAvatarFile(appContext)
-
-                // Update profile info in preferences if present
-                studentPrefs.edit().apply {
-                    if (profile.name.isNotBlank()) putString("student_name", profile.name)
-                    if (profile.role.isNotBlank()) putString("user_role", profile.role)
-                    if (profile.email.isNotBlank()) putString("user_email", profile.email)
-                    if (profile.group.isNotBlank()) putString("student_group", profile.group)
-                }.apply()
 
                 val avatarUrlFromBackend = profile.avatar.trim()
-                if (avatarUrlFromBackend.isBlank() || avatarUrlFromBackend == "null") {
-                    // Avatar was removed on server
-                    if (localFile.exists()) {
-                        try { localFile.delete() } catch (_: Exception) {}
-                    }
-                    studentPrefs.edit().remove("avatar_path").remove("synced_avatar_url").apply()
-                    authPrefs.edit().remove("avatar_url").apply()
-                    withContext(Dispatchers.Main) {
-                        onUpdated?.invoke()
-                    }
+                if (avatarUrlFromBackend.isNullOrBlank()) {
+                    Log.d(TAG, "No avatar configured on server")
                     return@launch
                 }
 
+                val localFile = getCachedAvatarFile(appContext)
                 val lastSyncedUrl = studentPrefs.getString("synced_avatar_url", null)
                 val shouldDownload = forceRefresh || (avatarUrlFromBackend != lastSyncedUrl) || !localFile.exists()
 
@@ -133,15 +172,18 @@ object AvatarManager {
                 Log.d(TAG, "Downloading fresh avatar from: $avatarUrlFromBackend")
                 val finalUrl = ServerConfig.resolveMediaUrl(appContext, avatarUrlFromBackend)
                 val client = repo.getUnsafeOkHttpClient()
-                val request = Request.Builder()
+                val requestBuilder = Request.Builder()
                     .url(finalUrl)
                     .header("Cache-Control", "no-cache")
-                    .header("Authorization", "Bearer $token")
-                    .build()
 
-                val response = client.newCall(request).execute()
+                // KA-04: Only attach Authorization if the origin is trusted (our backend)
+                if (ServerConfig.isTrustedOrigin(appContext, finalUrl) && token.isNotBlank()) {
+                    requestBuilder.header("Authorization", "Bearer $token")
+                }
+
+                val response = client.newCall(requestBuilder.build()).execute()
                 if (response.isSuccessful) {
-                    val bytes = response.body?.bytes()
+                    val bytes = readLimitedBody(response.body, MAX_AVATAR_BYTES)
                     if (bytes != null && bytes.isNotEmpty()) {
                         FileOutputStream(localFile).use { it.write(bytes) }
                         studentPrefs.edit()
@@ -184,30 +226,55 @@ object AvatarManager {
     }
 
     /**
+     * Checks whether an avatar URL points to a custom uploaded avatar rather than empty or default placeholder.
+     */
+    fun isCustomAvatar(avatarUrl: String?): Boolean {
+        if (avatarUrl.isNullOrBlank()) return false
+        val trimmed = avatarUrl.trim()
+        if (trimmed.equals("null", ignoreCase = true) || trimmed.isEmpty()) return false
+        val lower = trimmed.lowercase()
+        if (lower.contains("default") || lower.contains("placeholder") ||
+            lower.contains("no_avatar") || lower.contains("noavatar") ||
+            lower.endsWith("/ic_person.png") || lower.endsWith("/default.png") ||
+            (lower.endsWith("/avatar.png") && lower.contains("example.com"))
+        ) {
+            return false
+        }
+        return true
+    }
+
+    /**
      * Loads avatar from URL with local caching into any ImageView, supporting Recycler view recycling.
      */
     fun loadAvatarUrl(
         context: Context,
         imageView: ImageView,
-        avatarUrl: String?,
-        defaultPadDp: Int = 6
+        url: String? = null,
+        avatarUrl: String? = null,
+        defaultPadDp: Int = 10,
+        showDefaultPlaceholder: Boolean = true,
+        onSuccess: ((Bitmap) -> Unit)? = null,
+        onError: (() -> Unit)? = null
     ) {
         val appContext = context.applicationContext
-        val cleanUrl = avatarUrl?.trim()?.takeIf { it.isNotBlank() && it != "null" }
-        if (cleanUrl == null) {
-            val pad = (defaultPadDp * context.resources.displayMetrics.density).toInt()
-            imageView.setPadding(pad, pad, pad, pad)
-            imageView.setImageResource(R.drawable.ic_person)
-            imageView.imageTintList = ContextCompat.getColorStateList(context, R.color.sib_blue_primary)
-            imageView.tag = null
+        val effectiveUrl = avatarUrl ?: url
+        if (!isCustomAvatar(effectiveUrl)) {
+            if (showDefaultPlaceholder) {
+                val pad = (defaultPadDp * context.resources.displayMetrics.density).toInt()
+                imageView.setPadding(pad, pad, pad, pad)
+                imageView.setImageResource(R.drawable.ic_person)
+                imageView.imageTintList = ContextCompat.getColorStateList(context, R.color.sib_blue_primary)
+            }
+            onError?.invoke()
             return
         }
 
-        val finalUrl = ServerConfig.resolveMediaUrl(appContext, cleanUrl)
+        val finalUrl = ServerConfig.resolveMediaUrl(appContext, effectiveUrl)
         imageView.tag = finalUrl
 
-        val cacheDir = File(appContext.cacheDir, "avatars_cache").apply { mkdirs() }
-        val cacheFile = File(cacheDir, "${cleanUrl.hashCode()}.jpg")
+        val cacheDir = File(appContext.cacheDir, "avatars").apply { if (!exists()) mkdirs() }
+        val cacheKey = finalUrl.hashCode().toString()
+        val cacheFile = File(cacheDir, "$cacheKey.jpg")
 
         if (cacheFile.exists() && cacheFile.length() > 0) {
             try {
@@ -216,16 +283,19 @@ object AvatarManager {
                     imageView.setPadding(0, 0, 0, 0)
                     imageView.setImageBitmap(bitmap)
                     imageView.imageTintList = null
+                    onSuccess?.invoke(bitmap)
                     return
                 }
             } catch (_: Exception) {}
         }
 
         // Placeholder while loading
-        val pad = (defaultPadDp * context.resources.displayMetrics.density).toInt()
-        imageView.setPadding(pad, pad, pad, pad)
-        imageView.setImageResource(R.drawable.ic_person)
-        imageView.imageTintList = ContextCompat.getColorStateList(context, R.color.sib_blue_primary)
+        if (showDefaultPlaceholder) {
+            val pad = (defaultPadDp * context.resources.displayMetrics.density).toInt()
+            imageView.setPadding(pad, pad, pad, pad)
+            imageView.setImageResource(R.drawable.ic_person)
+            imageView.imageTintList = ContextCompat.getColorStateList(context, R.color.sib_blue_primary)
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -235,32 +305,39 @@ object AvatarManager {
                 val repo = StudentRepositoryHTTPS(appContext, db.studentDao())
                 val okClient = repo.getUnsafeOkHttpClient()
 
-                val req = Request.Builder()
-                    .url(finalUrl)
-                    .apply {
-                        if (token.isNotBlank()) header("Authorization", "Bearer $token")
-                    }
-                    .build()
+                val reqBuilder = Request.Builder().url(finalUrl)
+                // KA-04: Only attach Authorization if the origin is trusted (our backend)
+                if (ServerConfig.isTrustedOrigin(appContext, finalUrl) && token.isNotBlank()) {
+                    reqBuilder.header("Authorization", "Bearer $token")
+                }
 
-                val resp = okClient.newCall(req).execute()
+                val resp = okClient.newCall(reqBuilder.build()).execute()
                 if (resp.isSuccessful) {
-                    val bytes = resp.body?.bytes()
+                    val bytes = readLimitedBody(resp.body, MAX_AVATAR_BYTES)
                     if (bytes != null && bytes.isNotEmpty()) {
                         FileOutputStream(cacheFile).use { it.write(bytes) }
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val bitmap = decodeSampledBitmap(bytes)
                         if (bitmap != null) {
                             withContext(Dispatchers.Main) {
                                 if (imageView.tag == finalUrl) {
                                     imageView.setPadding(0, 0, 0, 0)
                                     imageView.setImageBitmap(bitmap)
                                     imageView.imageTintList = null
+                                    onSuccess?.invoke(bitmap)
                                 }
                             }
+                            return@launch
                         }
                     }
                 }
+                withContext(Dispatchers.Main) {
+                    onError?.invoke()
+                }
             } catch (e: Exception) {
                 Log.d(TAG, "Error loading avatar from url: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    onError?.invoke()
+                }
             }
         }
     }
