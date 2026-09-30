@@ -92,18 +92,16 @@ object JwtUtils {
     fun isUserSessionValid(context: Context): Boolean {
         val authPrefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val token = authPrefs.getString("auth_token", null)
+        val refreshToken = authPrefs.getString("refresh_token", null)
         val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val studentId = studentPrefs.getInt("current_student_id", -1)
 
-        if (studentId == -1 || token.isNullOrBlank()) {
+        if (studentId == -1) {
             return false
         }
-        // Allow refresh within backend grace period (up to 14 days past expiration)
-        val expMillis = getExpirationMillis(token)
-        if (expMillis > 0 && System.currentTimeMillis() > expMillis + 14 * 24 * 3600 * 1000L) {
-            return false
-        }
-        return true
+        // A refresh session outlives the short access JWT. Existing installs
+        // without a refresh token can use only their still-valid access JWT.
+        return !refreshToken.isNullOrBlank() || !isExpired(token)
     }
 
     /**

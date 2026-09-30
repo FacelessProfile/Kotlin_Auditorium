@@ -82,7 +82,10 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                     val token = authPrefs.getString("auth_token", null)
-                    if (!token.isNullOrBlank() && JwtUtils.needsRefresh(token, 5L)) {
+                    val refreshToken = authPrefs.getString("refresh_token", null)
+                    if ((!token.isNullOrBlank() && JwtUtils.needsRefresh(token, 5L)) ||
+                        (token.isNullOrBlank() && !refreshToken.isNullOrBlank())
+                    ) {
                         lifecycleScope.launch(Dispatchers.IO) {
                             val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity)
                             val repo = StudentRepositoryHTTPS(this@MainActivity, db.studentDao())

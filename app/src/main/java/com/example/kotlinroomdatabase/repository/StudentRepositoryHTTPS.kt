@@ -66,62 +66,88 @@ class StudentRepositoryHTTPS(
 
     private fun getUnsafeOkHttpClientBuilder(): OkHttpClient.Builder = getSafeOkHttpClientBuilder()
 
-    @Synchronized
-    private fun refreshSessionTokenSync(rawCurrentToken: String?): String? {
-        val currentToken = rawCurrentToken ?: sharedPrefs.getString("auth_token", null)
-        if (currentToken.isNullOrBlank()) return null
+    private data class RefreshAttempt(val accessToken: String? = null, val permanentFailure: Boolean = false)
+
+    private fun refreshSessionTokenSync(
+        force: Boolean = false,
+        failedAccessToken: String? = null
+    ): RefreshAttempt = synchronized(refreshLock) {
+        val currentToken = sharedPrefs.getString("auth_token", null)
         val storedRefreshToken = sharedPrefs.getString("refresh_token", null)
 
-        return try {
-            val refreshUrl = "$BASE_URL/api/auth/refresh"
-            val payload = JSONObject().apply {
-                if (!storedRefreshToken.isNullOrBlank()) {
-                    put("refresh_token", storedRefreshToken)
-                }
-                put("token", currentToken)
-            }
-            val refreshRequest = Request.Builder()
-                .url(refreshUrl)
-                .post(payload.toString().toRequestBody(JSON_TYPE))
-                .header("Authorization", "Bearer $currentToken")
-                .build()
+        // A different repository instance may have refreshed while this request
+        // was in flight. Reuse its token instead of rotating the session again.
+        if (!failedAccessToken.isNullOrBlank() && !currentToken.isNullOrBlank() && currentToken != failedAccessToken) {
+            return@synchronized RefreshAttempt(accessToken = currentToken)
+        }
+        if (!force && !com.example.kotlinroomdatabase.util.JwtUtils.needsRefresh(currentToken)) {
+            return@synchronized RefreshAttempt(accessToken = currentToken)
+        }
+        if (currentToken.isNullOrBlank() && storedRefreshToken.isNullOrBlank()) {
+            return@synchronized RefreshAttempt(permanentFailure = true)
+        }
 
+        try {
+            val payload = JSONObject().apply {
+                if (!storedRefreshToken.isNullOrBlank()) put("refresh_token", storedRefreshToken)
+                if (!currentToken.isNullOrBlank()) put("token", currentToken)
+            }
+            val requestBuilder = Request.Builder()
+                .url("$BASE_URL/api/auth/refresh")
+                .post(payload.toString().toRequestBody(JSON_TYPE))
+            if (!currentToken.isNullOrBlank()) {
+                requestBuilder.header("Authorization", "Bearer $currentToken")
+            }
+            val refreshRequest = requestBuilder.build()
             val rawClient = getUnsafeOkHttpClientBuilder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
                 .build()
 
-            val response = rawClient.newCall(refreshRequest).execute()
-            val responseBody = response.body?.string() ?: ""
-            if (response.isSuccessful) {
-                val json = JSONObject(responseBody)
-                if (json.optBoolean("ok")) {
-                    val result = json.getJSONObject("result")
-                    val newToken = result.optString("token")
-                    val newRefreshToken = result.optString("refresh_token", "")
-                    if (newToken.isNotBlank()) {
-                        sharedPrefs.edit().apply {
-                            putString("auth_token", newToken)
-                            if (newRefreshToken.isNotBlank()) {
-                                putString("refresh_token", newRefreshToken)
-                            }
-                        }.apply()
-                        Log.d("HTTP_REPO", "Token refreshed successfully, expires_at: ${result.optString("expires_at")}")
-                        newToken
-                    } else null
-                } else null
-            } else {
-                Log.e("HTTP_REPO", "Refresh failed: status=${response.code}, body=$responseBody")
-                null
+            rawClient.newCall(refreshRequest).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    val error = runCatching { JSONObject(responseBody).optString("error") }.getOrDefault("")
+                    Log.w("HTTP_REPO", "Refresh failed: status=${response.code}, error=$error")
+                    if (response.code == 401 && error == "refresh token already rotated") {
+                        val latestRefreshToken = sharedPrefs.getString("refresh_token", null)
+                        val latestAccessToken = sharedPrefs.getString("auth_token", null)
+                        if (latestRefreshToken != storedRefreshToken || latestAccessToken != currentToken) {
+                            return@synchronized RefreshAttempt(accessToken = latestAccessToken)
+                        }
+                    }
+                    val expiredAccessToken = com.example.kotlinroomdatabase.util.JwtUtils.isExpired(currentToken)
+                    return@synchronized RefreshAttempt(permanentFailure = response.code == 401 && expiredAccessToken)
+                }
+
+                val envelope = JSONObject(responseBody)
+                if (envelope.has("ok") && !envelope.optBoolean("ok")) {
+                    Log.w("HTTP_REPO", "Refresh endpoint rejected the session")
+                    return@synchronized RefreshAttempt()
+                }
+                val result = envelope.optJSONObject("result")
+                    ?: envelope.optJSONObject("data")
+                    ?: envelope
+                val newToken = result.nonEmptyString("token", "access_token", "auth_token")
+                if (newToken == null) {
+                    Log.e("HTTP_REPO", "Refresh response is missing an access token")
+                    return@synchronized RefreshAttempt()
+                }
+                val newRefreshToken = result.nonEmptyString("refresh_token", "refreshToken")
+                val editor = sharedPrefs.edit().putString("auth_token", newToken)
+                if (newRefreshToken != null) editor.putString("refresh_token", newRefreshToken)
+                if (!editor.commit()) return@synchronized RefreshAttempt()
+                Log.d("HTTP_REPO", "Token refreshed successfully")
+                RefreshAttempt(accessToken = newToken)
             }
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "Exception refreshing token", e)
-            null
+            RefreshAttempt()
         }
     }
 
     override suspend fun refreshSessionToken(): Boolean = withContext(Dispatchers.IO) {
-        refreshSessionTokenSync(null) != null
+        refreshSessionTokenSync().accessToken != null
     }
 
     private val client = getUnsafeOkHttpClientBuilder()
@@ -135,7 +161,7 @@ class StudentRepositoryHTTPS(
             if (!authHeader.isNullOrBlank() && !currentToken.isNullOrBlank()) {
                 if (com.example.kotlinroomdatabase.util.JwtUtils.needsRefresh(currentToken)) {
                     Log.d("HTTP_REPO", "Proactively refreshing expiring JWT token before request: ${originalRequest.url.encodedPath}")
-                    val refreshedToken = refreshSessionTokenSync(currentToken)
+                    val refreshedToken = refreshSessionTokenSync().accessToken
                     if (!refreshedToken.isNullOrBlank()) {
                         currentToken = refreshedToken
                     }
@@ -147,6 +173,8 @@ class StudentRepositoryHTTPS(
             } else {
                 originalRequest
             }
+            val accessTokenUsed = currentToken?.takeIf { it.isNotBlank() }
+                ?: authHeader?.removePrefix("Bearer ")?.trim()?.takeIf { it.isNotBlank() }
 
             val response = chain.proceed(requestToProceed)
 
@@ -155,23 +183,20 @@ class StudentRepositoryHTTPS(
                 val path = originalRequest.url.encodedPath
                 if (!path.endsWith("/login") && !path.endsWith("/register") && !path.contains("/api/auth/refresh")) {
                     Log.d("HTTP_REPO", "Received 401 for $path, attempting token refresh...")
-                    val refreshedToken = refreshSessionTokenSync(null)
+                    val refreshAttempt = refreshSessionTokenSync(
+                        force = true,
+                        failedAccessToken = accessTokenUsed
+                    )
+                    val refreshedToken = refreshAttempt.accessToken
                     if (!refreshedToken.isNullOrBlank()) {
                         response.close()
                         val retriedRequest = originalRequest.newBuilder()
                             .header("Authorization", "Bearer $refreshedToken")
                             .build()
                         return@addInterceptor chain.proceed(retriedRequest)
-                    } else {
-                        // CRITICAL: Only drop session if access token is actually expired!
-                        // A 401/403 permission error must NEVER drop the user's active session!
-                        val isActuallyExpired = com.example.kotlinroomdatabase.util.JwtUtils.isExpired(currentToken)
-                        if (isActuallyExpired) {
-                            Log.e("HTTP_REPO", "Token refresh failed and access token is actually expired, triggering session expiration")
-                            triggerSessionExpired(context, "Срок действия сессии истёк. Пожалуйста, выполните вход повторно.")
-                        } else {
-                            Log.w("HTTP_REPO", "Received 401 for $path, but token is not expired (permission error). Preserving session.")
-                        }
+                    } else if (refreshAttempt.permanentFailure) {
+                        Log.e("HTTP_REPO", "Token refresh failed for expired session, triggering session expiration")
+                        triggerSessionExpired(context, "Срок действия сессии истёк. Пожалуйста, выполните вход повторно.")
                     }
                 }
             }
@@ -184,6 +209,7 @@ class StudentRepositoryHTTPS(
         .build()
 
     companion object {
+        private val refreshLock = Any()
         val cachedStudentSubgroupIds = java.util.concurrent.ConcurrentHashMap<Int, Int>()
         val cachedStudentSubgroupNames = java.util.concurrent.ConcurrentHashMap<Int, String>()
 
@@ -237,11 +263,8 @@ class StudentRepositoryHTTPS(
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
                 val result = jsonResponse.getJSONObject("result")
-                val token = result.optString("token")
-                saveToken(token)
-                val refreshToken = result.optString("refresh_token", "")
-                if (refreshToken.isNotBlank()) {
-                    sharedPrefs.edit().putString("refresh_token", refreshToken).apply()
+                if (!saveAuthSession(result)) {
+                    return@withContext LoginResult.Error("Сервер не вернул данные сессии. Попробуйте ещё раз.")
                 }
 
                 val email = result.optString("email", "")
@@ -316,8 +339,9 @@ class StudentRepositoryHTTPS(
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
                 val result = jsonResponse.getJSONObject("result")
-                val token = result.optString("token")
-                saveToken(token)
+                if (!saveAuthSession(result)) {
+                    return@withContext LoginResult.Error("Сервер не вернул данные сессии. Попробуйте ещё раз.")
+                }
 
                 val userIdStr = result.optString("user_ID", result.optString("user_id", "0"))
                 val student = Student(
@@ -1159,13 +1183,22 @@ class StudentRepositoryHTTPS(
         }
     }
 
-    private fun saveToken(token: String?) {
-        Log.d("HTTP_REPO", "saveToken called with: $token")
-        if (!token.isNullOrBlank()) {
-            sharedPrefs.edit().putString("auth_token", token).apply()
-            Log.d("HTTP_REPO", "Token saved to sharedPrefs")
-        } else {
-            Log.e("HTTP_REPO", "Token is null or blank!")
+    private fun JSONObject.nonEmptyString(vararg keys: String): String? =
+        keys.asSequence()
+            .map { optString(it).trim() }
+            .firstOrNull { it.isNotEmpty() && it != "null" }
+
+    private fun saveAuthSession(result: JSONObject): Boolean {
+        val accessToken = result.nonEmptyString("token", "access_token", "auth_token")
+        val refreshToken = result.nonEmptyString("refresh_token", "refreshToken")
+        if (accessToken == null) {
+            Log.e("HTTP_REPO", "Authentication response is missing an access token")
+            return false
+        }
+        return synchronized(refreshLock) {
+            val editor = sharedPrefs.edit().putString("auth_token", accessToken)
+            if (refreshToken == null) editor.remove("refresh_token") else editor.putString("refresh_token", refreshToken)
+            editor.commit()
         }
     }
 
@@ -1833,8 +1866,9 @@ class StudentRepositoryHTTPS(
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
                 val result = jsonResponse.getJSONObject("result")
-                val token = result.optString("token")
-                saveToken(token)
+                if (!saveAuthSession(result)) {
+                    return@withContext LoginResult.Error("Сервер не вернул данные сессии. Попробуйте ещё раз.")
+                }
 
                 val userIdStr = result.optString("user_id", result.optString("user_ID", "0"))
                 val displayName = result.optString("student_name").takeIf { it.isNotBlank() }
