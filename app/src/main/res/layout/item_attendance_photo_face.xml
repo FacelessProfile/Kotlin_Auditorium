@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card_surface"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
+    <ImageView
+        android:id="@+id/ivFace"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:background="?attr/selectableItemBackground"
+        android:contentDescription="@string/attendance_photos_face_preview"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_person" />
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/tvFaceNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/sib_text_secondary"
+            android:textSize="12sp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStudent"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:gravity="start|center_vertical"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:paddingHorizontal="0dp"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            app:icon="@drawable/ic_arrow_drop_down"
+            app:iconGravity="end" />
+        <TextView
+            android:id="@+id/tvFaceHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/sib_text_muted"
+            android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>

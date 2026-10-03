@@ -147,6 +147,11 @@ interface IStudentRepository {
     suspend fun getActiveStudentLesson(): GenericResult<com.example.kotlinroomdatabase.model.ActiveStudentLessonInfo>
     suspend fun getTeacherActiveSession(): GenericResult<com.example.kotlinroomdatabase.model.ActiveSessionInfo>
     suspend fun getAttendanceSessionRoster(lessonId: Int): GenericResult<com.example.kotlinroomdatabase.model.TeacherAttendanceRosterResult>
+    suspend fun getAttendancePhotos(lessonId: Int, jobId: String = ""): GenericResult<com.example.kotlinroomdatabase.model.AttendancePhotos>
+    suspend fun uploadAttendancePhoto(lessonId: Int, groupId: Int, file: java.io.File): GenericResult<com.example.kotlinroomdatabase.model.AttendancePhotoUpload>
+    suspend fun confirmAttendancePhoto(lessonId: Int, jobId: String, decisions: List<com.example.kotlinroomdatabase.model.AttendancePhotoDecision>): GenericResult<Boolean>
+    suspend fun retryAttendancePhoto(lessonId: Int, jobId: String): GenericResult<Boolean>
+    suspend fun getAttendancePhotoImage(lessonId: Int, jobId: String): GenericResult<ByteArray>
     suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile>
     suspend fun getStudentSubgroups(semesterId: Int? = null): GenericResult<List<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>>
     suspend fun changeStudentSubgroup(subgroupId: Int, reason: String? = null): GenericResult<Boolean>

@@ -163,6 +163,17 @@ class LessonFragment : NFC_Tools() {
         binding.btnViewAllStudents.setOnClickListener {
             findNavController().navigate(R.id.action_lessonFragment_to_listFragment)
         }
+        binding.btnAttendancePhotos.setOnClickListener {
+            val lessonId = currentLessonId ?: return@setOnClickListener
+            if (isLessonActive && childFragmentManager.findFragmentByTag(AttendancePhotosBottomSheet.TAG) == null) {
+                AttendancePhotosBottomSheet.newInstance(lessonId).show(childFragmentManager, AttendancePhotosBottomSheet.TAG)
+            }
+        }
+        childFragmentManager.setFragmentResultListener(AttendancePhotosBottomSheet.RESULT_KEY, viewLifecycleOwner) { _, result ->
+            if (isLessonActive && result.getInt(AttendancePhotosBottomSheet.LESSON_ID) == currentLessonId) {
+                startAttendancePolling()
+            }
+        }
 
         binding.btnFinishLesson.setOnClickListener {
             AlertDialog.Builder(requireContext())
@@ -182,6 +193,8 @@ class LessonFragment : NFC_Tools() {
     }
 
     override fun onDestroyView() {
+        pollingJob?.cancel()
+        qrUpdateJob?.cancel()
         super.onDestroyView()
         activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         _binding = null
@@ -259,7 +272,7 @@ class LessonFragment : NFC_Tools() {
 
     private fun startAttendancePolling() {
         pollingJob?.cancel()
-        pollingJob = lifecycleScope.launch(Dispatchers.Main) {
+        pollingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             while (isLessonActive) {
                 val lessonId = currentLessonId ?: break
                 try {

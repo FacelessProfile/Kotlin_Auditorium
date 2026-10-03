@@ -1,5 +1,17 @@
 <resources>
     <string name="app_name">Signal</string>
+    <string name="attendance_photos_title">Отметить по фото</string>
+    <string name="attendance_photos_close">Закрыть</string>
+    <string name="attendance_photos_hint">Выберите фото участников группы и проверьте имена перед сохранением. Один студент на нескольких снимках учитывается один раз.</string>
+    <string name="attendance_photos_group">Группа на фото</string>
+    <string name="attendance_photos_photo">Фотография</string>
+    <string name="attendance_photos_upload">Загрузить</string>
+    <string name="attendance_photos_limits">До 10 фото за раз · JPEG, PNG, WebP · до 15 МБ и 20 Мп</string>
+    <string name="attendance_photos_original">Общее фото</string>
+    <string name="attendance_photos_refresh">Обновить список фотографий</string>
+    <string name="attendance_photos_retry">Повторить обработку</string>
+    <string name="attendance_photos_confirm">Подтвердить имена и посещаемость</string>
+    <string name="attendance_photos_face_preview">Открыть лицо крупнее</string>
     <!-- Sibgutenok Duolingo Widget Strings -->
     <string name="widget_sibgutenok_name">СибгУтёнок (Стрик и Маскот)</string>
     <string name="widget_sibgutenok_description">Оценивает успеваемость, считает стрик пар и мотивирует ходить на занятия в стиле Duolingo.</string>

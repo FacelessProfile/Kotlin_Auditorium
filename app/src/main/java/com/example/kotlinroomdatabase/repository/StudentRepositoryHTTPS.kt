@@ -8,10 +8,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -20,6 +23,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class StudentRepositoryHTTPS(
     private val context: Context,
@@ -231,6 +236,118 @@ class StudentRepositoryHTTPS(
         get() = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(context)
 
     fun getUnsafeOkHttpClient(): OkHttpClient = client
+
+    private val photoClient by lazy {
+        client.newBuilder().readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(45, TimeUnit.SECONDS).build()
+    }
+
+    private fun attendancePhotoRequest(lessonId: Int, jobId: String = "", action: String = ""): Request.Builder {
+        require(lessonId > 0)
+        val url = "$BASE_URL/api/teaching/attendance/session/$lessonId/photos".toHttpUrl().newBuilder()
+        if (jobId.isNotBlank()) url.addPathSegment(jobId)
+        if (action.isNotBlank()) url.addPathSegment(action)
+        return Request.Builder().url(url.build()).header("Authorization", "Bearer ${sharedPrefs.getString("auth_token", "")}")
+    }
+
+    private suspend fun awaitPhotoResponse(request: Request): Response = suspendCancellableCoroutine { continuation ->
+        val call = photoClient.newCall(request)
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                if (!continuation.isCancelled) continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                continuation.resume(response) { _, value, _ -> value.close() }
+            }
+        })
+    }
+
+    private suspend fun <T> attendancePhotoResult(request: Request, decode: (JSONObject) -> T): GenericResult<T> = withContext(Dispatchers.IO) {
+        try {
+            if (sharedPrefs.getString("auth_token", "").isNullOrBlank()) {
+                return@withContext GenericResult.Error("Сессия не найдена. Пожалуйста, войдите снова.")
+            }
+            awaitPhotoResponse(request).use { response ->
+                val raw = response.body?.string().orEmpty()
+                val envelope = runCatching { JSONObject(raw) }.getOrNull()
+                if (!response.isSuccessful || envelope?.optBoolean("ok") != true) {
+                    val error = envelope?.optString("error").orEmpty()
+                    GenericResult.Error(if (error.isNotBlank()) com.example.kotlinroomdatabase.util.AttendancePhotoErrors.message(error)
+                        else com.example.kotlinroomdatabase.util.ApiErrorMapper.mapHttpStatus(response.code))
+                } else {
+                    GenericResult.Success(decode(envelope.getJSONObject("result")))
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(failure))
+        }
+    }
+
+    override suspend fun getAttendancePhotos(lessonId: Int, jobId: String): GenericResult<AttendancePhotos> {
+        val request = attendancePhotoRequest(lessonId)
+        if (jobId.isNotBlank()) request.url(request.build().url.newBuilder().addQueryParameter("job_id", jobId).build())
+        return attendancePhotoResult(request.get().build()) { jsonSerializer.decodeFromString<AttendancePhotos>(it.toString()) }
+    }
+
+    override suspend fun uploadAttendancePhoto(lessonId: Int, groupId: Int, file: java.io.File): GenericResult<AttendancePhotoUpload> {
+        if (groupId <= 0 || !file.isFile || file.length() !in 1..com.example.kotlinroomdatabase.util.AttendancePhotoFile.MAX_BYTES.toLong()) {
+            return GenericResult.Error("Выберите группу и фото размером до 15 МБ")
+        }
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("group_id", groupId.toString())
+            .addFormDataPart("file", "attendance-photo", file.asRequestBody("application/octet-stream".toMediaType())).build()
+        return attendancePhotoResult(attendancePhotoRequest(lessonId).post(body).build()) {
+            jsonSerializer.decodeFromString<AttendancePhotoUpload>(it.toString())
+        }
+    }
+
+    override suspend fun confirmAttendancePhoto(lessonId: Int, jobId: String, decisions: List<AttendancePhotoDecision>): GenericResult<Boolean> {
+        val payload = JSONObject().put("decisions", JSONArray().apply {
+            decisions.forEach { put(JSONObject().put("face_id", it.face_id).put("student_id", it.student_id)) }
+        })
+        // This endpoint writes one session/student record, even when that student is on several photos.
+        return attendancePhotoResult(attendancePhotoRequest(lessonId, jobId, "confirm")
+            .post(payload.toString().toRequestBody(JSON_TYPE)).build()) { true }
+    }
+
+    override suspend fun retryAttendancePhoto(lessonId: Int, jobId: String): GenericResult<Boolean> =
+        attendancePhotoResult(attendancePhotoRequest(lessonId, jobId, "retry")
+            .post("{}".toRequestBody(JSON_TYPE)).build()) { true }
+
+    override suspend fun getAttendancePhotoImage(lessonId: Int, jobId: String): GenericResult<ByteArray> = withContext(Dispatchers.IO) {
+        try {
+            if (sharedPrefs.getString("auth_token", "").isNullOrBlank()) {
+                return@withContext GenericResult.Error("Сессия не найдена. Пожалуйста, войдите снова.")
+            }
+            awaitPhotoResponse(attendancePhotoRequest(lessonId, jobId, "image").get().build()).use { response ->
+                if (!response.isSuccessful) return@withContext GenericResult.Error("Не удалось загрузить исходное фото")
+                val body = response.body ?: return@withContext GenericResult.Error("Фотография пуста")
+                body.byteStream().use { input ->
+                    val output = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    var total = 0
+                    while (true) {
+                        val size = input.read(buffer)
+                        if (size < 0) break
+                        total += size
+                        if (total > com.example.kotlinroomdatabase.util.AttendancePhotoFile.MAX_BYTES) {
+                            return@withContext GenericResult.Error("Фото слишком большое")
+                        }
+                        output.write(buffer, 0, size)
+                    }
+                    GenericResult.Success(output.toByteArray())
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            GenericResult.Error(com.example.kotlinroomdatabase.util.ApiErrorMapper.mapError(failure))
+        }
+    }
 
     fun sha256(input: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())

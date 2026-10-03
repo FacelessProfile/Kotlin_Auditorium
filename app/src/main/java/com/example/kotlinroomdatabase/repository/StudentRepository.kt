@@ -20,6 +20,21 @@ class StudentRepository(
     private val studentDao: StudentDao,
     private val zeroMQSender: ZmqSockets? = null
 ) : IStudentRepository {
+    override suspend fun getAttendancePhotos(lessonId: Int, jobId: String): GenericResult<com.example.kotlinroomdatabase.model.AttendancePhotos> =
+        GenericResult.Error("Отметка по фото доступна при подключении через HTTPS")
+
+    override suspend fun uploadAttendancePhoto(lessonId: Int, groupId: Int, file: java.io.File): GenericResult<com.example.kotlinroomdatabase.model.AttendancePhotoUpload> =
+        GenericResult.Error("Отметка по фото доступна при подключении через HTTPS")
+
+    override suspend fun confirmAttendancePhoto(lessonId: Int, jobId: String, decisions: List<com.example.kotlinroomdatabase.model.AttendancePhotoDecision>): GenericResult<Boolean> =
+        GenericResult.Error("Отметка по фото доступна при подключении через HTTPS")
+
+    override suspend fun retryAttendancePhoto(lessonId: Int, jobId: String): GenericResult<Boolean> =
+        GenericResult.Error("Отметка по фото доступна при подключении через HTTPS")
+
+    override suspend fun getAttendancePhotoImage(lessonId: Int, jobId: String): GenericResult<ByteArray> =
+        GenericResult.Error("Отметка по фото доступна при подключении через HTTPS")
+
     @OptIn(InternalSerializationApi::class)
     override fun getAllStudents(): Flow<List<Student>> {
         return studentDao.getAllStudents()
