@@ -80,15 +80,31 @@ class StudentRepositoryHTTPS(
 
     private fun refreshSessionTokenSync(
         force: Boolean = false,
-        failedAccessToken: String? = null
+        failedAccessToken: String? = null,
+        expectedUserId: String? = null
     ): RefreshAttempt = synchronized(refreshLock) {
         val currentToken = sharedPrefs.getString("auth_token", null)
         val storedRefreshToken = sharedPrefs.getString("refresh_token", null)
+        val currentUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(currentToken)
+
+        // Security check: ensure current session belongs to expected user
+        if (!expectedUserId.isNullOrBlank()) {
+            if (!currentUserId.isNullOrBlank() && currentUserId != expectedUserId) {
+                Log.w("HTTP_REPO", "Session mismatch in refresh: current=$currentUserId, expected=$expectedUserId")
+                return@synchronized RefreshAttempt()
+            }
+        }
 
         // A different repository instance may have refreshed while this request
-        // was in flight. Reuse its token instead of rotating the session again.
+        // was in flight. Reuse its token only if it belongs to the SAME user identity.
         if (!failedAccessToken.isNullOrBlank() && !currentToken.isNullOrBlank() && currentToken != failedAccessToken) {
-            return@synchronized RefreshAttempt(accessToken = currentToken)
+            val failedUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(failedAccessToken)
+            if (failedUserId.isNullOrBlank() || failedUserId == currentUserId) {
+                return@synchronized RefreshAttempt(accessToken = currentToken)
+            } else {
+                Log.w("HTTP_REPO", "Rejecting token reuse: failed user $failedUserId != current user $currentUserId")
+                return@synchronized RefreshAttempt()
+            }
         }
         if (!force && !com.example.kotlinroomdatabase.util.JwtUtils.needsRefresh(currentToken)) {
             return@synchronized RefreshAttempt(accessToken = currentToken)
@@ -123,7 +139,10 @@ class StudentRepositoryHTTPS(
                         val latestRefreshToken = sharedPrefs.getString("refresh_token", null)
                         val latestAccessToken = sharedPrefs.getString("auth_token", null)
                         if (latestRefreshToken != storedRefreshToken || latestAccessToken != currentToken) {
-                            return@synchronized RefreshAttempt(accessToken = latestAccessToken)
+                            val latestUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(latestAccessToken)
+                            if (expectedUserId.isNullOrBlank() || latestUserId == expectedUserId) {
+                                return@synchronized RefreshAttempt(accessToken = latestAccessToken)
+                            }
                         }
                     }
                     val expiredAccessToken = com.example.kotlinroomdatabase.util.JwtUtils.isExpired(currentToken)
@@ -168,21 +187,42 @@ class StudentRepositoryHTTPS(
             val isTrustedOrigin = com.example.kotlinroomdatabase.config.ServerConfig.isTrustedOrigin(context, requestUrl)
             val authHeader = originalRequest.header("Authorization")
             val hadAuthHeader = !authHeader.isNullOrBlank()
+            val originalToken = authHeader?.removePrefix("Bearer ")?.trim()
+            val originalUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(originalToken)
             var currentToken = sharedPrefs.getString("auth_token", null)
+            val currentUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(currentToken)
+
+            // Critical security check: Never execute an old request with a new user's credentials or after logout
+            if (hadAuthHeader && !originalUserId.isNullOrBlank()) {
+                if (currentToken.isNullOrBlank()) {
+                    Log.w("HTTP_REPO", "Request canceled: active user session terminated for user $originalUserId")
+                    throw java.io.IOException("Request canceled: user session terminated for user $originalUserId")
+                }
+                if (!currentUserId.isNullOrBlank() && currentUserId != originalUserId) {
+                    Log.e("HTTP_REPO", "Cross-user request blocked: request belongs to user $originalUserId, but current session belongs to user $currentUserId")
+                    throw java.io.IOException("Cross-user request blocked: session switched from $originalUserId to $currentUserId")
+                }
+            }
 
             // 1. Proactive check & prediction: ONLY inject/refresh token for TRUSTED origins with an existing auth request
             if (isTrustedOrigin && hadAuthHeader && !currentToken.isNullOrBlank()) {
-                if (com.example.kotlinroomdatabase.util.JwtUtils.needsRefresh(currentToken)) {
-                    Log.d("HTTP_REPO", "Proactively refreshing expiring JWT token before request: ${originalRequest.url.encodedPath}")
-                    val refreshedToken = refreshSessionTokenSync().accessToken
-                    if (!refreshedToken.isNullOrBlank()) {
-                        currentToken = refreshedToken
+                if (originalUserId.isNullOrBlank() || originalUserId == currentUserId) {
+                    if (com.example.kotlinroomdatabase.util.JwtUtils.needsRefresh(currentToken)) {
+                        Log.d("HTTP_REPO", "Proactively refreshing expiring JWT token before request: ${originalRequest.url.encodedPath}")
+                        val refreshedToken = refreshSessionTokenSync(expectedUserId = originalUserId ?: currentUserId).accessToken
+                        if (!refreshedToken.isNullOrBlank()) {
+                            currentToken = refreshedToken
+                        }
                     }
                 }
             }
 
             val requestToProceed = if (isTrustedOrigin && hadAuthHeader && !currentToken.isNullOrBlank()) {
-                originalRequest.newBuilder().header("Authorization", "Bearer $currentToken").build()
+                if (originalUserId.isNullOrBlank() || originalUserId == currentUserId) {
+                    originalRequest.newBuilder().header("Authorization", "Bearer $currentToken").build()
+                } else {
+                    originalRequest
+                }
             } else if (!isTrustedOrigin && hadAuthHeader) {
                 // Strip auth header if request was somehow directed to an untrusted origin
                 originalRequest.newBuilder().removeHeader("Authorization").build()
@@ -201,18 +241,31 @@ class StudentRepositoryHTTPS(
             if (response.code == 401 && isTrustedOrigin && hadAuthHeader) {
                 val path = originalRequest.url.encodedPath
                 if (!path.endsWith("/login") && !path.endsWith("/register") && !path.contains("/api/auth/refresh")) {
+                    val activeCurrentToken = sharedPrefs.getString("auth_token", null)
+                    val activeCurrentUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(activeCurrentToken)
+                    if (!originalUserId.isNullOrBlank() && !activeCurrentUserId.isNullOrBlank() && originalUserId != activeCurrentUserId) {
+                        Log.w("HTTP_REPO", "Session user changed from $originalUserId to $activeCurrentUserId. Aborting 401 retry.")
+                        return@addInterceptor response
+                    }
+
                     Log.d("HTTP_REPO", "Received 401 for $path, attempting token refresh...")
                     val refreshAttempt = refreshSessionTokenSync(
                         force = true,
-                        failedAccessToken = accessTokenUsed
+                        failedAccessToken = accessTokenUsed,
+                        expectedUserId = originalUserId
                     )
                     val refreshedToken = refreshAttempt.accessToken
                     if (!refreshedToken.isNullOrBlank()) {
-                        response.close()
-                        val retriedRequest = originalRequest.newBuilder()
-                            .header("Authorization", "Bearer $refreshedToken")
-                            .build()
-                        return@addInterceptor chain.proceed(retriedRequest)
+                        val refreshedUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(refreshedToken)
+                        if (originalUserId.isNullOrBlank() || refreshedUserId == originalUserId) {
+                            response.close()
+                            val retriedRequest = originalRequest.newBuilder()
+                                .header("Authorization", "Bearer $refreshedToken")
+                                .build()
+                            return@addInterceptor chain.proceed(retriedRequest)
+                        } else {
+                            Log.w("HTTP_REPO", "Refreshed token user $refreshedUserId != original user $originalUserId. Skipping retry.")
+                        }
                     } else if (refreshAttempt.permanentFailure) {
                         Log.e("HTTP_REPO", "Token refresh failed for expired session, triggering session expiration")
                         triggerSessionExpired(context, "Срок действия сессии истёк. Пожалуйста, выполните вход повторно.")
@@ -227,10 +280,23 @@ class StudentRepositoryHTTPS(
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    init {
+        activeHttpClient = client
+    }
+
     companion object {
         private val refreshLock = Any()
         val cachedStudentSubgroupIds = java.util.concurrent.ConcurrentHashMap<Int, Int>()
         val cachedStudentSubgroupNames = java.util.concurrent.ConcurrentHashMap<Int, String>()
+
+        @Volatile
+        var activeHttpClient: OkHttpClient? = null
+
+        fun cancelAllPendingRequests() {
+            try {
+                activeHttpClient?.dispatcher?.cancelAll()
+            } catch (_: Exception) {}
+        }
 
         fun triggerSessionExpired(context: Context, customMessage: String? = null) {
             com.example.kotlinroomdatabase.util.JwtUtils.clearAllSessionData(context)

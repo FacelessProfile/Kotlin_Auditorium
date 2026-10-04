@@ -14,24 +14,56 @@ object StudentFacePhotoManager {
     const val MAX_BYTES = 15 * 1024 * 1024 // 15 MiB
     const val MAX_PIXELS = 20_000_000L // 20 Megapixels
 
-    fun getSamplesDirectory(context: Context): File {
+    /**
+     * Resolves the current user / student ID to isolate biometric face photos
+     * strictly per user account and prevent cross-account exposure.
+     */
+    fun resolveCurrentUserId(context: Context, explicitUserId: String? = null): String {
+        if (!explicitUserId.isNullOrBlank()) return explicitUserId
+        val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val studentId = studentPrefs.getInt("current_student_id", -1)
+        if (studentId != -1) return studentId.toString()
+
+        val authPrefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val token = authPrefs.getString("auth_token", null)
+        val jwtUserId = JwtUtils.getUserId(token)
+        if (!jwtUserId.isNullOrBlank()) return jwtUserId
+
+        return "shared"
+    }
+
+    /**
+     * Base directory containing all student biometric samples.
+     */
+    fun getBaseSamplesDirectory(context: Context): File {
         return File(context.cacheDir, "student_face_samples").apply {
             if (!exists()) mkdirs()
         }
     }
 
-    fun getSampleFile(context: Context, angle: String): File {
-        return File(getSamplesDirectory(context), "sample_${angle.lowercase()}.jpg")
+    /**
+     * Account-isolated directory for a specific user's face samples.
+     */
+    fun getSamplesDirectory(context: Context, userId: String? = null): File {
+        val uid = resolveCurrentUserId(context, userId)
+        return File(getBaseSamplesDirectory(context), "user_$uid").apply {
+            if (!exists()) mkdirs()
+        }
     }
 
-    fun createTempCaptureFile(context: Context, angle: String): File {
-        return File.createTempFile("capture_${angle}_", ".jpg", getSamplesDirectory(context))
+    fun getSampleFile(context: Context, angle: String, userId: String? = null): File {
+        return File(getSamplesDirectory(context, userId), "sample_${angle.lowercase()}.jpg")
+    }
+
+    fun createTempCaptureFile(context: Context, angle: String, userId: String? = null): File {
+        return File.createTempFile("capture_${angle}_", ".jpg", getSamplesDirectory(context, userId))
     }
 
     suspend fun processAndValidatePhoto(
         context: Context,
         sourceFile: File,
-        targetAngle: String
+        targetAngle: String,
+        userId: String? = null
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             require(sourceFile.exists() && sourceFile.length() > 0) {
@@ -71,7 +103,7 @@ object StudentFacePhotoManager {
                 else -> 0f
             }
 
-            val targetFile = getSampleFile(context, targetAngle)
+            val targetFile = getSampleFile(context, targetAngle, userId)
 
             if (rotationDegrees != 0f) {
                 val fullBitmap = BitmapFactory.decodeFile(sourceFile.absolutePath)
@@ -120,16 +152,32 @@ object StudentFacePhotoManager {
         }.getOrNull()
     }
 
-    fun deleteSample(context: Context, angle: String) {
+    fun deleteSample(context: Context, angle: String, userId: String? = null) {
         runCatching {
-            val file = getSampleFile(context, angle)
+            val file = getSampleFile(context, angle, userId)
             if (file.exists()) file.delete()
         }
     }
 
+    /**
+     * Clears all samples belonging to a specific user.
+     */
+    fun clearUserSamples(context: Context, userId: String? = null) {
+        runCatching {
+            val userDir = getSamplesDirectory(context, userId)
+            if (userDir.exists()) userDir.deleteRecursively()
+        }
+    }
+
+    /**
+     * Completely removes all stored face samples across all accounts (e.g. on logout or app data reset).
+     */
     fun clearAllSamples(context: Context) {
         runCatching {
-            getSamplesDirectory(context).listFiles()?.forEach { it.delete() }
+            val baseCache = File(context.cacheDir, "student_face_samples")
+            if (baseCache.exists()) baseCache.deleteRecursively()
+            val baseFiles = File(context.filesDir, "student_face_samples")
+            if (baseFiles.exists()) baseFiles.deleteRecursively()
         }
     }
 }

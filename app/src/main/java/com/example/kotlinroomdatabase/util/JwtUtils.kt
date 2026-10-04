@@ -10,6 +10,30 @@ import org.json.JSONObject
 
 object JwtUtils {
 
+    private fun decodeJwtPayloadString(part: String): String? {
+        return try {
+            val bytes = try {
+                Base64.decode(part, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+                    ?: java.util.Base64.getUrlDecoder().decode(part)
+            } catch (_: Throwable) {
+                try {
+                    java.util.Base64.getUrlDecoder().decode(part)
+                } catch (_: Throwable) {
+                    java.util.Base64.getDecoder().decode(part)
+                }
+            }
+            if (bytes != null && bytes.isNotEmpty()) String(bytes, Charsets.UTF_8) else null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun extractClaim(payloadJson: String, key: String): String? {
+        val pattern = Regex(""""$key"\s*:\s*("([^"]*)"|(-?[0-9]+))""")
+        val match = pattern.find(payloadJson) ?: return null
+        return match.groups[2]?.value ?: match.groups[3]?.value
+    }
+
     /**
      * Extracts expiration timestamp (in milliseconds) from JWT claims.
      * Returns 0L if not present or cannot be parsed.
@@ -19,9 +43,8 @@ object JwtUtils {
         return try {
             val parts = jwtToken.split(".")
             if (parts.size >= 2) {
-                val payloadBytes = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
-                val json = JSONObject(String(payloadBytes, Charsets.UTF_8))
-                val expSec = json.optLong("exp", 0L)
+                val payload = decodeJwtPayloadString(parts[1]) ?: return 0L
+                val expSec = extractClaim(payload, "exp")?.toLongOrNull() ?: 0L
                 expSec * 1000L
             } else {
                 0L
@@ -39,9 +62,8 @@ object JwtUtils {
         return try {
             val parts = jwtToken.split(".")
             if (parts.size >= 2) {
-                val payloadBytes = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
-                val json = JSONObject(String(payloadBytes, Charsets.UTF_8))
-                val iatSec = json.optLong("iat", 0L)
+                val payload = decodeJwtPayloadString(parts[1]) ?: return 0L
+                val iatSec = extractClaim(payload, "iat")?.toLongOrNull() ?: 0L
                 iatSec * 1000L
             } else {
                 0L
@@ -75,6 +97,33 @@ object JwtUtils {
     }
 
     /**
+     * Extracts user identifier (from "sub", "user_id", or "userId") from JWT payload.
+     * Returns null if not present or cannot be parsed.
+     */
+    fun getUserId(jwtToken: String?): String? {
+        if (jwtToken.isNullOrBlank()) return null
+        return try {
+            val parts = jwtToken.split(".")
+            if (parts.size >= 2) {
+                val payload = decodeJwtPayloadString(parts[1]) ?: return null
+                val sub = extractClaim(payload, "sub")
+                if (!sub.isNullOrBlank()) return sub
+                val userId = extractClaim(payload, "user_id")
+                if (!userId.isNullOrBlank()) return userId
+                val camelUserId = extractClaim(payload, "userId")
+                if (!camelUserId.isNullOrBlank()) return camelUserId
+                val id = extractClaim(payload, "id")
+                if (!id.isNullOrBlank()) return id
+                null
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
      * Checks if the given JWT token is strictly expired.
      */
     fun isExpired(jwtToken: String?): Boolean {
@@ -105,7 +154,7 @@ object JwtUtils {
     }
 
     /**
-     * Clears all session, credentials, TOTP, Room cache, and attendance preferences on logout (KA-08).
+     * Clears all session, credentials, TOTP, Room cache, face samples, and attendance preferences on logout (KA-08).
      */
     fun clearAllSessionData(context: Context) {
         try {
@@ -167,6 +216,20 @@ object JwtUtils {
                 if (logsDir.exists()) logsDir.deleteRecursively()
             } catch (e: Exception) {
                 Log.e("JwtUtils", "Error deleting cache and attachment files on logout", e)
+            }
+
+            // 7. Clear student biometric face samples to prevent cross-account leakage (Reviewer fix)
+            try {
+                com.example.kotlinroomdatabase.util.StudentFacePhotoManager.clearAllSamples(context)
+            } catch (e: Exception) {
+                Log.e("JwtUtils", "Error clearing student face samples on logout", e)
+            }
+
+            // 8. Cancel running and pending OkHttp network requests to prevent cross-user token leaks
+            try {
+                com.example.kotlinroomdatabase.repository.StudentRepositoryHTTPS.cancelAllPendingRequests()
+            } catch (e: Exception) {
+                Log.e("JwtUtils", "Error canceling pending network requests on logout", e)
             }
         } catch (e: Exception) {
             Log.e("JwtUtils", "Error clearing session data", e)
