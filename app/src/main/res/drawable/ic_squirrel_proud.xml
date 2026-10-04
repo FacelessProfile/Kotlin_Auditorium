@@ -101,6 +101,45 @@
         android:strokeLineCap="round"
         android:pathData="M47,47 C48,49 49.5,49 50,49 C50.5,49 52,49 53,47" />
 
+    <!-- Russian Squirrel Tufted Ears (firmly attached behind hardhat) -->
+    <!-- Left Ear Base & Shell -->
+    <path
+        android:fillColor="#C2410C"
+        android:pathData="M31,25 C29,19 25,12 24,6 C28,9 32,15 36,23 Z" />
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M31,24 C30,19 26,13 25,8 C28,10 32,16 35,22 Z" />
+    <!-- Left Ear Inner Pad -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M31,22 C29,18 27,13 26,9 C28,11 31,16 33,21 Z" />
+    <!-- Left Ear Fluffy Tuft (Кисточка) -->
+    <path
+        android:fillColor="#7C2D12"
+        android:pathData="M24,6 C22,2 24,0 25,0 C27,1 26,3 26,6 Z" />
+    <path
+        android:fillColor="#9A3412"
+        android:pathData="M24,6 C23,3 25,1 26,1 C27,2 26.5,4 25.5,6 Z" />
+
+    <!-- Right Ear Base & Shell -->
+    <path
+        android:fillColor="#C2410C"
+        android:pathData="M69,25 C71,19 75,12 76,6 C72,9 68,15 64,23 Z" />
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M69,24 C70,19 74,13 75,8 C72,10 68,16 65,22 Z" />
+    <!-- Right Ear Inner Pad -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M69,22 C71,18 73,13 74,9 C72,11 69,16 67,21 Z" />
+    <!-- Right Ear Fluffy Tuft (Кисточка) -->
+    <path
+        android:fillColor="#7C2D12"
+        android:pathData="M76,6 C78,2 76,0 75,0 C73,1 74,3 74,6 Z" />
+    <path
+        android:fillColor="#9A3412"
+        android:pathData="M76,6 C77,3 75,1 74,1 C73,2 73.5,4 74.5,6 Z" />
+
     <!-- SibSUTIS Engineering Hardhat (3D Curved Construction Helmet) -->
     <!-- Helmet Crown (SibSUTIS Blue) -->
     <path
@@ -127,20 +166,6 @@
     <path
         android:fillColor="#FBBF24"
         android:pathData="M51,7 L47,13 L50,13 L48,19 L54,12 L51,12 Z" />
-
-    <!-- Tufted Ears peeking out from under hardhat -->
-    <path
-        android:fillColor="#9A3412"
-        android:pathData="M30,22 L24,10 L32,18 Z" />
-    <path
-        android:fillColor="#7C2D12"
-        android:pathData="M24,10 L22,4 L27,8 Z" />
-    <path
-        android:fillColor="#9A3412"
-        android:pathData="M70,22 L76,10 L68,18 Z" />
-    <path
-        android:fillColor="#7C2D12"
-        android:pathData="M76,10 L78,4 L73,8 Z" />
 
     <!-- Right Paw: Proud Thumbs Up -->
     <path

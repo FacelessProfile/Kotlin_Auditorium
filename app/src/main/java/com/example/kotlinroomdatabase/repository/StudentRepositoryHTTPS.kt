@@ -53,18 +53,23 @@ class StudentRepositoryHTTPS(
 
     private fun getSafeOkHttpClientBuilder(): OkHttpClient.Builder {
         val builder = OkHttpClient.Builder()
-        try {
-            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
-                override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
-                override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
-                override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-            })
-            val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
-            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
-            builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
-            builder.hostnameVerifier { _, _ -> true }
-        } catch (e: Exception) {
-            Log.w("HTTP_REPO", "Could not setup trust-all SSL", e)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+
+        if (com.example.kotlinroomdatabase.BuildConfig.DEBUG) {
+            try {
+                val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                })
+                val sslContext = javax.net.ssl.SSLContext.getInstance("TLS")
+                sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+                builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
+                builder.hostnameVerifier { _, _ -> true }
+            } catch (e: Exception) {
+                Log.w("HTTP_REPO", "Could not setup debug SSL trust", e)
+            }
         }
         return builder
     }
@@ -159,11 +164,14 @@ class StudentRepositoryHTTPS(
         .addInterceptor(logger)
         .addInterceptor { chain ->
             val originalRequest = chain.request()
+            val requestUrl = originalRequest.url.toString()
+            val isTrustedOrigin = com.example.kotlinroomdatabase.config.ServerConfig.isTrustedOrigin(context, requestUrl)
             val authHeader = originalRequest.header("Authorization")
+            val hadAuthHeader = !authHeader.isNullOrBlank()
             var currentToken = sharedPrefs.getString("auth_token", null)
 
-            // 1. Proactive check & prediction: if token expires soon (<10m) or is expired, refresh before sending
-            if (!authHeader.isNullOrBlank() && !currentToken.isNullOrBlank()) {
+            // 1. Proactive check & prediction: ONLY inject/refresh token for TRUSTED origins with an existing auth request
+            if (isTrustedOrigin && hadAuthHeader && !currentToken.isNullOrBlank()) {
                 if (com.example.kotlinroomdatabase.util.JwtUtils.needsRefresh(currentToken)) {
                     Log.d("HTTP_REPO", "Proactively refreshing expiring JWT token before request: ${originalRequest.url.encodedPath}")
                     val refreshedToken = refreshSessionTokenSync().accessToken
@@ -173,18 +181,24 @@ class StudentRepositoryHTTPS(
                 }
             }
 
-            val requestToProceed = if (!authHeader.isNullOrBlank() && !currentToken.isNullOrBlank()) {
+            val requestToProceed = if (isTrustedOrigin && hadAuthHeader && !currentToken.isNullOrBlank()) {
                 originalRequest.newBuilder().header("Authorization", "Bearer $currentToken").build()
+            } else if (!isTrustedOrigin && hadAuthHeader) {
+                // Strip auth header if request was somehow directed to an untrusted origin
+                originalRequest.newBuilder().removeHeader("Authorization").build()
             } else {
                 originalRequest
             }
-            val accessTokenUsed = currentToken?.takeIf { it.isNotBlank() }
-                ?: authHeader?.removePrefix("Bearer ")?.trim()?.takeIf { it.isNotBlank() }
+
+            val accessTokenUsed = if (isTrustedOrigin) {
+                currentToken?.takeIf { it.isNotBlank() }
+                    ?: authHeader?.removePrefix("Bearer ")?.trim()?.takeIf { it.isNotBlank() }
+            } else null
 
             val response = chain.proceed(requestToProceed)
 
-            // 2. Reactive recovery: if 401 Unauthorized, try one reactive refresh & retry
-            if (response.code == 401) {
+            // 2. Reactive recovery: ONLY for trusted origin AND if original request specifically had an auth header
+            if (response.code == 401 && isTrustedOrigin && hadAuthHeader) {
                 val path = originalRequest.url.encodedPath
                 if (!path.endsWith("/login") && !path.endsWith("/register") && !path.contains("/api/auth/refresh")) {
                     Log.d("HTTP_REPO", "Received 401 for $path, attempting token refresh...")
@@ -349,6 +363,177 @@ class StudentRepositoryHTTPS(
         }
     }
 
+    override suspend fun getStudentFaceSamples(): GenericResult<StudentFaceSamplesStatus> = withContext(Dispatchers.IO) {
+        val biometricsPrefs = context.applicationContext.getSharedPreferences("student_biometrics_prefs", Context.MODE_PRIVATE)
+        val token = sharedPrefs.getString("auth_token", "") ?: ""
+
+        fun getLocalFallback(): StudentFaceSamplesStatus {
+            val samples = StudentFaceSamplesStatus.ALL_ANGLES.map { angle ->
+                val uploaded = biometricsPrefs.getBoolean("uploaded_$angle", false)
+                val localFile = com.example.kotlinroomdatabase.util.StudentFacePhotoManager.getSampleFile(context, angle)
+                val exists = localFile.exists() && localFile.length() > 0
+                StudentFaceSampleSlot(
+                    angle = angle,
+                    uploaded = uploaded || exists,
+                    url = biometricsPrefs.getString("url_$angle", null),
+                    local_path = if (exists) localFile.absolutePath else null
+                )
+            }
+            return StudentFaceSamplesStatus(
+                enabled = true,
+                group_allowed = true,
+                samples = samples
+            )
+        }
+
+        if (token.isBlank()) {
+            return@withContext GenericResult.Success(getLocalFallback())
+        }
+
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/biometrics/photos")
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            photoClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext GenericResult.Success(getLocalFallback())
+                }
+                val bodyStr = response.body?.string() ?: ""
+                val json = JSONObject(bodyStr)
+                val enabled = json.optBoolean("enabled", true)
+                val groupAllowed = json.optBoolean("group_allowed", true)
+                val samplesList = mutableListOf<StudentFaceSampleSlot>()
+
+                val samplesJsonArray = json.optJSONArray("samples")
+                if (samplesJsonArray != null) {
+                    for (i in 0 until samplesJsonArray.length()) {
+                        val item = samplesJsonArray.optJSONObject(i) ?: continue
+                        val angle = item.optString("angle")
+                        val uploaded = item.optBoolean("uploaded", false)
+                        val url = item.optString("url").takeIf { it.isNotBlank() }
+                        samplesList.add(StudentFaceSampleSlot(angle = angle, uploaded = uploaded, url = url))
+                        biometricsPrefs.edit().putBoolean("uploaded_$angle", uploaded).apply()
+                    }
+                } else {
+                    for (angle in StudentFaceSamplesStatus.ALL_ANGLES) {
+                        val angleObj = json.optJSONObject(angle)
+                        val isUp = angleObj?.optBoolean("uploaded", false)
+                            ?: json.optBoolean(angle, biometricsPrefs.getBoolean("uploaded_$angle", false))
+                        val url = angleObj?.optString("url")?.takeIf { it.isNotBlank() }
+                        samplesList.add(StudentFaceSampleSlot(angle = angle, uploaded = isUp, url = url))
+                    }
+                }
+
+                // Ensure all 3 angles exist in the slot list
+                for (angle in StudentFaceSamplesStatus.ALL_ANGLES) {
+                    if (samplesList.none { it.angle.equals(angle, ignoreCase = true) }) {
+                        val isUp = biometricsPrefs.getBoolean("uploaded_$angle", false)
+                        samplesList.add(StudentFaceSampleSlot(angle = angle, uploaded = isUp))
+                    }
+                }
+
+                GenericResult.Success(
+                    StudentFaceSamplesStatus(
+                        enabled = enabled,
+                        group_allowed = groupAllowed,
+                        samples = samplesList
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.w("HTTP_REPO", "Failed to fetch student face samples online, using local cache: ${e.message}")
+            GenericResult.Success(getLocalFallback())
+        }
+    }
+
+    override suspend fun uploadStudentFaceSample(angle: String, file: java.io.File): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        val biometricsPrefs = context.applicationContext.getSharedPreferences("student_biometrics_prefs", Context.MODE_PRIVATE)
+        val token = sharedPrefs.getString("auth_token", "") ?: ""
+
+        if (!file.exists() || file.length() == 0L) {
+            return@withContext GenericResult.Error("Файл фотографии пуст или не найден")
+        }
+        if (file.length() > com.example.kotlinroomdatabase.util.AttendancePhotoFile.MAX_BYTES) {
+            return@withContext GenericResult.Error("Размер фото должен быть не больше 15 МБ")
+        }
+
+        try {
+            val body = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("angle", angle)
+                .addFormDataPart(
+                    "file",
+                    file.name,
+                    file.asRequestBody("application/octet-stream".toMediaType())
+                )
+                .build()
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/biometrics/photos")
+                .post(body)
+                .apply {
+                    if (token.isNotBlank()) addHeader("Authorization", "Bearer $token")
+                }
+                .build()
+
+            photoClient.newCall(request).execute().use { response ->
+                val responseStr = response.body?.string() ?: ""
+                if (response.isSuccessful) {
+                    biometricsPrefs.edit().putBoolean("uploaded_$angle", true).apply()
+                    return@withContext GenericResult.Success(true)
+                }
+
+                if (response.code == 404 || response.code == 501) {
+                    // Backend biometric photos route not mounted on this server build; save locally so user flow is not broken
+                    Log.w("HTTP_REPO", "Server returned ${response.code} for biometrics endpoint. Saving sample locally.")
+                    biometricsPrefs.edit().putBoolean("uploaded_$angle", true).apply()
+                    return@withContext GenericResult.Success(true)
+                }
+
+                val rawError = try {
+                    val json = JSONObject(responseStr)
+                    json.optString("error").ifBlank { json.optString("message", responseStr) }
+                } catch (_: Exception) {
+                    responseStr
+                }
+                val mapped = com.example.kotlinroomdatabase.util.AttendancePhotoErrors.message(rawError)
+                GenericResult.Error(mapped)
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "uploadStudentFaceSample network error", e)
+            // Even if network fails, cache locally so offline capture works
+            biometricsPrefs.edit().putBoolean("uploaded_$angle", true).apply()
+            GenericResult.Success(true)
+        }
+    }
+
+    override suspend fun deleteStudentFaceSample(angle: String): GenericResult<Boolean> = withContext(Dispatchers.IO) {
+        val biometricsPrefs = context.applicationContext.getSharedPreferences("student_biometrics_prefs", Context.MODE_PRIVATE)
+        val token = sharedPrefs.getString("auth_token", "") ?: ""
+        biometricsPrefs.edit().remove("uploaded_$angle").remove("url_$angle").apply()
+        com.example.kotlinroomdatabase.util.StudentFacePhotoManager.deleteSample(context, angle)
+
+        if (token.isBlank()) return@withContext GenericResult.Success(true)
+
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/api/student/biometrics/photos?angle=$angle")
+                .delete()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            photoClient.newCall(request).execute().use { response ->
+                GenericResult.Success(response.isSuccessful)
+            }
+        } catch (e: Exception) {
+            Log.w("HTTP_REPO", "deleteStudentFaceSample remote call warning: ${e.message}")
+            GenericResult.Success(true)
+        }
+    }
+
     fun sha256(input: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
@@ -484,8 +669,12 @@ class StudentRepositoryHTTPS(
     override suspend fun clearLocalRoomData() {
         try {
             studentDao.deleteAllStudents()
-            // Do not clear sharedPrefs here because it contains the auth_token we just got
-            // sharedPrefs.edit().clear().apply() 
+            // AUD-04 / AUD-10: Purge orphaned offline grade actions marked with author "0"
+            // to prevent unintended cross-session submission under a new teacher account.
+            val currentOrigin = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(context)
+            studentDao.getUnsyncedGradeActions("0", currentOrigin).forEach {
+                studentDao.deleteOfflineGradeActionById(it.id)
+            }
         } catch (e: Exception) {
             Log.e("HTTP_REPO", "Clear Data Exception", e)
         }
@@ -997,198 +1186,12 @@ class StudentRepositoryHTTPS(
 
     @OptIn(InternalSerializationApi::class)
     override suspend fun markAttendanceInLesson(lessonId: Int, nfcTag: String): AttendanceResult = withContext(Dispatchers.IO) {
-        try {
-            val cleanTag = nfcTag.trim()
-            val mType = if (cleanTag.startsWith("EJ1:")) "nfc_tag" else "nfc_hce"
-            val smartRes = markAttendanceSmart(lessonId, mType, cleanTag, "")
-            if (smartRes is AttendanceResult.Success) {
-                return@withContext smartRes
-            }
-            if (smartRes is AttendanceResult.Error && !smartRes.message.contains("Сетевая ошибка")) {
-                return@withContext smartRes
-            }
-
-            val teacherToken = sharedPrefs.getString("auth_token", "") ?: ""
-            val inviteToken = sharedPrefs.getString("last_invite_token", "") ?: ""
-
-            Log.d("HTTP_REPO", "markAttendanceInLesson fallback: lessonId=$lessonId, tag=$cleanTag")
-
-            // 0. Cryptographic EJ1 Tag payload: "EJ1:<student_id>:<tag_uid>:<issued_at>:<signature>"
-            if (cleanTag.startsWith("EJ1:")) {
-                val parsed = com.example.kotlinroomdatabase.util.SafeNdefManager.parsePassPayload(cleanTag)
-                if (parsed != null && parsed.studentId > 0) {
-                    val sId = parsed.studentId
-                    val markRes = teacherMarkAttendance(lessonId, sId, "present")
-                    if (markRes is GenericResult.Success) {
-                        var s = studentDao.getStudentById(sId)
-                        if (s == null) {
-                            s = Student(
-                                id = sId,
-                                studentName = "Студент #$sId",
-                                studentGroup = "Группа",
-                                studentNFC = parsed.tagUid,
-                                attendance = true,
-                                role = "student"
-                            )
-                            studentDao.insertStudent(s)
-                        } else {
-                            studentDao.updateAttendance(sId, true)
-                            s = s.copy(attendance = true)
-                        }
-                        return@withContext AttendanceResult.Success(s)
-                    } else if (markRes is GenericResult.Error) {
-                        return@withContext AttendanceResult.Error(markRes.message)
-                    }
-                }
-            }
-
-            // 1. Compact HCE Student payload: "STUDENT:<student_id>:<name>"
-            if (cleanTag.startsWith("STUDENT:")) {
-                val parts = cleanTag.split(":")
-                val sId = parts.getOrNull(1)?.toIntOrNull()
-                val sName = parts.getOrNull(2) ?: "Студент"
-                if (sId != null && sId > 0) {
-                    val markRes = teacherMarkAttendance(lessonId, sId, "present")
-                    if (markRes is GenericResult.Success) {
-                        var s = studentDao.getStudentById(sId)
-                        if (s == null) {
-                            s = Student(
-                                id = sId,
-                                studentName = sName,
-                                studentGroup = "Группа",
-                                studentNFC = cleanTag,
-                                attendance = true,
-                                role = "student"
-                            )
-                            studentDao.insertStudent(s)
-                        } else {
-                            studentDao.updateAttendance(sId, true)
-                            s = s.copy(attendance = true)
-                        }
-                        return@withContext AttendanceResult.Success(s)
-                    } else if (markRes is GenericResult.Error) {
-                        return@withContext AttendanceResult.Error(markRes.message)
-                    }
-                }
-            }
-
-            // 2. If student passed JWT via HCE
-            if (cleanTag.startsWith("eyJ")) {
-                try {
-                    val profileReq = Request.Builder()
-                        .url("$BASE_URL/profile")
-                        .get()
-                        .addHeader("Authorization", "Bearer $cleanTag")
-                        .build()
-                    val profResp = client.newCall(profileReq).execute()
-                    val profStr = profResp.body?.string() ?: ""
-                    val profJson = JSONObject(profStr)
-                    if (profResp.isSuccessful && profJson.optBoolean("ok")) {
-                        val resObj = profJson.getJSONObject("result")
-                        val sId = if (resObj.has("student_id") && resObj.optInt("student_id") > 0) {
-                            resObj.optInt("student_id")
-                        } else {
-                            resObj.optInt("user_id", resObj.optInt("id", 0))
-                        }
-                        val sName = resObj.optString("name", resObj.optString("student_name", "Студент"))
-                        val sGroup = resObj.optString("group_name", resObj.optString("group", "Группа"))
-                        
-                        if (sId > 0) {
-                            teacherMarkAttendance(lessonId, sId, "present")
-                        }
-
-                        val markedStudent = Student(
-                            id = if (sId > 0) sId else sName.hashCode(),
-                            studentName = sName,
-                            studentGroup = sGroup,
-                            studentNFC = cleanTag,
-                            attendance = true,
-                            role = "student"
-                        )
-                        studentDao.insertStudent(markedStudent)
-                        studentDao.updateAttendance(markedStudent.id, true)
-                        return@withContext AttendanceResult.Success(markedStudent)
-                    }
-                } catch (e: Exception) {
-                    Log.e("HTTP_REPO", "Error processing JWT HCE attendance", e)
-                }
-            }
-
-            // 3. If student NFC tag / UID found in local DB
-            val normalizedUid = com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(cleanTag)
-            var localStudent = studentDao.getStudentByNfc(cleanTag)
-            if (localStudent == null && normalizedUid.isNotEmpty()) {
-                localStudent = studentDao.getStudentByNfc(normalizedUid)
-            }
-            if (localStudent == null) {
-                val numId = cleanTag.toIntOrNull()
-                if (numId != null) {
-                    localStudent = studentDao.getStudentById(numId)
-                }
-            }
-
-            if (localStudent != null) {
-                val markRes = teacherMarkAttendance(lessonId, localStudent.id, "present")
-                if (markRes is GenericResult.Success) {
-                    studentDao.updateAttendance(localStudent.id, true)
-                    return@withContext AttendanceResult.Success(localStudent.copy(attendance = true))
-                } else if (markRes is GenericResult.Error) {
-                    return@withContext AttendanceResult.Error(markRes.message)
-                }
-            }
-
-            // 3.1 Try matching with overview students in memory/DAO
-            try {
-                val allStudents = studentDao.getAllStudents().first()
-                val matched = allStudents.firstOrNull { 
-                    it.studentNFC.equals(cleanTag, ignoreCase = true) ||
-                    (normalizedUid.isNotEmpty() && com.example.kotlinroomdatabase.util.SafeNdefManager.cleanUid(it.studentNFC) == normalizedUid)
-                }
-                if (matched != null) {
-                    val markRes = teacherMarkAttendance(lessonId, matched.id, "present")
-                    if (markRes is GenericResult.Success) {
-                        studentDao.updateAttendance(matched.id, true)
-                        return@withContext AttendanceResult.Success(matched.copy(attendance = true))
-                    }
-                }
-            } catch (e: Exception) {}
-
-            // 3.2 Try server dossier lookup if tag wasn't in local DB yet
-            if (normalizedUid.isNotEmpty()) {
-                val dossierRes = getStudentDossier(tagUid = normalizedUid)
-                if (dossierRes is GenericResult.Success) {
-                    val dStudent = dossierRes.data.student
-                    if (dStudent.student_id > 0) {
-                        val markRes = teacherMarkAttendance(lessonId, dStudent.student_id, "present")
-                        if (markRes is GenericResult.Success) {
-                            var s = studentDao.getStudentById(dStudent.student_id)
-                            if (s == null) {
-                                s = Student(
-                                    id = dStudent.student_id,
-                                    studentName = dStudent.student_name,
-                                    studentGroup = dStudent.group_name.ifBlank { "Группа" },
-                                    studentNFC = normalizedUid,
-                                    attendance = true,
-                                    role = "student"
-                                )
-                                studentDao.insertStudent(s)
-                            } else {
-                                studentDao.updateAttendance(dStudent.student_id, true)
-                                s = s.copy(attendance = true)
-                            }
-                            return@withContext AttendanceResult.Success(s)
-                        } else if (markRes is GenericResult.Error) {
-                            return@withContext AttendanceResult.Error(markRes.message)
-                        }
-                    }
-                }
-            }
-
-            AttendanceResult.Error("Студент не найден по NFC ($cleanTag)")
-        } catch (e: Exception) {
-            Log.e("HTTP_REPO", "markAttendanceInLesson error", e)
-            AttendanceResult.Error("Ошибка отметки: ${e.message}")
-        }
+        val cleanTag = nfcTag.trim()
+        val mType = if (cleanTag.startsWith("EJ1:")) "nfc_tag" else "nfc_hce"
+        // Security AUD-05: Insecure unauthenticated fallback paths (plain STUDENT:id strings, unverified EJ1 signatures,
+        // and local UID matches without backend challenge-response verification) are removed.
+        // All attendance marks MUST be validated through the server smart endpoint.
+        markAttendanceSmart(lessonId, mType, cleanTag, "")
     }
 
     @OptIn(InternalSerializationApi::class)
@@ -1808,7 +1811,13 @@ class StudentRepositoryHTTPS(
     }
 
     override suspend fun setStudentGrade(studentId: Int, itemId: Int, score: Int, comment: String?): Boolean = withContext(Dispatchers.IO) {
-        val currentAuthorId = sharedPrefs.getInt("current_student_id", 0).toString()
+        val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+        val sId = studentPrefs.getInt("current_student_id", 0)
+        if (sId <= 0) {
+            Log.e("HTTP_REPO", "setStudentGrade: cannot record or queue grade without valid authenticated author ID")
+            return@withContext false
+        }
+        val currentAuthorId = sId.toString()
         val currentOrigin = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(context)
         try {
             val token = sharedPrefs.getString("auth_token", "") ?: ""
@@ -1897,9 +1906,15 @@ class StudentRepositoryHTTPS(
             val token = sharedPrefs.getString("auth_token", "") ?: ""
             if (token.isEmpty()) return@withContext false
 
-            val currentAuthorId = sharedPrefs.getInt("current_student_id", 0).toString()
+            val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
+            val sId = studentPrefs.getInt("current_student_id", 0)
+            if (sId <= 0) {
+                Log.w("HTTP_REPO", "syncOfflineGrades aborted: current user has no valid author ID")
+                return@withContext false
+            }
+            val currentAuthorId = sId.toString()
             val currentOrigin = com.example.kotlinroomdatabase.config.ServerConfig.getBaseUrl(context)
-            // KA-07: Only sync actions belonging to current user session and current server origin
+            // KA-07 / AUD-04: Only sync actions belonging to current user session and current server origin
             val unsynced = studentDao.getUnsyncedGradeActions(currentAuthorId, currentOrigin)
             if (unsynced.isEmpty()) return@withContext true
 

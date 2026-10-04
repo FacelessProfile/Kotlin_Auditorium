@@ -442,6 +442,62 @@
                         android:layout_height="1dp"
                         android:background="?attr/sib_border_subtle" />
 
+                    <!-- Biometric Photos Row -->
+                    <LinearLayout
+                        android:id="@+id/rowBiometricsPhotos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="Фотографии для распознавания"
+                            android:src="@drawable/ic_camera"
+                            app:tint="@color/sib_blue_primary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Фотографии для распознавания"
+                                android:textColor="?attr/sib_text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvBiometricsStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Образцы для посещаемости (0 / 3)"
+                                android:textColor="?attr/sib_text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:contentDescription="Перейти"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="?attr/sib_text_muted" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/sib_border_subtle" />
+
                     <!-- User Agreement Row -->
                     <LinearLayout
                         android:id="@+id/rowUserAgreement"

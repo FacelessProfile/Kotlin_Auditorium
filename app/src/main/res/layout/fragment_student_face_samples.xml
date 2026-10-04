@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/swipeRefreshLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/sib_bg_app">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="36dp">
+
+            <!-- Top Header Row: Back button, Title & Counter -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnBack"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Назад"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="?attr/sib_text_primary" />
+
+                <TextView
+                    android:id="@+id/tvMainTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Фотографии для распознавания"
+                    android:textColor="?attr/sib_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <!-- Counter Badge (e.g. 0 / 3) -->
+                <TextView
+                    android:id="@+id/tvCounter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge_type"
+                    android:backgroundTint="@color/sib_blue_active_bg"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:text="0 / 3"
+                    android:textColor="@color/sib_blue_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    tools:text="0 / 3" />
+            </LinearLayout>
+
+            <!-- Subtitle Description -->
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:lineSpacingExtra="3dp"
+                android:text="Добавьте три своих снимка: прямо, в повороте ¾ и боком. Группа допущена администратором к распознаванию по фото."
+                android:textColor="?attr/sib_text_secondary"
+                android:textSize="13sp" />
+
+            <!-- Requirements / Information Banner Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                app:cardBackgroundColor="@color/sib_card_surface"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/sib_border_subtle"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="14dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="2dp"
+                        android:src="@drawable/ic_info_circle"
+                        app:tint="@color/sib_blue_primary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:lineSpacingExtra="3dp"
+                        android:text="На каждом снимке должно быть одно чёткое лицо, без маски и тёмных очков. JPEG, PNG или WebP, до 15 МБ и 20 Мп. Сохраняется изображение лица: после загрузки оно сразу используется для распознавания."
+                        android:textColor="?attr/sib_text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Quick Action: Guided Capture Flow -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCaptureAllGuided"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="14dp"
+                android:backgroundTint="@color/sib_blue_primary"
+                android:text="Снять все 3 ракурса по очереди"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_camera"
+                app:iconTint="@color/white" />
+
+            <!-- Three Face Sample Cards Container -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical">
+
+                <!-- CARD 1: Анфас -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardFrontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/sib_border_subtle"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Анфас"
+                            android:textColor="?attr/sib_text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Смотрите прямо в камеру."
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="13sp" />
+
+                        <!-- Placeholder / Thumbnail Box -->
+                        <FrameLayout
+                            android:id="@+id/boxFrontalPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="180dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_face_placeholder_dashed">
+
+                            <!-- Empty Placeholder view -->
+                            <LinearLayout
+                                android:id="@+id/layoutFrontalEmpty"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:gravity="center"
+                                android:orientation="vertical">
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:src="@drawable/ic_angle_frontal"
+                                    app:tint="@color/sib_text_muted" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="Фото не добавлено"
+                                    android:textColor="@color/sib_text_muted"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <!-- Filled Thumbnail view -->
+                            <ImageView
+                                android:id="@+id/ivFrontalThumbnail"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="Анфас фото"
+                                android:scaleType="centerCrop"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+
+                            <!-- Status Badge if uploaded -->
+                            <TextView
+                                android:id="@+id/badgeFrontalDone"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="10dp"
+                                android:background="@drawable/bg_badge_type"
+                                android:backgroundTint="@color/sib_success_bg"
+                                android:paddingHorizontal="10dp"
+                                android:paddingVertical="4dp"
+                                android:text="✓ Добавлено"
+                                android:textColor="@color/sib_success"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+
+                            <ProgressBar
+                                android:id="@+id/progressFrontalUpload"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_gravity="center"
+                                android:indeterminate="true"
+                                android:visibility="gone" />
+                        </FrameLayout>
+
+                        <!-- Action Button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnActionFrontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="14dp"
+                            android:backgroundTint="@color/sib_blue_primary"
+                            android:text="Добавить фото"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- CARD 2: Поворот ¾ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardThreeQuarter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/sib_border_subtle"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Поворот ¾"
+                            android:textColor="?attr/sib_text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Поверните голову примерно на 45°."
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="13sp" />
+
+                        <!-- Placeholder / Thumbnail Box -->
+                        <FrameLayout
+                            android:id="@+id/boxThreeQuarterPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="180dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_face_placeholder_dashed">
+
+                            <!-- Empty Placeholder view -->
+                            <LinearLayout
+                                android:id="@+id/layoutThreeQuarterEmpty"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:gravity="center"
+                                android:orientation="vertical">
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:src="@drawable/ic_angle_three_quarter"
+                                    app:tint="@color/sib_text_muted" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="Фото не добавлено"
+                                    android:textColor="@color/sib_text_muted"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <!-- Filled Thumbnail view -->
+                            <ImageView
+                                android:id="@+id/ivThreeQuarterThumbnail"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="Поворот ¾ фото"
+                                android:scaleType="centerCrop"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+
+                            <!-- Status Badge if uploaded -->
+                            <TextView
+                                android:id="@+id/badgeThreeQuarterDone"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="10dp"
+                                android:background="@drawable/bg_badge_type"
+                                android:backgroundTint="@color/sib_success_bg"
+                                android:paddingHorizontal="10dp"
+                                android:paddingVertical="4dp"
+                                android:text="✓ Добавлено"
+                                android:textColor="@color/sib_success"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+
+                            <ProgressBar
+                                android:id="@+id/progressThreeQuarterUpload"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_gravity="center"
+                                android:indeterminate="true"
+                                android:visibility="gone" />
+                        </FrameLayout>
+
+                        <!-- Action Button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnActionThreeQuarter"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="14dp"
+                            android:backgroundTint="@color/sib_blue_primary"
+                            android:text="Добавить фото"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- CARD 3: Профиль -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardProfile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/sib_border_subtle"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Профиль"
+                            android:textColor="?attr/sib_text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Поверните лицо боком к камере."
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="13sp" />
+
+                        <!-- Placeholder / Thumbnail Box -->
+                        <FrameLayout
+                            android:id="@+id/boxProfilePreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="180dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_face_placeholder_dashed">
+
+                            <!-- Empty Placeholder view -->
+                            <LinearLayout
+                                android:id="@+id/layoutProfileEmpty"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:gravity="center"
+                                android:orientation="vertical">
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:src="@drawable/ic_angle_profile"
+                                    app:tint="@color/sib_text_muted" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="Фото не добавлено"
+                                    android:textColor="@color/sib_text_muted"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <!-- Filled Thumbnail view -->
+                            <ImageView
+                                android:id="@+id/ivProfileThumbnail"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="Профиль фото"
+                                android:scaleType="centerCrop"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+
+                            <!-- Status Badge if uploaded -->
+                            <TextView
+                                android:id="@+id/badgeProfileDone"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="10dp"
+                                android:background="@drawable/bg_badge_type"
+                                android:backgroundTint="@color/sib_success_bg"
+                                android:paddingHorizontal="10dp"
+                                android:paddingVertical="4dp"
+                                android:text="✓ Добавлено"
+                                android:textColor="@color/sib_success"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+
+                            <ProgressBar
+                                android:id="@+id/progressProfileUpload"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_gravity="center"
+                                android:indeterminate="true"
+                                android:visibility="gone" />
+                        </FrameLayout>
+
+                        <!-- Action Button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnActionProfile"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="14dp"
+                            android:backgroundTint="@color/sib_blue_primary"
+                            android:text="Добавить фото"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

@@ -49,28 +49,10 @@ object AppUpdateManager {
     private const val MAX_APK_SIZE = 150 * 1024 * 1024L // 150 MB (KA-14)
 
     private fun getOkHttpClient(): OkHttpClient {
-        return try {
-            val trustAllCerts = arrayOf<TrustManager>(
-                object : X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                    override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                }
-            )
-            val sslContext = SSLContext.getInstance("SSL")
-            sslContext.init(null, trustAllCerts, SecureRandom())
-            OkHttpClient.Builder()
-                .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
-                .hostnameVerifier { _, _ -> true }
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .build()
-        } catch (e: Exception) {
-            OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .build()
-        }
+        return OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
     }
 
     fun getCurrentVersionCode(context: Context): Int {
@@ -368,12 +350,14 @@ object AppUpdateManager {
 
             val currentSignatures = getAppSignatures(context)
             val apkSignatures = getApkSignatures(context, apkFile)
-            if (currentSignatures.isNotEmpty() && apkSignatures.isNotEmpty()) {
-                val matching = currentSignatures.any { currentSig -> apkSignatures.contains(currentSig) }
-                if (!matching) {
-                    Log.e(TAG, "APK signature mismatch! Current signatures: $currentSignatures, APK signatures: $apkSignatures")
-                    return false
-                }
+            if (currentSignatures.isEmpty() || apkSignatures.isEmpty()) {
+                Log.e(TAG, "Cannot verify APK signatures (empty signature set): current=${currentSignatures.size}, apk=${apkSignatures.size}")
+                return false
+            }
+            val matching = currentSignatures.any { currentSig -> apkSignatures.contains(currentSig) }
+            if (!matching) {
+                Log.e(TAG, "APK signature mismatch! Current signatures: $currentSignatures, APK signatures: $apkSignatures")
+                return false
             }
             true
         } catch (e: Exception) {

@@ -120,29 +120,44 @@
         android:fillColor="#FDBA74"
         android:pathData="M72,42 C76,44 76,50 70,52 C66,52 64,48 64,44 Z" />
 
-    <!-- Ears with Long Tufts -->
-    <!-- Left Ear Base & Shadow -->
+    <!-- Ears with Long Tufts (Firmly Anchored to Skull) -->
+    <!-- Left Ear Base & Outer Shell -->
     <path
         android:fillColor="#9A3412"
-        android:pathData="M40,28 L36,12 L46,24 Z" />
+        android:pathData="M38,28 C36,21 32,13 32,6 C37,9 41,16 47,25 Z" />
     <path
-        android:fillColor="#FCA5A5"
-        android:pathData="M40,26 L38,16 L44,24 Z" />
-    <!-- Left Ear Tuft Fringe (Wild Fur) -->
+        android:fillColor="#EA580C"
+        android:pathData="M38,27 C37,21 33,14 33,8 C37,10 40,17 46,24 Z" />
+    <!-- Left Ear Inner Warm Pad -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M38,25 C37,20 35,16 34,10 C37,12 40,17 44,22 Z" />
+    <!-- Left Ear Tuft (Кисточка) -->
     <path
         android:fillColor="#7C2D12"
-        android:pathData="M36,12 L33,6 L38,10 Z" />
-    <!-- Right Ear Base & Shadow -->
+        android:pathData="M32,6 C30,2 32,0 33,0 C35,1 34,3 34,6 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M32,6 C31,3 33,1 34,1 C35,2 34.5,4 33.5,6 Z" />
+
+    <!-- Right Ear Base & Outer Shell -->
     <path
         android:fillColor="#9A3412"
-        android:pathData="M66,28 L72,12 L62,24 Z" />
+        android:pathData="M70,28 C72,21 76,13 76,6 C71,9 67,16 61,25 Z" />
     <path
-        android:fillColor="#FCA5A5"
-        android:pathData="M66,26 L70,16 L64,24 Z" />
-    <!-- Right Ear Tuft Fringe -->
+        android:fillColor="#EA580C"
+        android:pathData="M70,27 C69,21 75,14 75,8 C71,10 68,17 62,24 Z" />
+    <!-- Right Ear Inner Warm Pad -->
+    <path
+        android:fillColor="#FDBA74"
+        android:pathData="M70,25 C69,20 73,16 74,10 C71,12 68,17 64,22 Z" />
+    <!-- Right Ear Tuft (Кисточка) -->
     <path
         android:fillColor="#7C2D12"
-        android:pathData="M72,12 L75,6 L70,10 Z" />
+        android:pathData="M76,6 C78,2 76,0 75,0 C73,1 74,3 74,6 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M76,6 C77,3 75,1 74,1 C73,2 73.5,4 74.5,6 Z" />
 
     <!-- Cute Squirrel Muzzle -->
     <path

@@ -119,23 +119,23 @@ class SettingsFragment : Fragment() {
                         // KA-09: Do not silently set a hardcoded fallback demo secret!
                         buttonView.isChecked = false
                         MaterialAlertDialogBuilder(requireContext())
-                            .setTitle("Настройка 2FA")
-                            .setMessage("Для включения двухфакторной аутентификации необходимо отсканировать QR-код или ввести секретный ключ из личного кабинета.")
+                            .setTitle("Генератор кодов TOTP (2FA)")
+                            .setMessage("Для привязки генератора кодов на этом устройстве отсканируйте 2FA QR-код из личного кабинета.")
                             .setPositiveButton("Сканировать QR") { _, _ ->
                                 binding.btnScan2FaQr.performClick()
                             }
                             .setNegativeButton("Отмена", null)
                             .show()
                     } else {
-                        Toast.makeText(context, "2FA включена", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Локальный генератор кодов TOTP активен", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Отключить 2FA?")
-                        .setMessage("Вы уверены, что хотите отключить двухфакторную аутентификацию?")
-                        .setPositiveButton("Отключить") { _, _ ->
+                        .setTitle("Удалить локальный ключ TOTP?")
+                        .setMessage("Удалить секретный ключ генератора кодов с этого устройства? Защита самого аккаунта на сервере настраивается в личном кабинете.")
+                        .setPositiveButton("Удалить") { _, _ ->
                             encPrefs.edit().remove("totp_secret").apply()
-                            Toast.makeText(context, "2FA отключена", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Локальный ключ TOTP удалён", Toast.LENGTH_SHORT).show()
                         }
                         .setNegativeButton("Отмена") { _, _ ->
                             buttonView.isChecked = true

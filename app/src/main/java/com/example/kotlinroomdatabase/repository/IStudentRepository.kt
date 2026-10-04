@@ -152,6 +152,9 @@ interface IStudentRepository {
     suspend fun confirmAttendancePhoto(lessonId: Int, jobId: String, decisions: List<com.example.kotlinroomdatabase.model.AttendancePhotoDecision>): GenericResult<Boolean>
     suspend fun retryAttendancePhoto(lessonId: Int, jobId: String): GenericResult<Boolean>
     suspend fun getAttendancePhotoImage(lessonId: Int, jobId: String): GenericResult<ByteArray>
+    suspend fun getStudentFaceSamples(): GenericResult<com.example.kotlinroomdatabase.model.StudentFaceSamplesStatus>
+    suspend fun uploadStudentFaceSample(angle: String, file: java.io.File): GenericResult<Boolean>
+    suspend fun deleteStudentFaceSample(angle: String): GenericResult<Boolean>
     suspend fun getFullUserProfile(): GenericResult<com.example.kotlinroomdatabase.model.UserProfile>
     suspend fun getStudentSubgroups(semesterId: Int? = null): GenericResult<List<com.example.kotlinroomdatabase.model.SubjectWithSubgroups>>
     suspend fun changeStudentSubgroup(subgroupId: Int, reason: String? = null): GenericResult<Boolean>

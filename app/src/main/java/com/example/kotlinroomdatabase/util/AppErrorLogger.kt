@@ -30,20 +30,28 @@ object AppErrorLogger {
      */
     fun sanitizeLogText(input: String): String {
         return input
-            // Redact Bearer JWT tokens
+            // 1. Redact Authorization headers and Bearer tokens
             .replace(Regex("(?i)Bearer\\s+[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+"), "Bearer [REDACTED_JWT]")
-            // Redact Authorization headers
             .replace(Regex("(?i)(Authorization:\\s*Bearer\\s*)[^\\r\\n]+"), "$1[REDACTED]")
             .replace(Regex("(?i)(Authorization:\\s*)[^\\r\\n]+"), "$1[REDACTED]")
-            // Redact passwords in JSON or query params or form data
+            // 2. Redact standalone JWT tokens without Bearer prefix
+            .replace(Regex("""\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\b"""), "[REDACTED_JWT]")
+            // 3. Redact passwords in JSON, query params, form-data, and unquoted key=val formats
             .replace(Regex("""(?i)("?password"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
             .replace(Regex("""(?i)("?pass"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
-            // Redact tokens in JSON
+            .replace(Regex("""(?i)\b(password|pass|secret)\s*=\s*[^\s,;&\r\n]+"""), "$1=[REDACTED]")
+            // 4. Redact tokens (auth_token, refresh_token) in JSON and key=val
             .replace(Regex("""(?i)("?token"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
             .replace(Regex("""(?i)("?auth_token"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
-            // Redact TOTP secret
+            .replace(Regex("""(?i)("?refresh_token"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
+            .replace(Regex("""(?i)\b(token|auth_token|refresh_token|refreshToken)\s*=\s*[^\s,;&\r\n]+"""), "$1=[REDACTED]")
+            // 5. Redact TOTP secret
             .replace(Regex("""(?i)("?totp_secret"?\s*[:=]\s*")[^"]+(")"""), """$1[REDACTED]$2""")
-            .replace(Regex("""(?i)(totp_secret\s*=\s*)[^\s,;&]+"""), "$1[REDACTED]")
+            .replace(Regex("""(?i)(totp_secret\s*[:=]\s*)[^\s,;&\r\n]+"""), "$1[REDACTED]")
+            // 6. Redact FCM tokens (key-value and standalone long tokens)
+            .replace(Regex("""(?i)\b(fcm_token|fcmToken|registration_token)\s*[:=]\s*"?([^\s,;&"\r\n]+)"?"""), "$1=[REDACTED]")
+            .replace(Regex("""\b[a-zA-Z0-9_\-]{22}:[a-zA-Z0-9_\-]{100,}\b"""), "[REDACTED_FCM_TOKEN]")
+            .replace(Regex("""\b[a-zA-Z0-9_\-]{140,200}\b"""), "[REDACTED_TOKEN]")
     }
 
     private var appContext: Context? = null

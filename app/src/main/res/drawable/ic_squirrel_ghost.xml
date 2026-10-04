@@ -60,34 +60,44 @@
         android:fillColor="#DDD6FE"
         android:pathData="M45,52 C45,46 47,43 50,43 C53,43 55,46 55,52 C55,61 53,68 50,68 C47,68 45,61 45,52 Z" />
 
-    <!-- Ghost Ears with Spiderwebs Draped -->
-    <!-- Left Ear -->
+    <!-- Ghost Ears with Spiderwebs Draped (Firmly anchored ethereal ears) -->
+    <!-- Left Ear Base & Shell -->
     <path
         android:fillColor="#5B21B6"
-        android:pathData="M32,32 L22,14 L36,22 Z" />
+        android:pathData="M33,28 C30,21 25,14 25,7 C30,10 35,16 41,25 Z" />
     <path
         android:fillColor="#7C3AED"
-        android:pathData="M33,30 L24,16 L35,23 Z" />
+        android:pathData="M33,27 C31,21 27,15 26,9 C30,11 34,17 40,24 Z" />
+    <!-- Left Ear Inner Lavender Glow -->
     <path
         android:fillColor="#DDD6FE"
-        android:pathData="M31,28 L26,19 L32,24 Z" />
+        android:pathData="M33,25 C32,20 29,16 28,11 C31,13 34,17 38,22 Z" />
+    <!-- Left Ear Ghost Tuft (Кисточка) -->
+    <path
+        android:fillColor="#5B21B6"
+        android:pathData="M25,7 C23,3 24,0 26,0 C28,1 27,4 27,7 Z" />
     <path
         android:fillColor="#A78BFA"
-        android:pathData="M22,14 L18,8 L24,12 Z" />
+        android:pathData="M25,7 C24,4 25,1 26,1 C27,2 27,4 26.5,7 Z" />
 
-    <!-- Right Ear -->
+    <!-- Right Ear Base & Shell -->
     <path
         android:fillColor="#5B21B6"
-        android:pathData="M66,32 L76,14 L62,22 Z" />
+        android:pathData="M67,28 C70,21 75,14 75,7 C70,10 65,16 59,25 Z" />
     <path
         android:fillColor="#7C3AED"
-        android:pathData="M65,30 L74,16 L63,23 Z" />
+        android:pathData="M67,27 C69,21 73,15 74,9 C70,11 66,17 60,24 Z" />
+    <!-- Right Ear Inner Lavender Glow -->
     <path
         android:fillColor="#DDD6FE"
-        android:pathData="M67,28 L72,19 L66,24 Z" />
+        android:pathData="M67,25 C68,20 71,16 72,11 C69,13 66,17 62,22 Z" />
+    <!-- Right Ear Ghost Tuft (Кисточка) -->
+    <path
+        android:fillColor="#5B21B6"
+        android:pathData="M75,7 C77,3 76,0 74,0 C72,1 73,4 73,7 Z" />
     <path
         android:fillColor="#A78BFA"
-        android:pathData="M76,14 L80,8 L74,12 Z" />
+        android:pathData="M75,7 C76,4 75,1 74,1 C73,2 73,4 73.5,7 Z" />
 
     <!-- Cobweb Draped Between Ears and Tail -->
     <path

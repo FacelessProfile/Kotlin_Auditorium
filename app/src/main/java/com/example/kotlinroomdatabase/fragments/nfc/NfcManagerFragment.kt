@@ -627,7 +627,7 @@ class NfcManagerFragment : NFC_Tools() {
         }
         binding.chipChipType.text = shortType
         binding.tvDiagUid.text = "UID: ${diagnostics.uidFormatted}"
-        val nxpText = if (diagnostics.hasNxpOriginalitySignature) "Подлинный NXP чип (ECDSA подпись)" else "Совместимый чип Type 2 (без подписи NXP)"
+        val nxpText = if (diagnostics.hasNxpOriginalitySignature) "Ответ на команду подписи NXP получен (32 байта, проверка ECDSA на сервере)" else "Совместимый чип Type 2 (без ответа NXP)"
         val lockText = if (diagnostics.isPasswordProtected) "Защита от чтения: Активна (NFC Tools заблокирован)" else "Защита от чтения: Открыта"
         binding.tvDiagLock.text = "$lockText\n$nxpText"
 
@@ -1710,10 +1710,14 @@ class NfcManagerFragment : NFC_Tools() {
         val wipeResult = SafeNdefManager.removeProtectionAndWipe(tag, rawUid)
         if (wipeResult.isSuccess) {
             playSuccessBeep()
-            binding.tvDiagPayload.text = "NDEF Payload: Очищен (Пустой чип)"
             val formattedUid = SafeNdefManager.formatUidWithColons(rawUid)
+            binding.tvDiagPayload.text = "NDEF Payload: Очищен (Пустой чип)"
+            binding.tvDiagLock.text = "Защита от чтения: Снята (Заводской статус)\nСовместимый чип Type 2 (NDEF)"
+            binding.cardStudentDossier.visibility = View.GONE
+            binding.tvReaderPromptTitle.text = "Метка очищена ($formattedUid)"
+            binding.tvReaderPromptSub.text = "Чип разблокирован и возвращён к пустому NDEF"
             binding.tvActiveTargetDetails.text = "Метка ($formattedUid) очищена от данных приложения"
-            Toast.makeText(requireContext(), "Чип ($formattedUid) успешно очищен", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Чип ($formattedUid) успешно очищен и разблокирован", Toast.LENGTH_SHORT).show()
 
             // Detach/revoke on backend & locally if it was bound to any student
             lifecycleScope.launch {

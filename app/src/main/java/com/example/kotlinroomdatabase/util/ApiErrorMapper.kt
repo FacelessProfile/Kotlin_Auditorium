@@ -67,7 +67,9 @@ object ApiErrorMapper {
                 "Срок действия сессии истёк"
             lower.contains("forbidden") || lower.contains("access denied") ->
                 "Действие недоступно для вашей роли"
-            lower.contains("not found") ->
+            lower.contains("certpathvalidator") || lower.contains("trust anchor") || lower.contains("sslhandshake") || lower.contains("certificateexception") ->
+                "Ошибка SSL-соединения: недоверенный или просроченный сертификат сервера"
+            lower.contains("not found") && !lower.contains("trust anchor") ->
                 "Данные не найдены"
             else -> rawError
         }

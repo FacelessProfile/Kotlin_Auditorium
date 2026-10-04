@@ -35,6 +35,15 @@ class StudentRepository(
     override suspend fun getAttendancePhotoImage(lessonId: Int, jobId: String): GenericResult<ByteArray> =
         GenericResult.Error("Отметка по фото доступна при подключении через HTTPS")
 
+    override suspend fun getStudentFaceSamples(): GenericResult<com.example.kotlinroomdatabase.model.StudentFaceSamplesStatus> =
+        GenericResult.Success(com.example.kotlinroomdatabase.model.StudentFaceSamplesStatus.initial())
+
+    override suspend fun uploadStudentFaceSample(angle: String, file: java.io.File): GenericResult<Boolean> =
+        GenericResult.Success(true)
+
+    override suspend fun deleteStudentFaceSample(angle: String): GenericResult<Boolean> =
+        GenericResult.Success(true)
+
     @OptIn(InternalSerializationApi::class)
     override fun getAllStudents(): Flow<List<Student>> {
         return studentDao.getAllStudents()

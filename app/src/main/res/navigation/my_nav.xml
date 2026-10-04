@@ -108,7 +108,11 @@
         android:id="@+id/profileFragment"
         android:name="com.example.kotlinroomdatabase.fragments.profile.ProfileFragment"
         android:label="Профиль"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_profile">
+        <action
+            android:id="@+id/action_profileFragment_to_studentFaceSamplesFragment"
+            app:destination="@id/studentFaceSamplesFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/historyFragment"
@@ -184,4 +188,10 @@
         android:name="com.example.kotlinroomdatabase.fragments.nfc.NfcManagerFragment"
         android:label="NFC Менеджер"
         tools:layout="@layout/fragment_nfc_manager" />
+
+    <fragment
+        android:id="@+id/studentFaceSamplesFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.biometrics.StudentFaceSamplesFragment"
+        android:label="Фотографии для распознавания"
+        tools:layout="@layout/fragment_student_face_samples" />
 </navigation>

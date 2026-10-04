@@ -31,7 +31,7 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "New FCM Registration Token: $token")
+        Log.d(TAG, "New FCM Registration Token received (length: ${token.length})")
 
         val fcmPrefs = getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
         fcmPrefs.edit().putString(KEY_FCM_TOKEN, token).apply()

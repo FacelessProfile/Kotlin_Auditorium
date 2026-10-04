@@ -405,18 +405,15 @@ class LoginFragment : Fragment() {
     @OptIn(InternalSerializationApi::class)
     private fun enableHceForStudent(student: Student) {
         val prefs = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
-        val authPrefs = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val token = authPrefs.getString("auth_token", "") ?: ""
-
         val tagForHce = if (student.role == "student") {
-            if (token.isNotEmpty()) token else "STUDENT:${student.id}:${student.studentName}"
+            "STUDENT:${student.id}:${student.studentName}"
         } else {
             student.studentNFC
         }
 
         if (!tagForHce.isNullOrBlank()) {
             prefs.edit().putString("nfc_payload", tagForHce).apply()
-            Log.d("DEBUG_NFC", "Saved HCE tag: $tagForHce")
+            Log.d("DEBUG_NFC", "Saved HCE tag payload for student id=${student.id}")
         } else {
             Log.e("DEBUG_NFC", "Server sent EMPTY tag!")
         }

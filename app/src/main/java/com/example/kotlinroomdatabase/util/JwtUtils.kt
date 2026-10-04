@@ -154,13 +154,19 @@ object JwtUtils {
                 }
             }
 
-            // 6. Clear local avatar and media cache files (KA-08)
+            // 6. Clear local avatar, attachments, feedback, and diagnostic files (KA-08 / AUD-10)
             try {
                 com.example.kotlinroomdatabase.util.AvatarManager.getCachedAvatarFile(context).delete()
                 val avatarCacheDir = java.io.File(context.cacheDir, "avatars")
                 if (avatarCacheDir.exists()) avatarCacheDir.deleteRecursively()
+                val attachmentsCacheDir = java.io.File(context.cacheDir, "attachments_cache")
+                if (attachmentsCacheDir.exists()) attachmentsCacheDir.deleteRecursively()
+                val feedbackUploadsDir = java.io.File(context.cacheDir, "feedback_uploads")
+                if (feedbackUploadsDir.exists()) feedbackUploadsDir.deleteRecursively()
+                val logsDir = java.io.File(context.filesDir, "app_logs")
+                if (logsDir.exists()) logsDir.deleteRecursively()
             } catch (e: Exception) {
-                Log.e("JwtUtils", "Error deleting avatar cache files", e)
+                Log.e("JwtUtils", "Error deleting cache and attachment files on logout", e)
             }
         } catch (e: Exception) {
             Log.e("JwtUtils", "Error clearing session data", e)

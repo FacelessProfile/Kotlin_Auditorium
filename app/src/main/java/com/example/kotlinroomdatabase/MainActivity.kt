@@ -41,11 +41,12 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         val filter = android.content.IntentFilter("com.example.kotlinroomdatabase.LOGOUT")
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(logoutReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(logoutReceiver, filter)
-        }
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            logoutReceiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
             .registerReceiver(logoutReceiver, filter)
     }
@@ -573,7 +574,7 @@ class MainActivity : AppCompatActivity() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val fcmToken = task.result
-                    android.util.Log.d("MainActivity", "Fetched FCM token: $fcmToken")
+                    android.util.Log.d("MainActivity", "Fetched FCM token successfully")
                     getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
                         .edit().putString("fcm_token", fcmToken).apply()
 

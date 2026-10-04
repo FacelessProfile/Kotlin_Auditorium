@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <!-- Camera Live Preview -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraPreviewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:implementationMode="compatible"
+        app:scaleType="fillCenter" />
+
+    <!-- Dotted Guideline Overlay with Mask & Face Cues -->
+    <com.example.kotlinroomdatabase.view.DottedFaceOverlayView
+        android:id="@+id/faceOverlayView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Top Guidance & Control Bar -->
+    <LinearLayout
+        android:id="@+id/topBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#99000000"
+        android:elevation="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="36dp"
+        android:paddingBottom="14dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnCloseCamera"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Закрыть камеру"
+            android:src="@drawable/ic_cross"
+            app:tint="@color/white" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvAngleTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                tools:text="Анфас" />
+
+            <TextView
+                android:id="@+id/tvAngleGuidance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="#E2E8F0"
+                android:textSize="12sp"
+                tools:text="Смотрите прямо в объектив камеры" />
+        </LinearLayout>
+
+        <!-- Flash / Torch Toggle -->
+        <ImageButton
+            android:id="@+id/btnToggleTorch"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Вспышка"
+            android:src="@drawable/ic_flash_off"
+            app:tint="@color/white" />
+
+        <!-- Camera Switch (Front/Back) Button -->
+        <ImageButton
+            android:id="@+id/btnSwitchCamera"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Сменить камеру"
+            android:src="@drawable/ic_flip_camera"
+            app:tint="@color/white" />
+
+    </LinearLayout>
+
+    <!-- Friendly tip banner for profile or back camera -->
+    <TextView
+        android:id="@+id/tvCameraHintBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_cyber_chip"
+        android:backgroundTint="#CC1E293B"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:text="Совет: для профиля можно переключить камеру и попросить друга"
+        android:textColor="#F1F5F9"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topBarLayout" />
+
+    <!-- Bottom Shutter & Controls -->
+    <LinearLayout
+        android:id="@+id/bottomControlLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#99000000"
+        android:elevation="6dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="32dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/tvShutterHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:text="Клавиша громкости или кнопка ниже для снимка"
+            android:textColor="#CBD5E1"
+            android:textSize="12sp" />
+
+        <!-- Shutter Button -->
+        <FrameLayout
+            android:id="@+id/btnShutterContainer"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <!-- Outer ring -->
+            <View
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:background="@drawable/circle_shape"
+                android:backgroundTint="#FFFFFFFF" />
+
+            <!-- Inner circle -->
+            <View
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:background="@drawable/circle_shape"
+                android:backgroundTint="@color/sib_blue_primary" />
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_camera"
+                app:tint="@color/white" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Review & Confirmation Overlay (Shown immediately after photo capture) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutReviewOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black"
+        android:elevation="10dp"
+        android:visibility="gone"
+        tools:visibility="gone">
+
+        <!-- Captured Photo Display -->
+        <ImageView
+            android:id="@+id/ivCapturedPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Предпросмотр снимка"
+            android:scaleType="fitCenter" />
+
+        <!-- Top Status Banner -->
+        <TextView
+            android:id="@+id/tvReviewTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#CC000000"
+            android:gravity="center"
+            android:paddingTop="36dp"
+            android:paddingBottom="16dp"
+            android:text="Проверьте снимок: лицо четкое и без бликов?"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Bottom Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#E6000000"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="36dp"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRetakePhoto"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Переснять"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_refresh"
+                app:iconTint="@color/white"
+                app:strokeColor="#94A3B8"
+                app:strokeWidth="1.5dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAcceptPhoto"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/sib_blue_primary"
+                android:text="Использовать"
+                android:textColor="@color/white"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_check"
+                app:iconTint="@color/white" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progressProcessing"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

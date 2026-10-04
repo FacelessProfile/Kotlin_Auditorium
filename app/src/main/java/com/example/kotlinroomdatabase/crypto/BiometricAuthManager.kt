@@ -90,8 +90,8 @@ object BiometricAuthManager {
         return try {
             val prefs = getEncryptedPrefs(context)
             val enabled = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
-            val hasLogin = !prefs.getString(KEY_SAVED_LOGIN, null).isNullOrBlank()
-            val hasPass = !prefs.getString(KEY_SAVED_PASSWORD, null).isNullOrBlank()
+            val hasLogin = prefs.contains(KEY_SAVED_LOGIN)
+            val hasPass = prefs.contains(KEY_SAVED_PASSWORD)
             val origin = prefs.getString(KEY_SAVED_ORIGIN, null)
             val currentOrigin = ServerConfig.getBaseUrl(context)
             enabled && hasLogin && hasPass && origin == currentOrigin

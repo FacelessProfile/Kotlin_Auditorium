@@ -40,15 +40,6 @@ class SibgutenokWidgetProvider : AppWidgetProvider() {
                 val nextIndex = (currentIndex + 1) % allEmotions.size
                 val nextEmotion = allEmotions[nextIndex]
 
-                // Чередуем маскотов (СибгУтёнок <-> Белка-Связист) при кликах
-                val currentMascot = StreakManager.getCurrentMascotType(context)
-                val nextMascot = if (currentMascot == MascotType.SIB_GUTENOK) {
-                    MascotType.SQUIRREL_COMM
-                } else {
-                    MascotType.SIB_GUTENOK
-                }
-                StreakManager.setMascotType(context, nextMascot)
-
                 val mockStreak = when (nextEmotion) {
                     MascotEmotion.ON_FIRE -> 12
                     MascotEmotion.PROUD -> 4
@@ -58,7 +49,7 @@ class SibgutenokWidgetProvider : AppWidgetProvider() {
                     MascotEmotion.GHOST -> 0
                     MascotEmotion.DOOM -> 0
                 }
-                Log.i("SibgutenokWidget", "Cycling emotion: $currentEmotion -> $nextEmotion (streak: $mockStreak, mascot: ${nextMascot.displayName})")
+                Log.i("SibgutenokWidget", "Cycling emotion: $currentEmotion -> $nextEmotion (streak: $mockStreak)")
                 StreakManager.setDemoStreak(context, mockStreak)
                 StreakManager.setDemoEmotion(context, nextEmotion.name)
             }

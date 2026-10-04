@@ -211,8 +211,17 @@ class LessonReminderReceiver : BroadcastReceiver() {
         android.util.Log.d("LessonReminderReceiver", "Posting notification ID $notificationId (enabled=$areEnabled)")
 
         try {
-            notificationManager.notify(notificationId, notification)
-            android.util.Log.d("LessonReminderReceiver", "Notification posted successfully")
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                androidx.core.app.ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationManager.notify(notificationId, notification)
+                android.util.Log.d("LessonReminderReceiver", "Notification posted successfully")
+            } else {
+                android.util.Log.w("LessonReminderReceiver", "Missing POST_NOTIFICATIONS permission, skipping notify")
+            }
         } catch (e: Exception) {
             android.util.Log.e("LessonReminderReceiver", "Failed to post notification", e)
         }

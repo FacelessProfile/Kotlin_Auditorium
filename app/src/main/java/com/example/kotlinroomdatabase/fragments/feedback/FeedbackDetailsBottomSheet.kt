@@ -365,8 +365,15 @@ class FeedbackDetailsBottomSheet : BottomSheetDialogFragment() {
         val finalUrl = ServerConfig.resolveMediaUrl(context, url)
         iv.tag = finalUrl
 
-        val cacheDir = File(context.cacheDir, "attachments_cache").apply { mkdirs() }
-        val cacheFile = File(cacheDir, "${url.hashCode()}_thumb.jpg")
+        val studentPrefs = context.getSharedPreferences("student_prefs", android.content.Context.MODE_PRIVATE)
+        val currentUserId = studentPrefs.getInt("current_student_id", 0)
+        val currentOrigin = ServerConfig.getBaseUrl(context)
+        val cacheKey = "${currentOrigin}_${currentUserId}_$url"
+        val hashStr = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(cacheKey.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        val userCacheDir = File(File(context.cacheDir, "attachments_cache"), "user_$currentUserId").apply { mkdirs() }
+        val cacheFile = File(userCacheDir, "${hashStr}_thumb.jpg")
 
         if (cacheFile.exists() && cacheFile.length() > 0) {
             val bmp = BitmapFactory.decodeFile(cacheFile.absolutePath)

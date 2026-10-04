@@ -81,8 +81,17 @@ object LessonCountdownManager {
                     .build()
 
                 try {
-                    notificationManager.notify(notificationId, notification)
-                    Log.d("LessonCountdownManager", "Updated countdown for '$subject': $remainingMin min left (onlyAlertOnce=true)")
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                        androidx.core.app.ActivityCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.POST_NOTIFICATIONS
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationManager.notify(notificationId, notification)
+                        Log.d("LessonCountdownManager", "Updated countdown for '$subject': $remainingMin min left (onlyAlertOnce=true)")
+                    } else {
+                        Log.w("LessonCountdownManager", "Missing POST_NOTIFICATIONS permission, skipping notify")
+                    }
                 } catch (e: Exception) {
                     Log.e("LessonCountdownManager", "Failed to update countdown notification", e)
                 }

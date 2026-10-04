@@ -83,7 +83,7 @@ object SibgutenokWidgetUpdater {
         )
         views.setOnClickPendingIntent(R.id.btnWidgetScan, scanPendingIntent)
 
-        // 5. Клик по самому виджету -> Открытие главного экрана приложения
+        // 5. Клик по самому виджету и маскоту -> Открытие главного экрана приложения
         val appIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -94,19 +94,7 @@ object SibgutenokWidgetUpdater {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.widgetRoot, appPendingIntent)
-
-        // 6. Клик по иконке маскота -> Интерактивное переключение эмоций (Demo Cycle)
-        val cycleIntent = Intent(context, SibgutenokWidgetProvider::class.java).apply {
-            action = SibgutenokWidgetProvider.ACTION_CYCLE_EMOTION
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-        }
-        val cyclePendingIntent = PendingIntent.getBroadcast(
-            context,
-            appWidgetId * 10 + 3,
-            cycleIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        views.setOnClickPendingIntent(R.id.ivWidgetMascot, cyclePendingIntent)
+        views.setOnClickPendingIntent(R.id.ivWidgetMascot, appPendingIntent)
 
         // Применяем обновление
         appWidgetManager.updateAppWidget(appWidgetId, views)

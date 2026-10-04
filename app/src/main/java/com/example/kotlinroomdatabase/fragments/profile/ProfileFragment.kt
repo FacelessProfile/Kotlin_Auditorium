@@ -92,6 +92,10 @@ class ProfileFragment : Fragment() {
             findNavController().navigate(R.id.totpFragment)
         }
 
+        binding.rowBiometricsPhotos.setOnClickListener {
+            findNavController().navigate(R.id.studentFaceSamplesFragment)
+        }
+
         binding.rowUserAgreement.setOnClickListener {
             showUserAgreementDialog()
         }
@@ -221,6 +225,22 @@ class ProfileFragment : Fragment() {
                             if (isAccepted) R.color.sib_success else R.color.sib_warning
                         )
                     )
+                }
+
+                launch(Dispatchers.IO) {
+                    val bioStatusResult = repository.getStudentFaceSamples()
+                    if (bioStatusResult is GenericResult.Success) {
+                        val count = bioStatusResult.data.uploadedCount()
+                        withContext(Dispatchers.Main) {
+                            if (_binding != null && isAdded) {
+                                binding.tvBiometricsStatus.text = if (count >= 3) {
+                                    "Все 3 ракурса загружены (готово к распознаванию)"
+                                } else {
+                                    "Образцы для посещаемости ($count / 3)"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

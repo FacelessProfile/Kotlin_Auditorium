@@ -77,30 +77,44 @@
         android:fillColor="#EA580C"
         android:pathData="M38,44 C38,36 44,30 54,30 C64,30 70,36 70,44 C70,54 68,66 65,74 C62,78 44,78 41,74 C39,66 38,54 38,44 Z" />
 
-    <!-- Frizzed Standing Ears (Pointed Upwards like Antennas) -->
-    <!-- Left Ear -->
+    <!-- Frizzed Standing Ears (Firmly anchored, electric/berserk tufts) -->
+    <!-- Left Ear Base & Shell -->
     <path
         android:fillColor="#78350F"
-        android:pathData="M38,28 L28,8 L44,20 Z" />
+        android:pathData="M37,28 C34,21 29,13 29,6 C34,9 39,16 46,25 Z" />
     <path
         android:fillColor="#B45309"
-        android:pathData="M38,26 L30,10 L43,20 Z" />
-    <!-- Red Hot Left Ear Tip (Sparking) -->
+        android:pathData="M37,27 C35,21 31,14 30,8 C35,10 39,17 45,24 Z" />
+    <!-- Left Inner Ear -->
+    <path
+        android:fillColor="#FECDD3"
+        android:pathData="M37,25 C36,20 33,16 32,10 C35,12 38,17 43,22 Z" />
+    <!-- Left Ear Spiky Tuft & Sparking Tip -->
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M29,6 C26,2 27,0 29,0 C32,2 31,4 31,6 Z" />
     <path
         android:fillColor="#EF4444"
-        android:pathData="M30,10 L24,2 L34,8 Z" />
+        android:pathData="M29,6 L26,2 L29,4 L31,0 L31,6 Z" />
 
-    <!-- Right Ear -->
+    <!-- Right Ear Base & Shell -->
     <path
         android:fillColor="#78350F"
-        android:pathData="M70,28 L80,8 L64,20 Z" />
+        android:pathData="M71,28 C74,21 79,13 79,6 C74,9 69,16 62,25 Z" />
     <path
         android:fillColor="#B45309"
-        android:pathData="M70,26 L78,10 L65,20 Z" />
-    <!-- Red Hot Right Ear Tip (Sparking) -->
+        android:pathData="M71,27 C73,21 77,14 78,8 C73,10 69,17 63,24 Z" />
+    <!-- Right Inner Ear -->
+    <path
+        android:fillColor="#FECDD3"
+        android:pathData="M71,25 C72,20 75,16 76,10 C73,12 70,17 65,22 Z" />
+    <!-- Right Ear Spiky Tuft & Sparking Tip -->
+    <path
+        android:fillColor="#78350F"
+        android:pathData="M79,6 C82,2 81,0 79,0 C76,2 77,4 77,6 Z" />
     <path
         android:fillColor="#EF4444"
-        android:pathData="M78,10 L84,2 L74,8 Z" />
+        android:pathData="M79,6 L82,2 L79,4 L77,0 L77,6 Z" />
 
     <!-- Anime Rage Vein Tic (Angry cross mark on temple) -->
     <path

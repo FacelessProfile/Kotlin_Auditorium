@@ -149,7 +149,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Безопасность (2FA)"
+                            android:text="Генератор кодов TOTP (2FA)"
                             android:textColor="?attr/sib_text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -158,7 +158,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Двухфакторная защита TOTP для входа"
+                            android:text="Локальное сохранение TOTP-ключа для входа"
                             android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -180,7 +180,7 @@
                     android:paddingBottom="12dp"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:text="Привязать 2FA (Сканировать QR)"
+                    android:text="Импортировать TOTP-ключ (Сканировать QR)"
                     android:textColor="?attr/sib_text_primary"
                     android:textSize="13sp"
                     app:cornerRadius="12dp"
