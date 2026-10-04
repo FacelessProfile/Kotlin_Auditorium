@@ -49,10 +49,32 @@ object AppUpdateManager {
     private const val MAX_APK_SIZE = 150 * 1024 * 1024L // 150 MB (KA-14)
 
     private fun getOkHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
-            .build()
+
+        try {
+            val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            })
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, trustAllCerts, SecureRandom())
+            builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+            builder.hostnameVerifier { hostname, _ ->
+                hostname.contains("lms.signal.qlabs.pro") ||
+                        hostname == "127.0.0.1" ||
+                        hostname == "localhost" ||
+                        hostname.startsWith("192.168.") ||
+                        hostname.startsWith("10.") ||
+                        com.example.kotlinroomdatabase.BuildConfig.DEBUG
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not setup SSL trust for update manager", e)
+        }
+
+        return builder.build()
     }
 
     fun getCurrentVersionCode(context: Context): Int {

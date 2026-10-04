@@ -20,6 +20,50 @@ object BiometricAuthManager {
     private const val KEY_SAVED_PASSWORD = "saved_password"
     private const val KEY_SAVED_ORIGIN = "saved_origin"
     private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
+    private const val KEY_SECURE_ACCESS_TOKEN = "secure_access_token"
+    private const val KEY_SECURE_REFRESH_TOKEN = "secure_refresh_token"
+
+    fun saveSecureTokens(context: Context, accessToken: String, refreshToken: String?) {
+        try {
+            getEncryptedPrefs(context).edit().apply {
+                putString(KEY_SECURE_ACCESS_TOKEN, accessToken)
+                if (refreshToken != null) {
+                    putString(KEY_SECURE_REFRESH_TOKEN, refreshToken)
+                } else {
+                    remove(KEY_SECURE_REFRESH_TOKEN)
+                }
+            }.apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save secure tokens", e)
+        }
+    }
+
+    fun getSecureAccessToken(context: Context): String? {
+        return try {
+            getEncryptedPrefs(context).getString(KEY_SECURE_ACCESS_TOKEN, null)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun getSecureRefreshToken(context: Context): String? {
+        return try {
+            getEncryptedPrefs(context).getString(KEY_SECURE_REFRESH_TOKEN, null)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun clearSecureTokens(context: Context) {
+        try {
+            getEncryptedPrefs(context).edit().apply {
+                remove(KEY_SECURE_ACCESS_TOKEN)
+                remove(KEY_SECURE_REFRESH_TOKEN)
+            }.apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to clear secure tokens", e)
+        }
+    }
 
     private fun getEncryptedPrefs(context: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(context)

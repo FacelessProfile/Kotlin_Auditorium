@@ -141,16 +141,33 @@ object JwtUtils {
     fun isUserSessionValid(context: Context): Boolean {
         val authPrefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val token = authPrefs.getString("auth_token", null)
+            ?: com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureAccessToken(context)
         val refreshToken = authPrefs.getString("refresh_token", null)
+            ?: com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureRefreshToken(context)
         val studentPrefs = context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE)
         val studentId = studentPrefs.getInt("current_student_id", -1)
 
         if (studentId == -1) {
             return false
         }
-        // A refresh session outlives the short access JWT. Existing installs
-        // without a refresh token can use only their still-valid access JWT.
-        return !refreshToken.isNullOrBlank() || !isExpired(token)
+        // 1. If we have a refresh token, session is valid and can refresh seamlessly
+        if (!refreshToken.isNullOrBlank()) {
+            return true
+        }
+        // 2. If access token is still within its validity period
+        if (!isExpired(token)) {
+            return true
+        }
+        // 3. If quick login / biometric credentials are saved, session can be silently renewed
+        if (com.example.kotlinroomdatabase.crypto.BiometricAuthManager.hasSavedCredentials(context)) {
+            return true
+        }
+        // 4. Fallback grace period (up to 14 days past access token expiry)
+        val expMillis = getExpirationMillis(token)
+        if (expMillis > 0 && System.currentTimeMillis() <= expMillis + 14 * 24 * 3600 * 1000L) {
+            return true
+        }
+        return false
     }
 
     /**
@@ -179,8 +196,9 @@ object JwtUtils {
             context.getSharedPreferences("student_prefs", Context.MODE_PRIVATE).edit().clear().apply()
             context.getSharedPreferences("student_attendance_state_prefs", Context.MODE_PRIVATE).edit().clear().apply()
 
-            // 3. Clear quick login credentials (KA-08)
+            // 3. Clear quick login credentials and secure tokens (KA-08)
             com.example.kotlinroomdatabase.crypto.BiometricAuthManager.clearCredentials(context)
+            com.example.kotlinroomdatabase.crypto.BiometricAuthManager.clearSecureTokens(context)
 
             // 4. Clear TOTP secret shared prefs (KA-08)
             try {

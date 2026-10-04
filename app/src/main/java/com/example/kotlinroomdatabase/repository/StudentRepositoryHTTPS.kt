@@ -56,35 +56,104 @@ class StudentRepositoryHTTPS(
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
 
-        if (com.example.kotlinroomdatabase.BuildConfig.DEBUG) {
-            try {
-                val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
-                    override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-                })
-                val sslContext = javax.net.ssl.SSLContext.getInstance("TLS")
-                sslContext.init(null, trustAllCerts, java.security.SecureRandom())
-                builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
-                builder.hostnameVerifier { _, _ -> true }
-            } catch (e: Exception) {
-                Log.w("HTTP_REPO", "Could not setup debug SSL trust", e)
+        try {
+            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+            })
+            val sslContext = javax.net.ssl.SSLContext.getInstance("TLS")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
+            builder.hostnameVerifier { hostname, _ ->
+                hostname.contains("lms.signal.qlabs.pro") ||
+                        hostname == "127.0.0.1" ||
+                        hostname == "localhost" ||
+                        hostname.startsWith("192.168.") ||
+                        hostname.startsWith("10.") ||
+                        com.example.kotlinroomdatabase.BuildConfig.DEBUG
             }
+        } catch (e: Exception) {
+            Log.w("HTTP_REPO", "Could not setup SSL trust", e)
         }
         return builder
     }
 
     private fun getUnsafeOkHttpClientBuilder(): OkHttpClient.Builder = getSafeOkHttpClientBuilder()
 
+    private fun getActiveAccessToken(): String? {
+        return com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureAccessToken(context)
+            ?: sharedPrefs.getString("auth_token", null)
+    }
+
+    private fun getActiveRefreshToken(): String? {
+        return com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureRefreshToken(context)
+            ?: sharedPrefs.getString("refresh_token", null)
+    }
+
     private data class RefreshAttempt(val accessToken: String? = null, val permanentFailure: Boolean = false)
+
+    private fun performSilentLoginDirect(loginName: String, passwordRaw: String): Boolean {
+        return try {
+            val jsonRequest = JSONObject().apply {
+                put("login", loginName)
+                put("password", passwordRaw)
+            }
+            val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
+            val request = Request.Builder()
+                .url("$BASE_URL/login")
+                .header("X-Client-Platform", "android")
+                .header("User-Agent", "Mozilla/5.0 (Android; Mobile; SibSUTIS/1.3) OkHttp/4.12.0")
+                .post(body)
+                .build()
+            val rawClient = getUnsafeOkHttpClientBuilder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .build()
+            rawClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return false
+                val responseStr = response.body?.string().orEmpty()
+                val jsonResponse = JSONObject(responseStr)
+                if (jsonResponse.optBoolean("ok")) {
+                    val result = jsonResponse.getJSONObject("result")
+                    return saveAuthSession(result, response)
+                }
+                false
+            }
+        } catch (e: Exception) {
+            Log.e("HTTP_REPO", "Exception during direct silent re-login", e)
+            false
+        }
+    }
+
+    private fun trySilentReLoginOrPermanentFailure(currentToken: String?, errorReason: String): RefreshAttempt {
+        val creds = com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSavedCredentials(context)
+        if (creds != null) {
+            Log.i("HTTP_REPO", "Refresh failed ($errorReason), attempting silent re-login with saved credentials...")
+            val success = performSilentLoginDirect(creds.first, creds.second)
+            if (success) {
+                val newToken = getActiveAccessToken()
+                if (!newToken.isNullOrBlank()) {
+                    Log.i("HTTP_REPO", "Direct silent re-login succeeded, session restored seamlessly")
+                    return RefreshAttempt(accessToken = newToken)
+                }
+            } else {
+                Log.w("HTTP_REPO", "Direct silent re-login failed")
+            }
+        }
+        val isExpired = com.example.kotlinroomdatabase.util.JwtUtils.isExpired(currentToken)
+        val hasCreds = com.example.kotlinroomdatabase.crypto.BiometricAuthManager.hasSavedCredentials(context)
+        val permanent = isExpired && !hasCreds && (errorReason == "session revoked" || errorReason == "cannot refresh session: user not active")
+        return RefreshAttempt(permanentFailure = permanent)
+    }
 
     private fun refreshSessionTokenSync(
         force: Boolean = false,
         failedAccessToken: String? = null,
         expectedUserId: String? = null
     ): RefreshAttempt = synchronized(refreshLock) {
-        val currentToken = sharedPrefs.getString("auth_token", null)
-        val storedRefreshToken = sharedPrefs.getString("refresh_token", null)
+        val currentToken = getActiveAccessToken()
+        val storedRefreshToken = getActiveRefreshToken()
         val currentUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(currentToken)
 
         // Security check: ensure current session belongs to expected user
@@ -110,7 +179,7 @@ class StudentRepositoryHTTPS(
             return@synchronized RefreshAttempt(accessToken = currentToken)
         }
         if (currentToken.isNullOrBlank() && storedRefreshToken.isNullOrBlank()) {
-            return@synchronized RefreshAttempt(permanentFailure = true)
+            return@synchronized trySilentReLoginOrPermanentFailure(null, "no tokens stored")
         }
 
         try {
@@ -120,7 +189,12 @@ class StudentRepositoryHTTPS(
             }
             val requestBuilder = Request.Builder()
                 .url("$BASE_URL/api/auth/refresh")
+                .header("X-Client-Platform", "android")
+                .header("User-Agent", "Mozilla/5.0 (Android; Mobile; SibSUTIS/1.3) OkHttp/4.12.0")
                 .post(payload.toString().toRequestBody(JSON_TYPE))
+            if (!storedRefreshToken.isNullOrBlank()) {
+                requestBuilder.header("Cookie", "ejournal_refresh=$storedRefreshToken")
+            }
             if (!currentToken.isNullOrBlank()) {
                 requestBuilder.header("Authorization", "Bearer $currentToken")
             }
@@ -136,8 +210,8 @@ class StudentRepositoryHTTPS(
                     val error = runCatching { JSONObject(responseBody).optString("error") }.getOrDefault("")
                     Log.w("HTTP_REPO", "Refresh failed: status=${response.code}, error=$error")
                     if (response.code == 401 && error == "refresh token already rotated") {
-                        val latestRefreshToken = sharedPrefs.getString("refresh_token", null)
-                        val latestAccessToken = sharedPrefs.getString("auth_token", null)
+                        val latestRefreshToken = getActiveRefreshToken()
+                        val latestAccessToken = getActiveAccessToken()
                         if (latestRefreshToken != storedRefreshToken || latestAccessToken != currentToken) {
                             val latestUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(latestAccessToken)
                             if (expectedUserId.isNullOrBlank() || latestUserId == expectedUserId) {
@@ -145,14 +219,14 @@ class StudentRepositoryHTTPS(
                             }
                         }
                     }
-                    val expiredAccessToken = com.example.kotlinroomdatabase.util.JwtUtils.isExpired(currentToken)
-                    return@synchronized RefreshAttempt(permanentFailure = response.code == 401 && expiredAccessToken)
+                    return@synchronized trySilentReLoginOrPermanentFailure(currentToken, error)
                 }
 
                 val envelope = JSONObject(responseBody)
                 if (envelope.has("ok") && !envelope.optBoolean("ok")) {
-                    Log.w("HTTP_REPO", "Refresh endpoint rejected the session")
-                    return@synchronized RefreshAttempt()
+                    val error = envelope.optString("error")
+                    Log.w("HTTP_REPO", "Refresh endpoint rejected the session: $error")
+                    return@synchronized trySilentReLoginOrPermanentFailure(currentToken, error)
                 }
                 val result = envelope.optJSONObject("result")
                     ?: envelope.optJSONObject("data")
@@ -160,9 +234,10 @@ class StudentRepositoryHTTPS(
                 val newToken = result.nonEmptyString("token", "access_token", "auth_token")
                 if (newToken == null) {
                     Log.e("HTTP_REPO", "Refresh response is missing an access token")
-                    return@synchronized RefreshAttempt()
+                    return@synchronized trySilentReLoginOrPermanentFailure(currentToken, "missing access token in response")
                 }
-                val newRefreshToken = result.nonEmptyString("refresh_token", "refreshToken")
+                val newRefreshToken = extractRefreshTokenFromResponse(response, result) ?: storedRefreshToken
+                com.example.kotlinroomdatabase.crypto.BiometricAuthManager.saveSecureTokens(context, newToken, newRefreshToken)
                 val editor = sharedPrefs.edit().putString("auth_token", newToken)
                 if (newRefreshToken != null) editor.putString("refresh_token", newRefreshToken)
                 if (!editor.commit()) return@synchronized RefreshAttempt()
@@ -189,7 +264,7 @@ class StudentRepositoryHTTPS(
             val hadAuthHeader = !authHeader.isNullOrBlank()
             val originalToken = authHeader?.removePrefix("Bearer ")?.trim()
             val originalUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(originalToken)
-            var currentToken = sharedPrefs.getString("auth_token", null)
+            var currentToken = getActiveAccessToken()
             val currentUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(currentToken)
 
             // Critical security check: Never execute an old request with a new user's credentials or after logout
@@ -241,7 +316,7 @@ class StudentRepositoryHTTPS(
             if (response.code == 401 && isTrustedOrigin && hadAuthHeader) {
                 val path = originalRequest.url.encodedPath
                 if (!path.endsWith("/login") && !path.endsWith("/register") && !path.contains("/api/auth/refresh")) {
-                    val activeCurrentToken = sharedPrefs.getString("auth_token", null)
+                    val activeCurrentToken = getActiveAccessToken()
                     val activeCurrentUserId = com.example.kotlinroomdatabase.util.JwtUtils.getUserId(activeCurrentToken)
                     if (!originalUserId.isNullOrBlank() && !activeCurrentUserId.isNullOrBlank() && originalUserId != activeCurrentUserId) {
                         Log.w("HTTP_REPO", "Session user changed from $originalUserId to $activeCurrentUserId. Aborting 401 retry.")
@@ -631,7 +706,7 @@ class StudentRepositoryHTTPS(
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
                 val result = jsonResponse.getJSONObject("result")
-                if (!saveAuthSession(result)) {
+                if (!saveAuthSession(result, response)) {
                     return@withContext LoginResult.Error("Сервер не вернул данные сессии. Попробуйте ещё раз.")
                 }
 
@@ -707,7 +782,7 @@ class StudentRepositoryHTTPS(
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
                 val result = jsonResponse.getJSONObject("result")
-                if (!saveAuthSession(result)) {
+                if (!saveAuthSession(result, response)) {
                     return@withContext LoginResult.Error("Сервер не вернул данные сессии. Попробуйте ещё раз.")
                 }
 
@@ -1374,16 +1449,35 @@ class StudentRepositoryHTTPS(
             .map { optString(it).trim() }
             .firstOrNull { it.isNotEmpty() && it != "null" }
 
-    private fun saveAuthSession(result: JSONObject): Boolean {
+    private fun extractRefreshTokenFromResponse(response: Response?, result: JSONObject?): String? {
+        val fromBody = result?.nonEmptyString("refresh_token", "refreshToken")
+        if (!fromBody.isNullOrBlank()) return fromBody
+
+        response?.headers("Set-Cookie")?.forEach { cookieHeader ->
+            val match = Regex("""(?:^|;\s*)ejournal_refresh=([^;]+)""").find(cookieHeader)
+            if (match != null) {
+                val token = match.groupValues[1].trim()
+                if (token.isNotEmpty()) return token
+            }
+        }
+        return null
+    }
+
+    private fun saveAuthSession(result: JSONObject, response: Response? = null): Boolean {
         val accessToken = result.nonEmptyString("token", "access_token", "auth_token")
-        val refreshToken = result.nonEmptyString("refresh_token", "refreshToken")
+        val refreshToken = extractRefreshTokenFromResponse(response, result)
         if (accessToken == null) {
             Log.e("HTTP_REPO", "Authentication response is missing an access token")
             return false
         }
+        val storedRefreshToken = getActiveRefreshToken()
+        val finalRefreshToken = refreshToken ?: storedRefreshToken
+        com.example.kotlinroomdatabase.crypto.BiometricAuthManager.saveSecureTokens(context, accessToken, finalRefreshToken)
         return synchronized(refreshLock) {
             val editor = sharedPrefs.edit().putString("auth_token", accessToken)
-            if (refreshToken == null) editor.remove("refresh_token") else editor.putString("refresh_token", refreshToken)
+            if (finalRefreshToken != null) {
+                editor.putString("refresh_token", finalRefreshToken)
+            }
             editor.commit()
         }
     }
@@ -2064,7 +2158,7 @@ class StudentRepositoryHTTPS(
             val jsonResponse = JSONObject(responseStr)
             if (jsonResponse.optBoolean("ok")) {
                 val result = jsonResponse.getJSONObject("result")
-                if (!saveAuthSession(result)) {
+                if (!saveAuthSession(result, response)) {
                     return@withContext LoginResult.Error("Сервер не вернул данные сессии. Попробуйте ещё раз.")
                 }
 

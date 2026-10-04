@@ -83,9 +83,12 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     val authPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                     val token = authPrefs.getString("auth_token", null)
+                        ?: com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureAccessToken(this)
                     val refreshToken = authPrefs.getString("refresh_token", null)
+                        ?: com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureRefreshToken(this)
                     if ((!token.isNullOrBlank() && JwtUtils.needsRefresh(token, 5L)) ||
-                        (token.isNullOrBlank() && !refreshToken.isNullOrBlank())
+                        token.isNullOrBlank() ||
+                        JwtUtils.isExpired(token)
                     ) {
                         lifecycleScope.launch(Dispatchers.IO) {
                             val db = com.example.kotlinroomdatabase.data.StudentDatabase.getInstance(this@MainActivity)

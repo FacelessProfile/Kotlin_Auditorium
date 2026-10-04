@@ -22,6 +22,9 @@ class HCEservice : HostApduService() {
         val STATUS_INS_NOT_SUPPORTED = byteArrayOf(0x6D, 0x00)
         val STATUS_CLA_NOT_SUPPORTED = byteArrayOf(0x6E, 0x00)
         val STATUS_FILE_NOT_FOUND = byteArrayOf(0x6A, 0x82.toByte())
+        private const val MIN_APDU_INTERVAL_MS = 600L
+        @Volatile
+        private var lastApduTime = 0L
     }
 
     override fun processCommandApdu(commandApdu: ByteArray?, extras: Bundle?): ByteArray {
@@ -29,6 +32,19 @@ class HCEservice : HostApduService() {
 
         val hexCommand = commandApdu.toHexString()
         Log.i(TAG, "Received APDU from Reader: $hexCommand")
+
+        val km = applicationContext.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        if (km != null && km.isKeyguardLocked) {
+            Log.w(TAG, "HCE rejected: device is locked")
+            return STATUS_FAILED
+        }
+
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastApduTime < MIN_APDU_INTERVAL_MS) {
+            Log.w(TAG, "HCE rejected: rate limit exceeded")
+            return STATUS_FAILED
+        }
+        lastApduTime = now
 
         // KA-06: Reject arbitrary commands; only respond to standard SELECT by DF/AID
         val cla = commandApdu[0]
@@ -76,8 +92,13 @@ class HCEservice : HostApduService() {
     private fun getStoredNfcPayload(): String? {
         val authPrefs = applicationContext.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val token = authPrefs.getString("auth_token", null)
+            ?: com.example.kotlinroomdatabase.crypto.BiometricAuthManager.getSecureAccessToken(applicationContext)
         if (token.isNullOrBlank()) {
             Log.w(TAG, "HCE rejected: no active authenticated session")
+            return null
+        }
+        if (!com.example.kotlinroomdatabase.util.JwtUtils.isUserSessionValid(applicationContext)) {
+            Log.w(TAG, "HCE rejected: authentication session has expired")
             return null
         }
 
