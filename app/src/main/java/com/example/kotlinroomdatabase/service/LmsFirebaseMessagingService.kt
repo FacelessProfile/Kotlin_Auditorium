@@ -58,9 +58,7 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "Received Cloud Push from: ${remoteMessage.from}")
 
         val mode = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getNotificationMode(applicationContext)
-        if (mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED ||
-            mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_LOCAL_ONLY
-        ) {
+        if (mode == com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED) {
             Log.d(TAG, "Cloud push ignored due to notification mode=$mode")
             return
         }
@@ -70,58 +68,39 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
+        val eventType = remoteMessage.data["event_type"] ?: remoteMessage.data["type"] ?: ""
+        if (eventType == "lesson_break") {
+            if (!com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isMidLessonBreakEnabled(applicationContext)) {
+                Log.d(TAG, "Lesson break notification ignored: mid-lesson break switch is OFF in student settings")
+                return
+            }
+        }
+
         // 1. Extract title and body from either Notification payload or Data payload
         val title = remoteMessage.notification?.title
             ?: remoteMessage.data["title"]
-            ?: "СибГУТИ Журнал"
+            ?: (if (eventType == "lesson_break") "Перемена (экватор пары)" else "СибГУТИ Журнал")
 
         val body = remoteMessage.notification?.body
             ?: remoteMessage.data["body"]
             ?: remoteMessage.data["message"]
-            ?: ""
+            ?: (if (eventType == "lesson_break") "Преподаватель разрешил перерыв на занятии." else "")
 
         if (title.isBlank() && body.isBlank()) {
             Log.w(TAG, "Empty FCM message payload received")
             return
         }
 
-        showCloudNotification(title, body, remoteMessage.data)
+        showCloudNotification(title, body, remoteMessage.data, eventType)
     }
 
-    private fun showCloudNotification(title: String, body: String, data: Map<String, String>) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private fun showCloudNotification(title: String, body: String, data: Map<String, String>, eventType: String = "") {
+        val isBreak = eventType == "lesson_break"
         val isVibrationOn = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isVibrationEnabled(this)
-        val isSoundOn = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isSoundEnabled(this)
+        val isSoundOn = !isBreak && com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isSoundEnabled(this)
 
-        // Create high-priority notification channel for Android O+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Облачные уведомления СибГУТИ",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Важные уведомления о расписании, оценках и безопасности"
-                enableVibration(isVibrationOn)
-                if (isVibrationOn) {
-                    vibrationPattern = longArrayOf(0, 400, 200, 400)
-                }
-                if (isSoundOn) {
-                    setSound(
-                        soundUri,
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
-                } else {
-                    setSound(null, null)
-                }
-                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                setShowBadge(true)
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
+        com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.ensureNotificationChannels(this)
+        val channelId = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getCloudChannelId(this, isBreak)
 
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -130,36 +109,54 @@ class LmsFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        val pendingIntentId = (System.currentTimeMillis() % 100000).toInt()
+        // Stable ID calculation to prevent stacking spam
+        val notifId = when {
+            isBreak -> 8888
+            data["notification_id"] != null -> {
+                data["notification_id"]!!.toIntOrNull() ?: 5000 + (title.hashCode() % 1000).let { if (it < 0) -it else it }
+            }
+            eventType == "security_login_alert" || data["category"] == "system" -> 7777
+            data["category"] == "grades" -> 6000 + (title.hashCode() % 1000).let { if (it < 0) -it else it }
+            data["category"] == "schedule" -> 5000 + (title.hashCode() % 1000).let { if (it < 0) -it else it }
+            else -> 4000 + (title.hashCode() % 1000).let { if (it < 0) -it else it }
+        }
+
         val pendingIntent = PendingIntent.getActivity(
             this,
-            pendingIntentId,
+            notifId,
             openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(com.example.kotlinroomdatabase.R.drawable.ic_notifications)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(if (isBreak) NotificationCompat.PRIORITY_DEFAULT else NotificationCompat.PRIORITY_HIGH)
+            .setGroup("lms_notifications_group")
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
-        if (isVibrationOn) {
-            notificationBuilder.setVibrate(longArrayOf(0, 400, 200, 400))
-        } else {
-            notificationBuilder.setVibrate(longArrayOf(0))
-        }
-
-        if (!isSoundOn) {
+        if (isBreak) {
+            notificationBuilder.setTimeoutAfter(5 * 60 * 1000L) // auto-dismiss after 5 mins
             notificationBuilder.setSilent(true)
+            com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.performMinimalBreakVibration(this)
+        } else {
+            if (isVibrationOn) {
+                notificationBuilder.setVibrate(com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getVibrationPattern(this))
+                com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.performVibration(this)
+            } else {
+                notificationBuilder.setVibrate(longArrayOf(0))
+            }
+            if (!isSoundOn) {
+                notificationBuilder.setSilent(true)
+            }
         }
 
         try {
-            NotificationManagerCompat.from(this).notify(pendingIntentId, notificationBuilder.build())
-            Log.d(TAG, "Displayed cloud push notification: $title - $body")
+            NotificationManagerCompat.from(this).notify(notifId, notificationBuilder.build())
+            Log.d(TAG, "Displayed cloud push notification: id=$notifId title=$title - body=$body")
         } catch (e: SecurityException) {
             Log.e(TAG, "Notification permission missing to show push", e)
         } catch (e: Exception) {

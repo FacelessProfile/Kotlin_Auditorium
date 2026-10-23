@@ -101,26 +101,7 @@ class LessonReminderReceiver : BroadcastReceiver() {
             android.util.Log.d("LessonReminderReceiver", "System notifications disabled, skipping vibration")
             return
         }
-        try {
-            val pattern = longArrayOf(0, 600, 250, 600, 250, 900)
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-                vibratorManager?.defaultVibrator ?: (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
-            } else {
-                @Suppress("DEPRECATION")
-                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(pattern, -1)
-            }
-            android.util.Log.d("LessonReminderReceiver", "Vibration executed")
-        } catch (e: Exception) {
-            android.util.Log.e("LessonReminderReceiver", "Vibration failed", e)
-        }
+        LessonReminderScheduler.performVibration(context)
     }
 
     private fun showNotification(
@@ -138,32 +119,8 @@ class LessonReminderReceiver : BroadcastReceiver() {
         val isVibrationOn = isTest || LessonReminderScheduler.isVibrationEnabled(context)
         val isSoundOn = LessonReminderScheduler.isSoundEnabled(context)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val soundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Оповещения о начале пар",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Предупреждение за несколько минут до начала занятия"
-                enableVibration(isVibrationOn)
-                if (isVibrationOn) {
-                    vibrationPattern = longArrayOf(0, 600, 250, 600, 250, 900)
-                }
-                if (isSoundOn) {
-                    setSound(soundUri, android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                    )
-                } else {
-                    setSound(null, null)
-                }
-                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                setShowBadge(true)
-            }
-            sysNotificationManager.createNotificationChannel(channel)
-        }
+        LessonReminderScheduler.ensureNotificationChannels(context)
+        val channelId = LessonReminderScheduler.getReminderChannelId(context)
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -179,8 +136,9 @@ class LessonReminderReceiver : BroadcastReceiver() {
         val roomText = if (room.isNotBlank()) " в ауд. $room" else ""
         val contentText = "Через $minutes мин ($startTime) начнётся $lessonType$roomText"
         val noteFooter = if (isTest) "Тест оповещения выполнен успешно." else "Не забудьте отметиться на занятии!"
+        val remainingMs = (startMillis - System.currentTimeMillis()).coerceAtLeast(1000L)
 
-        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(contentText)
@@ -190,12 +148,14 @@ class LessonReminderReceiver : BroadcastReceiver() {
             .setWhen(startMillis)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
+            .setTimeoutAfter(remainingMs)
+            .setGroup("lms_notifications_group")
             .setOnlyAlertOnce(true) // DO NOT buzz/alert on text updates
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
         if (isVibrationOn) {
-            notificationBuilder.setVibrate(longArrayOf(0, 600, 250, 600, 250, 900))
+            notificationBuilder.setVibrate(LessonReminderScheduler.getVibrationPattern(context))
         } else {
             notificationBuilder.setVibrate(longArrayOf(0))
         }

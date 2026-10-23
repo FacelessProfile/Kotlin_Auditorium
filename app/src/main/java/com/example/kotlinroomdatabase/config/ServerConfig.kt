@@ -15,11 +15,11 @@ object ServerConfig {
     private const val TAG = "ServerConfig"
 
     // =========================================================================
-    // PRODUCTION DEFAULT: Set to false for external production server (https://lms.signal.qlabs.pro:9001)
+    // PRODUCTION DEFAULT: Set to false for external production server (https://academus.site)
     // =========================================================================
     const val USE_LOCAL_SERVER_BY_DEFAULT: Boolean = false
 
-    const val REMOTE_SERVER_URL: String = "https://lms.signal.qlabs.pro:9001"
+    const val REMOTE_SERVER_URL: String = "https://academus.site"
     const val LOCAL_SERVER_URL: String = "https://127.0.0.1:9001"
     const val LOCAL_WIFI_SERVER_URL: String = "https://192.168.0.55:9001"
     const val EMULATOR_SERVER_URL: String = "https://10.0.2.2:9001"
@@ -131,7 +131,7 @@ object ServerConfig {
     fun showServerSwitcherDialog(context: Context, onServerChanged: (() -> Unit)? = null) {
         val currentUrl = getBaseUrl(context)
         val options = arrayOf(
-            "Внешний сервер (https://lms.signal.qlabs.pro:9001)",
+            "Внешний сервер (https://academus.site)",
             "Локальный Wi-Fi (https://192.168.0.55:9001)",
             "Локальный Loopback / ADB USB (https://127.0.0.1:9001)",
             "Эмулятор Android (https://10.0.2.2:9001)",
@@ -142,7 +142,7 @@ object ServerConfig {
             currentUrl.contains("192.168.0.55") -> 1
             currentUrl.contains("127.0.0.1") -> 2
             currentUrl.contains("10.0.2.2") -> 3
-            !currentUrl.contains("lms.signal.qlabs.pro") -> 4
+            !currentUrl.contains("academus.site") && !currentUrl.contains("lms.signal.qlabs.pro") -> 4
             else -> 0
         }
 
@@ -238,8 +238,11 @@ object ServerConfig {
             url.startsWith("http://109.172.114.128:9001") -> url.replace("http://109.172.114.128:9001", baseUrl)
             url.startsWith("https://192.168.0.56:9001") -> url.replace("https://192.168.0.56:9001", baseUrl)
             url.startsWith("https://192.168.0.55:9001") -> url.replace("https://192.168.0.55:9001", baseUrl)
-            url.startsWith("https://lms.signal.qlabs.pro:9001") && isLocalServer(context) ->
-                url.replace("https://lms.signal.qlabs.pro:9001", baseUrl)
+            url.startsWith("https://lms.signal.qlabs.pro:9001") -> url.replace("https://lms.signal.qlabs.pro:9001", baseUrl)
+            url.startsWith("https://academus.site") && isLocalServer(context) ->
+                url.replace("https://academus.site", baseUrl)
+            url.startsWith("https://lms.signal.qlabs.pro") && isLocalServer(context) ->
+                url.replace("https://lms.signal.qlabs.pro", baseUrl)
             url.startsWith("https://") || url.startsWith("http://") -> url
             else -> "$baseUrl${if (url.startsWith("/")) "" else "/"}$url"
         }

@@ -84,7 +84,7 @@ class ApiIntegrationUnitTest {
         try {
             val client = getOkHttpClient()
             val request = Request.Builder()
-                .url("https://lms.signal.qlabs.pro:9001/healthz")
+                .url("https://academus.site/healthz")
                 .get()
                 .build()
 
@@ -100,7 +100,7 @@ class ApiIntegrationUnitTest {
         try {
             val client = getOkHttpClient()
             val request = Request.Builder()
-                .url("https://lms.signal.qlabs.pro:9001/api/semesters")
+                .url("https://academus.site/api/semesters")
                 .get()
                 .build()
 

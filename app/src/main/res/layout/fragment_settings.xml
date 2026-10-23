@@ -256,43 +256,26 @@
                         android:layout_marginVertical="12dp"
                         android:background="?attr/sib_border_subtle" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Режим доставки уведомлений"
-                        android:textColor="?attr/sib_text_secondary"
-                        android:textSize="12sp" />
-
-                    <RadioGroup
-                        android:id="@+id/rgNotificationMode"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp">
-
-                        <RadioButton
-                            android:id="@+id/rbModeFcmAndLocal"
-                            android:layout_width="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="FCM + Фоновая служба (Макс. надёжность)"
-                            android:textColor="?attr/sib_text_primary"
-                            android:textSize="13sp" />
-
-                        <RadioButton
-                            android:id="@+id/rbModeFcmOnly"
-                            android:layout_width="match_parent"
+                            android:layout_weight="1"
+                            android:text="Доставка: Только облачные уведомления (FCM)"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="12sp" />
+                        <TextView
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Только FCM (Экономия батареи, без службы)"
-                            android:textColor="?attr/sib_text_primary"
-                            android:textSize="13sp" />
-
-                        <RadioButton
-                            android:id="@+id/rbModeLocalOnly"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Только локальные (Опрос без Google FCM)"
-                            android:textColor="?attr/sib_text_primary"
-                            android:textSize="13sp" />
-                    </RadioGroup>
+                            android:text="Активно"
+                            android:textColor="@color/sib_blue_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
                     <View
                         android:layout_width="match_parent"
@@ -332,6 +315,99 @@
 
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switchVibration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- Vibration Intensity Level -->
+                    <LinearLayout
+                        android:id="@+id/layoutVibrationLevel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Уровень вибрации"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="12sp" />
+
+                        <RadioGroup
+                            android:id="@+id/rgVibrationLevel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:orientation="horizontal">
+
+                            <RadioButton
+                                android:id="@+id/rbVibLight"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Слабая"
+                                android:textColor="?attr/sib_text_primary"
+                                android:textSize="13sp" />
+
+                            <RadioButton
+                                android:id="@+id/rbVibMedium"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Обычная"
+                                android:textColor="?attr/sib_text_primary"
+                                android:textSize="13sp" />
+                        </RadioGroup>
+
+                        <TextView
+                            android:id="@+id/tvVibrationLevelDesc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Обычная: 2 отчётливых импульса (рекомендуется)"
+                            android:textColor="?attr/sib_text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="?attr/sib_border_subtle" />
+
+                    <!-- Mid-lesson break switch (Перемена на половине пары) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Оповещение о перемене"
+                                android:textColor="?attr/sib_text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Тихий виброотклик на перемене (по согласованию с преподавателем)"
+                                android:textColor="?attr/sib_text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchMidLessonBreak"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
                     </LinearLayout>

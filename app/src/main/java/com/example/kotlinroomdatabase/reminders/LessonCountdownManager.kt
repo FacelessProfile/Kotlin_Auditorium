@@ -57,15 +57,23 @@ object LessonCountdownManager {
             while (isActive) {
                 val now = System.currentTimeMillis()
                 val diffMs = lessonStartMillis - now
-                val remainingMin = if (diffMs > 0) ((diffMs + 59_999L) / 60_000L).toInt() else 0
 
-                val contentText = if (remainingMin > 0) {
-                    "Через $remainingMin мин ($startTime) начнётся $lessonType$roomText"
-                } else {
-                    "Пара началась! ($startTime) $lessonType$roomText"
+                // Auto-delete notification immediately when the lesson starts
+                if (diffMs <= 0) {
+                    try {
+                        notificationManager.cancel(notificationId)
+                        Log.d("LessonCountdownManager", "Lesson started for '$subject', notification $notificationId automatically cleared")
+                    } catch (e: Exception) {
+                        Log.e("LessonCountdownManager", "Failed to clear notification on lesson start", e)
+                    }
+                    break
                 }
 
-                val notification = NotificationCompat.Builder(appContext, LessonReminderReceiver.CHANNEL_ID)
+                val remainingMin = ((diffMs + 59_999L) / 60_000L).toInt()
+                val contentText = "Через $remainingMin мин ($startTime) начнётся $lessonType$roomText"
+
+                val channelId = LessonReminderScheduler.getReminderChannelId(appContext)
+                val notification = NotificationCompat.Builder(appContext, channelId)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle("Скоро пара: $subject")
                     .setContentText(contentText)
@@ -75,6 +83,8 @@ object LessonCountdownManager {
                     .setWhen(lessonStartMillis)
                     .setUsesChronometer(true)
                     .setChronometerCountDown(true)
+                    .setTimeoutAfter(diffMs.coerceAtLeast(1000L)) // System auto-cancel when time arrives
+                    .setGroup("lms_notifications_group")
                     .setOnlyAlertOnce(true) // CRITICAL: NEVER buzz or play sound on countdown updates
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
@@ -94,12 +104,6 @@ object LessonCountdownManager {
                     }
                 } catch (e: Exception) {
                     Log.e("LessonCountdownManager", "Failed to update countdown notification", e)
-                }
-
-                if (remainingMin <= 0) {
-                    // Keep "Пара началась" notification for 3 minutes, then exit countdown loop
-                    delay(180_000L)
-                    break
                 }
 
                 // Wait until the next minute boundary (:00 seconds)

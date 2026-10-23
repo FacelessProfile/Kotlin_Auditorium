@@ -310,6 +310,9 @@ class MainActivity : AppCompatActivity() {
         // Automatic in-app update scanner on launch
         com.example.kotlinroomdatabase.update.AppUpdateManager.checkForUpdatesOnLaunch(this)
 
+        // Initialize notification channels with custom vibration settings
+        com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.ensureNotificationChannels(this)
+
         handleFcmIntentExtras(intent)
 
         binding.navView.setNavigationItemSelectedListener { menuItem ->
@@ -609,13 +612,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkNotificationPermission() {
         com.example.kotlinroomdatabase.util.LocalNotificationHelper.createNotificationChannel(this)
-        val mode = com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.getNotificationMode(this)
-        if (mode != com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_FCM_ONLY &&
-            mode != com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.MODE_DISABLED &&
-            com.example.kotlinroomdatabase.reminders.LessonReminderScheduler.isNotificationsEnabled(this)
-        ) {
-            com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(this)
-        }
+        com.example.kotlinroomdatabase.service.NotificationForegroundService.stopService(this)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)

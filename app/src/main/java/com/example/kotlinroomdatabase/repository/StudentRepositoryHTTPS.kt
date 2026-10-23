@@ -66,7 +66,8 @@ class StudentRepositoryHTTPS(
             sslContext.init(null, trustAllCerts, java.security.SecureRandom())
             builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
             builder.hostnameVerifier { hostname, _ ->
-                hostname.contains("lms.signal.qlabs.pro") ||
+                hostname.contains("academus.site") ||
+                        hostname.contains("lms.signal.qlabs.pro") ||
                         hostname == "127.0.0.1" ||
                         hostname == "localhost" ||
                         hostname.startsWith("192.168.") ||
@@ -98,12 +99,13 @@ class StudentRepositoryHTTPS(
             val jsonRequest = JSONObject().apply {
                 put("login", loginName)
                 put("password", passwordRaw)
+                put("client_type", "mobile")
             }
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
             val request = Request.Builder()
                 .url("$BASE_URL/login")
                 .header("X-Client-Platform", "android")
-                .header("User-Agent", "Mozilla/5.0 (Android; Mobile; SibSUTIS/1.3) OkHttp/4.12.0")
+                .header("User-Agent", "Mozilla/5.0 (Android; Mobile; Kotlin_Auditorium/1.3) OkHttp/4.12.0")
                 .post(body)
                 .build()
             val rawClient = getUnsafeOkHttpClientBuilder()
@@ -687,11 +689,14 @@ class StudentRepositoryHTTPS(
             val jsonRequest = JSONObject().apply {
                 put("login", loginName)
                 put("password", passwordRaw)
+                put("client_type", "mobile")
             }
 
             val body = jsonRequest.toString().toRequestBody(JSON_TYPE)
             val request = Request.Builder()
                 .url("$BASE_URL/login")
+                .header("X-Client-Platform", "android")
+                .header("User-Agent", "Mozilla/5.0 (Android; Mobile; Kotlin_Auditorium/1.3) OkHttp/4.12.0")
                 .post(body)
                 .build()
 

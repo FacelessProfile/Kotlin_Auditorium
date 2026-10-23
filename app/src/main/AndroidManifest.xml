@@ -128,7 +128,7 @@
         <receiver
             android:name=".reminders.LessonReminderReceiver"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="ru.sibsutis.ejournal.ACTION_LESSON_REMINDER" />
             </intent-filter>

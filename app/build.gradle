@@ -21,7 +21,7 @@ def getGitCommitCount = { ->
     }
 }
 
-def baseVersionName = "1.3"
+def baseVersionName = "1.4"
 def gitCommitCount = getGitCommitCount()
 def autoVersionCode = gitCommitCount > 0 ? gitCommitCount : 3
 def autoVersionName = gitCommitCount > 0 ? "${baseVersionName}.${gitCommitCount}" : baseVersionName

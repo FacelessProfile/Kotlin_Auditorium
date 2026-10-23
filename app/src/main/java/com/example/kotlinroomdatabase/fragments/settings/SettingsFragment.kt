@@ -161,52 +161,76 @@ class SettingsFragment : Fragment() {
         binding.switchNotificationsMaster.isChecked = isNotifMasterEnabled
         binding.layoutNotificationsConfig.visibility = if (isNotifMasterEnabled) View.VISIBLE else View.GONE
 
-        // Delivery Mode
-        val currentMode = LessonReminderScheduler.getNotificationMode(context)
-        when (currentMode) {
-            LessonReminderScheduler.MODE_FCM_ONLY -> binding.rbModeFcmOnly.isChecked = true
-            LessonReminderScheduler.MODE_LOCAL_ONLY -> binding.rbModeLocalOnly.isChecked = true
-            else -> binding.rbModeFcmAndLocal.isChecked = true
-        }
-
-        binding.rgNotificationMode.setOnCheckedChangeListener { _, checkedId ->
-            val newMode = when (checkedId) {
-                R.id.rbModeFcmOnly -> LessonReminderScheduler.MODE_FCM_ONLY
-                R.id.rbModeLocalOnly -> LessonReminderScheduler.MODE_LOCAL_ONLY
-                else -> LessonReminderScheduler.MODE_FCM_AND_LOCAL
-            }
-            LessonReminderScheduler.setNotificationMode(context, newMode)
-            if (newMode == LessonReminderScheduler.MODE_FCM_ONLY) {
-                com.example.kotlinroomdatabase.service.NotificationForegroundService.stopService(context)
-                Toast.makeText(context, "Режим FCM: фоновая служба остановлена", Toast.LENGTH_SHORT).show()
-            } else {
-                com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(context)
-                Toast.makeText(context, "Режим обновлен", Toast.LENGTH_SHORT).show()
-            }
-        }
-
         // Master switch
         binding.switchNotificationsMaster.setOnCheckedChangeListener { _, isChecked ->
             LessonReminderScheduler.setNotificationsEnabled(context, isChecked)
             binding.layoutNotificationsConfig.visibility = if (isChecked) View.VISIBLE else View.GONE
+            com.example.kotlinroomdatabase.service.NotificationForegroundService.stopService(context)
             if (isChecked) {
-                val mode = LessonReminderScheduler.getNotificationMode(context)
-                if (mode != LessonReminderScheduler.MODE_FCM_ONLY) {
-                    com.example.kotlinroomdatabase.service.NotificationForegroundService.startService(context)
-                }
                 Toast.makeText(context, "Уведомления включены", Toast.LENGTH_SHORT).show()
             } else {
-                com.example.kotlinroomdatabase.service.NotificationForegroundService.stopService(context)
-                Toast.makeText(context, "Уведомления и вибрация отключены", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Уведомления отключены", Toast.LENGTH_SHORT).show()
             }
         }
 
         // Vibration
         binding.switchVibration.isChecked = LessonReminderScheduler.isVibrationEnabled(context)
+        binding.layoutVibrationLevel.visibility = if (binding.switchVibration.isChecked) View.VISIBLE else View.GONE
         binding.switchVibration.setOnCheckedChangeListener { _, isChecked ->
             LessonReminderScheduler.setVibrationEnabled(context, isChecked)
+            LessonReminderScheduler.ensureNotificationChannels(context)
+            binding.layoutVibrationLevel.visibility = if (isChecked) View.VISIBLE else View.GONE
             val msg = if (isChecked) "Вибрация включена" else "Вибрация отключена"
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            if (isChecked) {
+                LessonReminderScheduler.performVibration(context)
+            }
+        }
+
+        // Vibration Level (Adjustable Intensity: Light or Normal)
+        fun updateVibrationDescription(level: Int) {
+            binding.tvVibrationLevelDesc.text = when (level) {
+                LessonReminderScheduler.VIBRATION_LEVEL_LIGHT -> "Слабая: 1 короткий деликатный клик"
+                else -> "Обычная: 2 отчётливых ритмичных импульса (рекомендуется)"
+            }
+        }
+
+        val initialVibLevel = LessonReminderScheduler.getVibrationLevel(context)
+        if (initialVibLevel == LessonReminderScheduler.VIBRATION_LEVEL_LIGHT) {
+            binding.rbVibLight.isChecked = true
+        } else {
+            binding.rbVibMedium.isChecked = true
+        }
+        updateVibrationDescription(initialVibLevel)
+
+        binding.rgVibrationLevel.setOnCheckedChangeListener { _, checkedId ->
+            val level = if (checkedId == R.id.rbVibLight) {
+                LessonReminderScheduler.VIBRATION_LEVEL_LIGHT
+            } else {
+                LessonReminderScheduler.VIBRATION_LEVEL_MEDIUM
+            }
+            LessonReminderScheduler.setVibrationLevel(context, level)
+            LessonReminderScheduler.ensureNotificationChannels(context)
+            updateVibrationDescription(level)
+            LessonReminderScheduler.performVibration(context, level)
+            val levelMsg = if (level == LessonReminderScheduler.VIBRATION_LEVEL_LIGHT) {
+                "Вибрация: Слабая (1 клик)"
+            } else {
+                "Вибрация: Обычная (2 импульса)"
+            }
+            Toast.makeText(context, levelMsg, Toast.LENGTH_SHORT).show()
+        }
+
+        // Mid-lesson break switch (Перемена на половине пары)
+        binding.switchMidLessonBreak.isChecked = LessonReminderScheduler.isMidLessonBreakEnabled(context)
+        binding.switchMidLessonBreak.setOnCheckedChangeListener { _, isChecked ->
+            LessonReminderScheduler.setMidLessonBreakEnabled(context, isChecked)
+            if (isChecked) {
+                LessonReminderScheduler.performMinimalBreakVibration(context)
+                Toast.makeText(context, "Оповещение о перемене включено (тихий тик)", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Оповещение о перемене отключено", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Sound

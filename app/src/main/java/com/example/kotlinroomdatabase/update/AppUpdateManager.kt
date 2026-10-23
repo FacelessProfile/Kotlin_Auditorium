@@ -63,7 +63,8 @@ object AppUpdateManager {
             sslContext.init(null, trustAllCerts, SecureRandom())
             builder.sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
             builder.hostnameVerifier { hostname, _ ->
-                hostname.contains("lms.signal.qlabs.pro") ||
+                hostname.contains("academus.site") ||
+                        hostname.contains("lms.signal.qlabs.pro") ||
                         hostname == "127.0.0.1" ||
                         hostname == "localhost" ||
                         hostname.startsWith("192.168.") ||
@@ -137,7 +138,8 @@ object AppUpdateManager {
             val isCritical = json.optBoolean("is_critical", false)
 
             val currentVersionCode = getCurrentVersionCode(context)
-            Log.d(TAG, "Local version: $currentVersionCode, Server version: $serverVersionCode ($versionName)")
+            val currentVersionName = getCurrentVersionName(context)
+            Log.d(TAG, "Local version: $currentVersionCode ($currentVersionName), Server version: $serverVersionCode ($versionName)")
 
             val info = AppVersionInfo(
                 versionCode = serverVersionCode,
@@ -149,7 +151,27 @@ object AppUpdateManager {
                 isCritical = isCritical
             )
 
-            if (serverVersionCode > currentVersionCode) {
+            fun isVersionNameNewer(serverName: String, localName: String): Boolean {
+                return try {
+                    val sParts = serverName.split(".").mapNotNull { it.toIntOrNull() }
+                    val lParts = localName.split(".").mapNotNull { it.toIntOrNull() }
+                    val maxLen = maxOf(sParts.size, lParts.size)
+                    for (i in 0 until maxLen) {
+                        val s = sParts.getOrElse(i) { 0 }
+                        val l = lParts.getOrElse(i) { 0 }
+                        if (s > l) return true
+                        if (s < l) return false
+                    }
+                    false
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
+            val hasUpdate = serverVersionCode > currentVersionCode ||
+                    (serverVersionCode == currentVersionCode && isVersionNameNewer(versionName, currentVersionName))
+
+            if (hasUpdate) {
                 Result.success(info)
             } else {
                 Result.success(null) // No update needed
