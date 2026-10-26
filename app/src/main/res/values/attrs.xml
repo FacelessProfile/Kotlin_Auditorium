@@ -6,4 +6,9 @@
     <attr name="sib_text_primary" format="color|reference" />
     <attr name="sib_text_secondary" format="color|reference" />
     <attr name="sib_text_muted" format="color|reference" />
+    <attr name="sib_header_background" format="reference|color" />
+    <attr name="sib_header_title" format="color|reference" />
+    <attr name="sib_header_subtitle" format="color|reference" />
+    <attr name="sib_toolbar_background" format="color|reference" />
+    <attr name="sib_toolbar_foreground" format="color|reference" />
 </resources>

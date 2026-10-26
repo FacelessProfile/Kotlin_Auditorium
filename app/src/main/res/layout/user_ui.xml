@@ -32,7 +32,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_hero_gradient"
+                    android:background="?attr/sib_header_background"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:padding="20dp">
@@ -48,7 +48,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Панель студента"
-                            android:textColor="#D0E2FF"
+                            android:textColor="?attr/sib_header_subtitle"
                             android:textSize="13sp"
                             android:textStyle="bold" />
 
@@ -58,7 +58,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="Загрузка..."
-                            android:textColor="@color/sib_text_white"
+                            android:textColor="?attr/sib_header_title"
                             android:textSize="22sp"
                             android:textStyle="bold" />
 
@@ -68,7 +68,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="СибГУТИ"
-                            android:textColor="#D0E2FF"
+                            android:textColor="?attr/sib_header_subtitle"
                             android:textSize="14sp" />
                     </LinearLayout>
 

@@ -18,7 +18,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Новая активность"
-            android:textColor="@color/sib_text_primary"
+            android:textColor="?attr/sib_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
                 android:buttonTint="@color/sib_blue_primary"
                 android:checked="true"
                 android:text="Задача (Task)"
-                android:textColor="@color/sib_text_primary"
+                android:textColor="?attr/sib_text_primary"
                 android:textSize="14sp" />
 
             <RadioButton
@@ -48,7 +48,7 @@
                 android:layout_weight="1"
                 android:buttonTint="#DC2626"
                 android:text="Баг (Bug)"
-                android:textColor="@color/sib_text_primary"
+                android:textColor="?attr/sib_text_primary"
                 android:textSize="14sp" />
         </RadioGroup>
 
@@ -72,7 +72,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textCapSentences"
-                android:textColor="@color/sib_text_primary"
+                android:textColor="?attr/sib_text_primary"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -98,7 +98,7 @@
                 android:gravity="top|start"
                 android:inputType="textMultiLine|textCapSentences"
                 android:minLines="3"
-                android:textColor="@color/sib_text_primary"
+                android:textColor="?attr/sib_text_primary"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -108,7 +108,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:text="Приоритет / Критичность"
-            android:textColor="@color/sib_text_secondary"
+            android:textColor="?attr/sib_text_secondary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -128,7 +128,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:text="Ответственный (Assignee)"
-            android:textColor="@color/sib_text_secondary"
+            android:textColor="?attr/sib_text_secondary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -156,7 +156,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Отмена"
-                android:textColor="@color/sib_text_secondary" />
+                android:textColor="?attr/sib_text_secondary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCreate"

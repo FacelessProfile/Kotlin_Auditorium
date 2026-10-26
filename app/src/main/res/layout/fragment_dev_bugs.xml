@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/sib_bg_page">
+    android:background="?attr/sib_bg_page">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -41,7 +41,7 @@
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="Открытые"
-                android:textColor="@color/sib_text_secondary"
+                android:textColor="?attr/sib_text_secondary"
                 android:textSize="12sp"
                 app:cornerRadius="19dp"
                 app:strokeColor="@color/sib_border" />
@@ -55,7 +55,7 @@
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="Закрытые"
-                android:textColor="@color/sib_text_secondary"
+                android:textColor="?attr/sib_text_secondary"
                 android:textSize="12sp"
                 app:cornerRadius="19dp"
                 app:strokeColor="@color/sib_border" />

@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" style="@style/AnalyticsCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="10dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <TextView android:id="@+id/tvName" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_subject" android:textStyle="bold"/>
+        <TextView android:id="@+id/tvRating" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_rating" android:layout_marginTop="10dp"/>
+        <com.example.kotlinroomdatabase.view.TargetProgressView android:id="@+id/barRating" android:layout_width="match_parent" android:layout_height="14dp" android:importantForAccessibility="no"/>
+        <TextView android:id="@+id/tvAttendance" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_attendance" android:layout_marginTop="10dp"/>
+        <com.example.kotlinroomdatabase.view.TargetProgressView android:id="@+id/barAttendance" android:layout_width="match_parent" android:layout_height="14dp" android:importantForAccessibility="no"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

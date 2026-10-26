@@ -1,0 +1,7 @@
+<resources>
+    <color name="workspace_page">#0D1522</color>
+    <color name="workspace_card">#172233</color>
+    <color name="workspace_text">#ECF1F8</color>
+    <color name="workspace_muted">#ACB9CD</color>
+    <color name="workspace_border">#304156</color>
+</resources>

@@ -24,11 +24,11 @@
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                android:background="?attr/colorPrimary"
+                android:background="?attr/sib_toolbar_background"
                 app:contentInsetStartWithNavigation="0dp"
-                app:navigationIconTint="@color/white"
+                app:navigationIconTint="?attr/sib_toolbar_foreground"
                 app:titleTextAppearance="@style/SibToolbarTitle"
-                app:titleTextColor="?attr/colorOnPrimary">
+                app:titleTextColor="?attr/sib_toolbar_foreground">
 
                 <!-- Custom Header Actions: Role Badge & Notifications -->
                 <LinearLayout
@@ -71,7 +71,7 @@
                             android:layout_gravity="center"
                             android:contentDescription="Уведомления"
                             android:src="@drawable/ic_notifications"
-                            app:tint="?attr/colorOnPrimary" />
+                            app:tint="?attr/sib_toolbar_foreground" />
 
                         <TextView
                             android:id="@+id/tvUnreadBadge"

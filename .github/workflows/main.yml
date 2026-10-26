@@ -123,8 +123,8 @@ jobs:
           input_notes = os.environ.get('INPUT_NOTES', '').strip()
           commit_msg = os.environ.get('COMMIT_MSG', '').strip()
           raw_notes = input_notes if input_notes else (commit_msg if commit_msg else f'Обновление мобильного приложения v{v_name} (сборка {v_code})')
-          # Escape newlines and double quotes safely
-          clean_notes = ' '.join(raw_notes.splitlines()).replace('\"', '\\\"')
+          # Keep output to one line; JSON serialization happens during publication
+          clean_notes = ' '.join(raw_notes.splitlines())
 
           f_size = os.environ.get('FILE_SIZE', '0')
           sha = os.environ.get('SHA256_HASH', '')
@@ -155,6 +155,9 @@ jobs:
       (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_to_prod == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Release Verification Script
+        uses: actions/checkout@v4
+
       - name: Download Built APK Artifact
         uses: actions/download-artifact@v4
         with:
@@ -197,47 +200,51 @@ jobs:
           script: |
             set -e
             cd /home/sibsutis-ms/ejournal
-            SOURCE_APK="/tmp/app-release.apk"
-            TARGET_APK="./downloads/app-release.apk"
-            VERSION_FILE="./downloads/version.json"
             
-            if [ -f "$SOURCE_APK" ]; then
-              if [ -f "./scripts/publish_apk.sh" ]; then
-                chmod +x ./scripts/publish_apk.sh
-                ./scripts/publish_apk.sh "$SOURCE_APK" "$VERSION_CODE" "$VERSION_NAME" "$RELEASE_NOTES"
-              else
-                mkdir -p ./downloads
-                cp -f "$SOURCE_APK" "$TARGET_APK"
-                chmod 644 "$TARGET_APK"
-                export FILE_SIZE=$(stat -c%s "$TARGET_APK")
-                export SHA256_HASH=$(sha256sum "$TARGET_APK" | awk '{print $1}')
-                python3 -c "
-                import os, json
-                data = {
-                    'version_code': int(os.environ.get('VERSION_CODE', 1)),
-                    'version_name': os.environ.get('VERSION_NAME', '1.0'),
-                    'download_url': '/downloads/app-release.apk',
-                    'file_size': int(os.environ.get('FILE_SIZE', 0)),
-                    'sha256': os.environ.get('SHA256_HASH', ''),
-                    'release_notes': os.environ.get('RELEASE_NOTES', ''),
-                    'is_critical': False
-                }
-                with open('$VERSION_FILE', 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                "
-                chmod 644 "$VERSION_FILE"
-              fi
-              rm -f "$SOURCE_APK"
-              
-              echo "=== Successfully published APK on production server! ==="
-              cat "$VERSION_FILE"
-            else
-              echo "Error: $SOURCE_APK was not found after upload"
-              exit 1
-            fi
+            # Publish both files ourselves: older server scripts may leave stale metadata.
+            python3 - <<'PYTHON'
+            import hashlib, json, os, shutil, tempfile
+            from pathlib import Path
+            source = Path("/tmp/app-release.apk")
+            directory = Path("downloads")
+            directory.mkdir(exist_ok=True)
+            apk = directory / "app-release.apk"
+            version = directory / "version.json"
+            if not source.is_file():
+                raise SystemExit("Uploaded APK not found")
+            if apk.exists():
+                shutil.copy2(apk, directory / "previous-release.apk")
+            if version.exists():
+                shutil.copy2(version, directory / "previous-version.json")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            metadata = {
+                "version_code": int(os.environ["VERSION_CODE"]),
+                "version_name": os.environ["VERSION_NAME"],
+                "download_url": "/downloads/app-release.apk",
+                "file_size": source.stat().st_size,
+                "sha256": digest,
+                "release_notes": os.environ.get("RELEASE_NOTES", ""),
+                "is_critical": False,
+            }
+            with tempfile.NamedTemporaryFile(dir=directory, delete=False) as staged:
+                staged_apk = Path(staged.name)
+                with source.open("rb") as incoming:
+                    shutil.copyfileobj(incoming, staged)
+            staged_apk.chmod(0o644)
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory, delete=False) as staged:
+                json.dump(metadata, staged, ensure_ascii=False, indent=2)
+                staged_version = Path(staged.name)
+            staged_version.chmod(0o644)
+            os.replace(staged_apk, apk)
+            os.replace(staged_version, version)
+            source.unlink()
+            print(json.dumps(metadata, ensure_ascii=False))
+            PYTHON
 
-      - name: Verify Live Update Endpoint
-        run: |
-          echo "Waiting for live update endpoint verification..."
-          sleep 2
-          curl -sf -k https://lms.signal.qlabs.pro:9001/api/app/version || true
+      - name: Verify Published Version and APK
+        env:
+          EXPECTED_VERSION_CODE: ${{ needs.build.outputs.version_code }}
+          EXPECTED_VERSION_NAME: ${{ needs.build.outputs.version_name }}
+          EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
+          EXPECTED_FILE_SIZE: ${{ needs.build.outputs.file_size }}
+        run: python3 scripts/verify_mobile_release.py

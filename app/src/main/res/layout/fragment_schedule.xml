@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_main">
+    android:background="?attr/sib_bg_page">
 
     <!-- Date Navigation Header Strip -->
     <LinearLayout
@@ -14,7 +14,7 @@
         android:gravity="center_vertical"
         android:paddingHorizontal="14dp"
         android:paddingVertical="10dp"
-        android:background="@color/card_surface"
+        android:background="?attr/sib_bg_card"
         android:elevation="2dp">
 
         <!-- Previous Day Button -->
@@ -47,7 +47,7 @@
                 android:text="27 августа 2026"
                 android:textSize="15.5sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_main"/>
+                android:textColor="?attr/sib_text_primary"/>
 
             <TextView
                 android:id="@+id/tvSelectedWeekday"
@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:text="Четверг • Нечётная неделя"
                 android:textSize="11.5sp"
-                android:textColor="@color/text_muted"
+                android:textColor="?attr/sib_text_secondary"
                 android:layout_marginTop="1dp"/>
         </LinearLayout>
 
@@ -131,7 +131,7 @@
                 android:text="В этот день занятий нет"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_main"/>
+                android:textColor="?attr/sib_text_primary"/>
 
             <TextView
                 android:id="@+id/tvEmptySubtitle"
@@ -139,7 +139,7 @@
                 android:layout_height="wrap_content"
                 android:text="В расписании на выбранный день не найдено запланированных пар"
                 android:textSize="12sp"
-                android:textColor="@color/text_muted"
+                android:textColor="?attr/sib_text_secondary"
                 android:gravity="center"
                 android:layout_marginTop="4dp"/>
         </LinearLayout>

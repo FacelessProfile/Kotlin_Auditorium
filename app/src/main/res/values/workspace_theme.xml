@@ -1,0 +1,33 @@
+<resources>
+    <style name="Theme.Academus.Workspace" parent="Theme.KotlinRoomDatabase">
+        <item name="sib_bg_page">@color/workspace_page</item>
+        <item name="sib_bg_card">@color/workspace_card</item>
+        <item name="sib_text_primary">@color/workspace_text</item>
+        <item name="sib_text_secondary">@color/workspace_muted</item>
+        <item name="sib_text_muted">@color/workspace_muted</item>
+        <item name="sib_border_subtle">@color/workspace_border</item>
+        <item name="sib_header_background">@color/workspace_card</item>
+        <item name="sib_header_title">@color/workspace_text</item>
+        <item name="sib_header_subtitle">@color/workspace_muted</item>
+        <item name="sib_toolbar_background">@color/workspace_card</item>
+        <item name="sib_toolbar_foreground">@color/workspace_text</item>
+        <item name="colorOnBackground">@color/workspace_text</item>
+        <item name="android:colorBackground">@color/workspace_page</item>
+        <item name="colorSurface">@color/workspace_card</item>
+        <item name="colorOnSurface">@color/workspace_text</item>
+        <item name="android:windowBackground">@color/workspace_page</item>
+        <item name="android:statusBarColor">@color/workspace_card</item>
+        <item name="android:navigationBarColor">@color/workspace_card</item>
+        <item name="android:textColorPrimary">@color/workspace_text</item>
+        <item name="android:textColorSecondary">@color/workspace_muted</item>
+        <item name="materialCardViewStyle">@style/AnalyticsCard</item>
+        <item name="materialButtonStyle">@style/WorkspaceButton</item>
+        <item name="drawerArrowStyle">@style/WorkspaceDrawerArrow</item>
+    </style>
+    <style name="WorkspaceButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:textAllCaps">false</item><item name="cornerRadius">10dp</item>
+    </style>
+    <style name="WorkspaceDrawerArrow" parent="Widget.AppCompat.DrawerArrowToggle">
+        <item name="color">@color/workspace_text</item>
+    </style>
+</resources>

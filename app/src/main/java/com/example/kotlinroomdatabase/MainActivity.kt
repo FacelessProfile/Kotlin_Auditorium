@@ -138,10 +138,17 @@ class MainActivity : AppCompatActivity() {
         }
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(appCompatMode)
 
+        if (InterfaceAppearance.isModern(this)) setTheme(R.style.Theme_Academus_Workspace)
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        binding.appBarLayout.setBackgroundColor(getColorFromAttr(R.attr.sib_toolbar_background))
+        if (InterfaceAppearance.isModern(this)) {
+            binding.bottomNavigation.elevation = 0f
+            binding.tvRoleBadge.setTextColor(getColorFromAttr(R.attr.sib_text_primary))
+            binding.tvRoleBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(getColorFromAttr(R.attr.sib_border_subtle))
+        }
 
         // Handle window insets for status bar
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.mainContent) { _, insets ->
@@ -177,7 +184,7 @@ class MainActivity : AppCompatActivity() {
             binding.drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
-        binding.toolbar.setNavigationIconTint(android.graphics.Color.WHITE)
+        binding.toolbar.setNavigationIconTint(getColorFromAttr(R.attr.sib_toolbar_foreground))
         binding.navView.setupWithNavController(navController)
 
         // Setup bottom navigation listener
@@ -252,7 +259,7 @@ class MainActivity : AppCompatActivity() {
                 binding.appBarLayout.visibility = android.view.View.VISIBLE
                 binding.bottomNavigation.visibility = android.view.View.VISIBLE
                 binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-                binding.toolbar.setNavigationIconTint(android.graphics.Color.WHITE)
+                binding.toolbar.setNavigationIconTint(getColorFromAttr(R.attr.sib_toolbar_foreground))
                 // Sync selected bottom nav item if destination matches
                 val bottomMenu = binding.bottomNavigation.menu
                 for (i in 0 until bottomMenu.size()) {

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/sib_card_surface">
+    android:background="?attr/sib_bg_card">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -95,7 +95,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:textColor="@color/sib_text_primary"
+                    android:textColor="?attr/sib_text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     tools:text="Добавить сканер обновлений в приложение" />
@@ -138,7 +138,7 @@
                             android:id="@+id/tvDetailAssigneeName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/sib_text_primary"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="13sp"
                             android:textStyle="bold"
                             tools:text="TechnoPonk (Шаламов)" />
@@ -168,7 +168,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="Описание"
-                    android:textColor="@color/sib_text_secondary"
+                    android:textColor="?attr/sib_text_secondary"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
@@ -179,7 +179,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:lineSpacingExtra="3dp"
-                    android:textColor="@color/sib_text_primary"
+                    android:textColor="?attr/sib_text_primary"
                     android:textSize="14sp"
                     tools:text="Необходимо добавить сканирование релизов на GitHub API при запуске приложения и отображать диалог обновления если доступна новая версия." />
 
@@ -202,7 +202,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Обсуждение"
-                        android:textColor="@color/sib_text_primary"
+                        android:textColor="?attr/sib_text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -233,7 +233,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/sib_card_surface"
+            android:background="?attr/sib_bg_card"
             android:elevation="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -250,7 +250,7 @@
                 android:maxLines="4"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="10dp"
-                android:textColor="@color/sib_text_primary"
+                android:textColor="?attr/sib_text_primary"
                 android:textColorHint="@color/sib_text_muted"
                 android:textSize="14sp" />
 

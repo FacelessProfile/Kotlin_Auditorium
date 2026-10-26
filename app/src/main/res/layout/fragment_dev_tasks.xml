@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/sib_bg_page">
+    android:background="?attr/sib_bg_page">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
@@ -28,7 +28,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="12dp"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="2dp"
                     app:strokeColor="@color/sib_border"
@@ -51,7 +51,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:textColor="@color/sib_text_primary"
+                                android:textColor="?attr/sib_text_primary"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
                                 tools:text="Спринт 1 (07.09 – 14.09)" />
@@ -74,7 +74,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:textColor="@color/sib_text_secondary"
+                            android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp"
                             tools:text="Пн 12:00 НСК — Пн 11:59 НСК (авто-ролловер)" />
 
@@ -113,7 +113,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:textColor="@color/sib_text_secondary"
+                            android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp"
                             tools:text="Задач: 4/6 выполнено • Багов: 2/3 закрыто" />
                     </LinearLayout>
@@ -148,7 +148,7 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="Мои задачи"
-                        android:textColor="@color/sib_text_secondary"
+                        android:textColor="?attr/sib_text_secondary"
                         android:textSize="12sp"
                         app:cornerRadius="19dp"
                         app:strokeColor="@color/sib_border" />
@@ -167,7 +167,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="В работе"
-                        android:textColor="@color/sib_text_primary"
+                        android:textColor="?attr/sib_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/sib_bg_app">
+    android:background="?attr/sib_bg_page">
 
     <!--
         Тулбар MainActivity уже показывает заголовок "NFC Менеджер" и кнопку назад
@@ -14,7 +14,7 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/sib_card_surface"
+        android:background="?attr/sib_bg_card"
         app:elevation="0dp">
 
         <com.google.android.material.tabs.TabLayout
@@ -25,7 +25,7 @@
             app:tabIndicatorHeight="3dp"
             app:tabIndicatorFullWidth="false"
             app:tabSelectedTextColor="@color/sib_blue_primary"
-            app:tabTextColor="@color/sib_text_secondary"
+            app:tabTextColor="?attr/sib_text_secondary"
             app:tabRippleColor="@color/sib_blue_active_bg"
             app:tabMode="fixed"
             app:tabGravity="fill">
@@ -125,7 +125,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/sib_border"
@@ -159,7 +159,7 @@
                                 android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="Диагностика чипа"
-                                android:textColor="@color/sib_text_primary"
+                                android:textColor="?attr/sib_text_primary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -218,7 +218,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:text="Память: 888 байт (NDEF: 868 байт)"
-                            android:textColor="@color/sib_text_secondary"
+                            android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp" />
 
                         <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -265,7 +265,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/sib_border"
@@ -336,7 +336,7 @@
                                         android:ellipsize="end"
                                         android:maxLines="1"
                                         android:text="Шаламов Н.В."
-                                        android:textColor="@color/sib_text_primary"
+                                        android:textColor="?attr/sib_text_primary"
                                         android:textSize="17sp"
                                         android:textStyle="bold" />
 
@@ -380,7 +380,7 @@
                             android:paddingHorizontal="10dp"
                             android:paddingVertical="7dp"
                             android:text="Шаламов Никита Вячеславович"
-                            android:textColor="@color/sib_text_primary"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="13sp" />
 
                         <!-- Теги академического профиля студента -->
@@ -512,7 +512,7 @@
                                         android:ellipsize="end"
                                         android:maxLines="1"
                                         android:text="1 из 4 пар"
-                                        android:textColor="@color/sib_text_secondary"
+                                        android:textColor="?attr/sib_text_secondary"
                                         android:textSize="11sp" />
                                 </LinearLayout>
 
@@ -565,7 +565,7 @@
                                         android:ellipsize="end"
                                         android:maxLines="1"
                                         android:text="5 предметов"
-                                        android:textColor="@color/sib_text_secondary"
+                                        android:textColor="?attr/sib_text_secondary"
                                         android:textSize="11sp" />
                                 </LinearLayout>
                             </LinearLayout>
@@ -614,7 +614,7 @@
                                         android:ellipsize="end"
                                         android:maxLines="1"
                                         android:text="75% от всех пар"
-                                        android:textColor="@color/sib_text_secondary"
+                                        android:textColor="?attr/sib_text_secondary"
                                         android:textSize="11sp" />
 
                                     <TextView
@@ -667,7 +667,7 @@
                                         android:ellipsize="end"
                                         android:maxLines="1"
                                         android:text="Нарушений нет"
-                                        android:textColor="@color/sib_text_secondary"
+                                        android:textColor="?attr/sib_text_secondary"
                                         android:textSize="11sp" />
 
                                     <TextView
@@ -722,7 +722,7 @@
                                     android:ellipsize="end"
                                     android:maxLines="1"
                                     android:text="student@sibsutis.ru"
-                                    android:textColor="@color/sib_text_primary"
+                                    android:textColor="?attr/sib_text_primary"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
@@ -734,7 +734,7 @@
                                 android:layout_marginStart="24dp"
                                 android:layout_marginTop="2dp"
                                 android:text="Логин: Technoponk • Статус: Активен"
-                                android:textColor="@color/sib_text_secondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textSize="12sp" />
 
                             <View
@@ -783,7 +783,7 @@
                                 android:layout_marginStart="24dp"
                                 android:layout_marginTop="2dp"
                                 android:text="Выдана: 25.09.2026 в 15:30 • HMAC-SHA256 активен"
-                                android:textColor="@color/sib_text_secondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textSize="12sp" />
                         </LinearLayout>
 
@@ -810,7 +810,7 @@
                                 android:layout_weight="1"
                                 android:maxLines="2"
                                 android:text="Последняя пара: —"
-                                android:textColor="@color/sib_text_secondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textSize="12sp" />
                         </LinearLayout>
 
@@ -848,7 +848,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:text="Мои дисциплины у студента"
-                                    android:textColor="@color/sib_text_primary"
+                                    android:textColor="?attr/sib_text_primary"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
 
@@ -903,7 +903,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Успеваемость по предметам"
-                                    android:textColor="@color/sib_text_primary"
+                                    android:textColor="?attr/sib_text_primary"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
@@ -916,7 +916,7 @@
                                 android:layout_marginStart="24dp"
                                 android:lineSpacingExtra="3dp"
                                 android:text="Оценки отсутствуют"
-                                android:textColor="@color/sib_text_secondary"
+                                android:textColor="?attr/sib_text_secondary"
                                 android:textSize="12sp" />
                         </LinearLayout>
 
@@ -950,7 +950,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="История меток"
-                                    android:textColor="@color/sib_text_primary"
+                                    android:textColor="?attr/sib_text_primary"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
@@ -1000,7 +1000,7 @@
                                 android:minHeight="48dp"
                                 android:text="Безопасная очистка чипа (Zero-Brick)"
                                 android:textAllCaps="false"
-                                android:textColor="@color/sib_text_primary"
+                                android:textColor="?attr/sib_text_primary"
                                 android:textSize="14sp"
                                 app:cornerRadius="12dp"
                                 app:icon="@drawable/ic_delete"
@@ -1028,7 +1028,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="12dp"
-                app:cardBackgroundColor="@color/sib_card_surface"
+                app:cardBackgroundColor="?attr/sib_bg_card"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:strokeColor="@color/sib_border"
@@ -1051,7 +1051,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Группа"
-                            android:textColor="@color/sib_text_primary"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -1070,7 +1070,7 @@
                             android:layout_marginStart="10dp"
                             android:checked="true"
                             android:text="Авто"
-                            android:textColor="@color/sib_text_secondary"
+                            android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
 
@@ -1104,7 +1104,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:text="0 / 0 (0%)"
-                            android:textColor="@color/sib_text_secondary"
+                            android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -1151,7 +1151,7 @@
                         android:ellipsize="end"
                         android:text="Выберите студента или группу"
                         android:textAlignment="center"
-                        android:textColor="@color/sib_text_primary"
+                        android:textColor="?attr/sib_text_primary"
                         android:textSize="17sp"
                         android:textStyle="bold" />
 
@@ -1163,7 +1163,7 @@
                         android:gravity="center"
                         android:maxLines="3"
                         android:text="Поднесите чистую метку NTAG 216"
-                        android:textColor="@color/sib_text_secondary"
+                        android:textColor="?attr/sib_text_secondary"
                         android:textSize="13sp" />
 
                     <!-- Кнопки конвейера -->
@@ -1182,7 +1182,7 @@
                             android:layout_marginEnd="8dp"
                             android:layout_weight="1"
                             android:text="Пропустить"
-                            android:textColor="@color/sib_text_primary"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="13sp"
                             app:cornerRadius="10dp"
                             app:strokeColor="@color/sib_border" />
@@ -1194,7 +1194,7 @@
                             android:layout_height="40dp"
                             android:layout_weight="1"
                             android:text="Очистить чип"
-                            android:textColor="@color/sib_text_primary"
+                            android:textColor="?attr/sib_text_primary"
                             android:textSize="13sp"
                             app:cornerRadius="10dp"
                             app:strokeColor="@color/sib_border" />

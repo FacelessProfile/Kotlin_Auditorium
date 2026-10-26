@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/sib_bg_page">
+    android:background="?attr/sib_bg_page">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshSprint"
@@ -27,7 +27,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="12dp"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="2dp"
                     app:strokeColor="@color/sib_border"
@@ -62,7 +62,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:textColor="@color/sib_text_secondary"
+                            android:textColor="?attr/sib_text_secondary"
                             android:textSize="12sp"
                             tools:text="Цикл: Пн 12:00 НСК — следующий Пн 11:59 НСК" />
 
@@ -96,7 +96,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
                         android:layout_weight="1"
-                        app:cardBackgroundColor="@color/sib_card_surface"
+                        app:cardBackgroundColor="?attr/sib_bg_card"
                         app:cardCornerRadius="14dp"
                         app:cardElevation="1dp"
                         app:strokeColor="@color/sib_border"
@@ -134,7 +134,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
-                        app:cardBackgroundColor="@color/sib_card_surface"
+                        app:cardBackgroundColor="?attr/sib_bg_card"
                         app:cardCornerRadius="14dp"
                         app:cardElevation="1dp"
                         app:strokeColor="@color/sib_border"
@@ -174,7 +174,7 @@
                     android:layout_marginHorizontal="14dp"
                     android:layout_marginTop="20dp"
                     android:text="Активность команды разработки"
-                    android:textColor="@color/sib_text_primary"
+                    android:textColor="?attr/sib_text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -184,7 +184,7 @@
                     android:layout_marginHorizontal="14dp"
                     android:layout_marginTop="2dp"
                     android:text="Закрытые задачи и баги за выбранный спринт"
-                    android:textColor="@color/sib_text_secondary"
+                    android:textColor="?attr/sib_text_secondary"
                     android:textSize="12sp" />
 
                 <!-- Member Activity RecyclerView -->

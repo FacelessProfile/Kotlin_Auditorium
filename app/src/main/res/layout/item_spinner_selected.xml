@@ -10,5 +10,5 @@
     android:paddingEnd="30dp"
     android:paddingBottom="2dp"
     android:singleLine="true"
-    android:textColor="@color/sib_text_primary"
+    android:textColor="?attr/sib_text_primary"
     android:textSize="14sp" />

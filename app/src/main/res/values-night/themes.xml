@@ -33,6 +33,11 @@
         <item name="sib_text_primary">@color/sib_text_primary</item>
         <item name="sib_text_secondary">@color/sib_text_secondary</item>
         <item name="sib_text_muted">@color/sib_text_muted</item>
+        <item name="sib_header_background">@drawable/bg_hero_gradient</item>
+        <item name="sib_header_title">@color/white</item>
+        <item name="sib_header_subtitle">#D0E2FF</item>
+        <item name="sib_toolbar_background">?attr/colorPrimary</item>
+        <item name="sib_toolbar_foreground">@color/white</item>
         <item name="drawerArrowStyle">@style/WhiteDrawerArrow</item>
     </style>
 

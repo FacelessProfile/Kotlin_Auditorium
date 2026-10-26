@@ -394,6 +394,34 @@ class StudentRepositoryHTTPS(
 
     fun getUnsafeOkHttpClient(): OkHttpClient = client
 
+    /** Strict analytics calls: failures must not look like an empty semester. */
+    private suspend fun analyticsResult(path: String, payload: JSONObject? = null): JSONObject = withContext(Dispatchers.IO) {
+        val token = getActiveAccessToken()?.takeIf { it.isNotBlank() }
+            ?: throw java.io.IOException("Сессия истекла. Войдите снова.")
+        val builder = Request.Builder().url("$BASE_URL$path").header("Authorization", "Bearer $token")
+        if (payload != null) builder.post(payload.toString().toRequestBody(JSON_TYPE))
+        awaitPhotoResponse(builder.build()).use { response ->
+            if (!response.isSuccessful) throw java.io.IOException("Не удалось загрузить аналитику (${response.code}). Повторите попытку.")
+            val envelope = JSONObject(response.body?.string().orEmpty())
+            if (!envelope.optBoolean("ok")) throw java.io.IOException("Сервер не смог загрузить аналитику. Повторите попытку.")
+            envelope.getJSONObject("result")
+        }
+    }
+
+    suspend fun getStudentAnalytics(): AnalyticsSnapshot =
+        AnalyticsPayloadParser.parse(analyticsResult("/api/student/grades/all"), teacher = false)
+
+    suspend fun getAnalyticsSubjects(): List<TeacherSubject> {
+        val result = analyticsResult("/api/teacher/subjects")
+        return jsonSerializer.decodeFromString<List<TeacherSubject>>(result.getJSONArray("subjects").toString())
+    }
+
+    suspend fun getGroupAnalytics(groupId: Int, subjectId: Int): AnalyticsSnapshot =
+        AnalyticsPayloadParser.parse(analyticsResult("/api/teacher/group/performance", JSONObject().apply {
+            put("group_id", groupId)
+            put("subject_id", subjectId)
+        }), teacher = true)
+
     private val photoClient by lazy {
         client.newBuilder().readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS)
             .callTimeout(45, TimeUnit.SECONDS).build()

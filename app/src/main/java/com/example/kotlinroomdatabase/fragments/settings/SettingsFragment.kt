@@ -74,6 +74,17 @@ class SettingsFragment : Fragment() {
 
         val prefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
 
+        val modern = com.example.kotlinroomdatabase.InterfaceAppearance.isModern(requireContext())
+        binding.rgInterface.check(if (modern) R.id.rbInterfaceModern else R.id.rbInterfaceClassic)
+        binding.tvInterfaceHint.setText(if (modern) R.string.interface_modern_hint else R.string.interface_classic_hint)
+        binding.rgInterface.setOnCheckedChangeListener { _, id ->
+            val nextModern = id == R.id.rbInterfaceModern
+            if (nextModern != com.example.kotlinroomdatabase.InterfaceAppearance.isModern(requireContext())) {
+                com.example.kotlinroomdatabase.InterfaceAppearance.setModern(requireContext(), nextModern)
+                requireActivity().recreate()
+            }
+        }
+
         // 1. Theme selection (System / Light / Dark)
         val themeMode = prefs.getString("theme_mode", "system") ?: "system"
         when (themeMode) {

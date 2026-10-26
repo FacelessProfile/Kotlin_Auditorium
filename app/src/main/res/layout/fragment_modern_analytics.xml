@@ -1,0 +1,92 @@
+<?xml version="1.0" ?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/swipeRefresh" android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/sib_bg_page">
+
+
+    <androidx.core.widget.NestedScrollView android:id="@+id/scrollContent" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:clipToPadding="false">
+
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+            <TextView android:id="@+id/tvTitle" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_title" android:textSize="28sp"/>
+            <TextView android:id="@+id/tvSubtitle" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_subtitle" android:layout_marginTop="8dp" android:layout_marginBottom="20dp"/>
+            <com.google.android.material.card.MaterialCardView style="@style/AnalyticsCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" android:id="@+id/teacherFilters" android:visibility="gone">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                    <TextView android:id="@+id/tvSubjectLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_subject"/>
+                    <Spinner android:id="@+id/spinnerSubject" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"/>
+                    <TextView android:id="@+id/tvGroupLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_group"/>
+                    <Spinner android:id="@+id/spinnerGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <ProgressBar android:id="@+id/progressLoading" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:layout_margin="24dp" android:contentDescription="@string/analytics_loading"/>
+            <LinearLayout android:id="@+id/errorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <TextView android:id="@+id/tvError" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_error"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnRetry" style="@style/AnalyticsChoice" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_retry"/>
+            </LinearLayout>
+            <TextView android:id="@+id/tvEmpty" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_empty" android:visibility="gone" android:padding="24dp" android:gravity="center"/>
+            <LinearLayout android:id="@+id/contentAnalytics" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <com.google.android.material.card.MaterialCardView style="@style/AnalyticsCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:baselineAligned="false" android:orientation="horizontal">
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingEnd="8dp" android:orientation="vertical">
+                                <TextView android:id="@+id/tvAverage" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_average" android:paddingBottom="6dp"/>
+                                <TextView android:id="@+id/tvAverageLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_average"/>
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingEnd="8dp" android:orientation="vertical">
+                                <TextView android:id="@+id/tvMeasured" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_measured" android:paddingBottom="6dp"/>
+                                <TextView android:id="@+id/tvMeasuredLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_measured"/>
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingEnd="8dp" android:orientation="vertical">
+                                <TextView android:id="@+id/tvReached" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_reached" android:paddingBottom="6dp"/>
+                                <TextView android:id="@+id/tvReachedLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_reached"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView style="@style/AnalyticsCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvExplorerTitle" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_explorer_title"/>
+                        <TextView android:id="@+id/tvExplorerDescription" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_explorer_description" android:layout_marginTop="6dp"/>
+                        <com.google.android.material.button.MaterialButtonToggleGroup android:id="@+id/metricGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" app:singleSelection="true" app:selectionRequired="true">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnRating" style="@style/AnalyticsChoice" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/analytics_rating"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnAttendance" style="@style/AnalyticsChoice" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/analytics_attendance"/>
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+                        <com.google.android.material.button.MaterialButtonToggleGroup android:id="@+id/viewGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" app:singleSelection="true" app:selectionRequired="true">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnRadar" style="@style/AnalyticsChoice" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/analytics_radar"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnBars" style="@style/AnalyticsChoice" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/analytics_bars"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnCompare" style="@style/AnalyticsChoice" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/analytics_compare"/>
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+                        <TextView android:id="@+id/tvTarget" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_target_accessibility" android:layout_marginTop="20dp"/>
+                        <SeekBar android:id="@+id/seekTarget" android:layout_width="match_parent" android:layout_height="48dp" android:max="10" android:progress="6" android:contentDescription="@string/analytics_target_accessibility"/>
+                        <TextView android:id="@+id/tvGoalSummary" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_goal_summary"/>
+                        <com.google.android.material.checkbox.MaterialCheckBox android:textColor="?attr/sib_text_primary" android:id="@+id/checkBelow" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/analytics_only_below"/>
+                        <TextView android:id="@+id/tvOrderLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_order"/>
+                        <Spinner android:id="@+id/spinnerOrder" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"/>
+                        <com.github.mikephil.charting.charts.RadarChart android:id="@+id/radarChart" android:layout_width="match_parent" android:layout_height="280dp" android:contentDescription="@string/analytics_radar"/>
+                        <TextView android:id="@+id/tvChartHint" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_select_hint" android:layout_marginTop="8dp"/>
+                        <TextView android:id="@+id/tvLegend" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_legend" android:layout_marginTop="8dp"/>
+                        <TextView android:id="@+id/tvTargetNote" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_target_note" android:layout_marginTop="12dp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView style="@style/AnalyticsCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" android:id="@+id/focusCard">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvFocusLabel" style="@style/AnalyticsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_focus"/>
+                        <TextView android:id="@+id/tvSelectedName" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_select_hint" android:layout_marginTop="8dp"/>
+                        <FrameLayout android:layout_width="match_parent" android:layout_height="144dp" android:layout_marginVertical="12dp">
+                            <com.google.android.material.progressindicator.CircularProgressIndicator android:id="@+id/selectedRing" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:indeterminate="false" android:max="100" app:indicatorSize="132dp" app:trackThickness="8dp" app:trackColor="?attr/sib_border_subtle"/>
+                            <TextView android:id="@+id/tvSelectedValue" style="@style/AnalyticsTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:textSize="30sp"/>
+                        </FrameLayout>
+                        <TextView android:id="@+id/tvSelectedMetric" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_rating" android:gravity="center"/>
+                        <TextView android:id="@+id/tvSelectedDetails" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_no_value" android:layout_marginTop="12dp"/>
+                        <TextView android:id="@+id/tvSelectedNote" style="@style/AnalyticsBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_no_value" android:layout_marginTop="12dp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView style="@style/AnalyticsCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvListTitle" style="@style/AnalyticsTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_list_title"/>
+                        <LinearLayout android:id="@+id/containerRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="12dp"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnMore" style="@style/AnalyticsChoice" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/analytics_more"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

@@ -20,7 +20,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_hero_gradient"
+            android:background="?attr/sib_header_background"
             android:orientation="vertical"
             android:padding="20dp">
 
@@ -28,7 +28,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Аутентификатор TOTP"
-                android:textColor="@color/sib_text_white"
+                android:textColor="?attr/sib_header_title"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="Одноразовые 6-значные коды подтверждения"
-                android:textColor="#D0E2FF"
+                android:textColor="?attr/sib_header_subtitle"
                 android:textSize="13sp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

@@ -5,7 +5,7 @@
     android:id="@+id/swipeRefreshLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/sib_bg_app">
+    android:background="?attr/sib_bg_page">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -79,7 +79,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                app:cardBackgroundColor="@color/sib_card_surface"
+                app:cardBackgroundColor="?attr/sib_bg_card"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/sib_border_subtle"
@@ -141,7 +141,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="14dp"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="1dp"
                     app:strokeColor="?attr/sib_border_subtle"
@@ -259,7 +259,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="14dp"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="1dp"
                     app:strokeColor="?attr/sib_border_subtle"
@@ -377,7 +377,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="14dp"
-                    app:cardBackgroundColor="@color/sib_card_surface"
+                    app:cardBackgroundColor="?attr/sib_bg_card"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="1dp"
                     app:strokeColor="?attr/sib_border_subtle"
