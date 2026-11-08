@@ -194,4 +194,9 @@
         android:name="com.example.kotlinroomdatabase.fragments.biometrics.StudentFaceSamplesFragment"
         android:label="Фотографии для распознавания"
         tools:layout="@layout/fragment_student_face_samples" />
+    <fragment
+        android:id="@+id/attendanceAppealsFragment"
+        android:name="com.example.kotlinroomdatabase.fragments.appeals.AttendanceAppealsFragment"
+        android:label="@string/attendance_appeals"
+        tools:layout="@layout/fragment_attendance_appeals" />
 </navigation>

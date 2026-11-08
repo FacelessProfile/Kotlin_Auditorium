@@ -12,6 +12,15 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/historyAppeals"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:text="@string/attendance_appeals"
+            android:visibility="gone" />
+
         <!-- Top Header Card with Blue Gradient -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

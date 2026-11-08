@@ -3650,6 +3650,64 @@ class StudentRepositoryHTTPS(
         }
     }
 
+    private class AttendanceAppealException(message: String) : java.io.IOException(message)
+
+    private suspend fun <T> attendanceAppealCall(block: suspend () -> T): GenericResult<T> = withContext(Dispatchers.IO) {
+        try {
+            GenericResult.Success(block())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: AttendanceAppealException) {
+            GenericResult.Error(e.message ?: "Не удалось загрузить обращения")
+        } catch (e: java.io.IOException) {
+            GenericResult.Error("Нет связи с сервером. Обновите список перед повторной отправкой.")
+        } catch (e: Exception) {
+            GenericResult.Error("Не удалось прочитать ответ сервера. Повторите попытку.")
+        }
+    }
+
+    private suspend fun attendanceAppealResult(path: String, method: String = "GET", payload: JSONObject? = null): JSONObject {
+        val token = getActiveAccessToken()?.takeIf { it.isNotBlank() }
+            ?: throw AttendanceAppealException("Сессия истекла. Войдите снова.")
+        val request = Request.Builder().url("$BASE_URL$path").header("Authorization", "Bearer $token")
+        if (method != "GET") request.method(method, requireNotNull(payload).toString().toRequestBody(JSON_TYPE))
+        try {
+            awaitPhotoResponse(request.build()).use { response ->
+                val envelope = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
+                if (!response.isSuccessful || envelope?.optBoolean("ok") != true) {
+                    throw AttendanceAppealException(com.example.kotlinroomdatabase.util.AttendanceAppealRules.errorMessage(envelope?.optString("error").orEmpty(), response.code))
+                }
+                return envelope.getJSONObject("result")
+            }
+        } catch (e: java.net.SocketTimeoutException) {
+            throw AttendanceAppealException("Сервер не ответил вовремя. Обновите список перед повторной отправкой.")
+        } catch (e: java.net.UnknownHostException) {
+            throw AttendanceAppealException("Нет связи с сервером. Проверьте подключение к интернету.")
+        }
+    }
+
+    override suspend fun getAttendanceAppeals(page: Int, status: String): GenericResult<AttendanceAppealsPage> = attendanceAppealCall {
+        require(page > 0 && status in listOf("", "pending", "approved", "rejected"))
+        jsonSerializer.decodeFromString<AttendanceAppealsPage>(attendanceAppealResult("/api/attendance/appeals?page=$page&status=$status").toString())
+    }
+
+    override suspend fun createAttendanceAppeal(entryId: String, requestedStatus: String, reason: String): GenericResult<AttendanceAppealResult> = attendanceAppealCall {
+        require(requestedStatus in com.example.kotlinroomdatabase.util.AttendanceAppealRules.requestedStatuses)
+        require(com.example.kotlinroomdatabase.util.AttendanceAppealRules.validReason(reason))
+        val payload = JSONObject().put("entry_id", entryId).put("requested_status", requestedStatus).put("reason", reason.trim())
+        jsonSerializer.decodeFromString<AttendanceAppealResult>(attendanceAppealResult("/api/attendance/appeals", "POST", payload).toString())
+    }
+
+    override suspend fun decideAttendanceAppeal(appealId: Long, decision: String, note: String, expectedStatus: String?): GenericResult<AttendanceAppealResult> = attendanceAppealCall {
+        require(appealId > 0 && decision in listOf("approved", "rejected"))
+        require(com.example.kotlinroomdatabase.util.AttendanceAppealRules.validNote(note))
+        // Never fall back to the original mark when the current journal entry is unavailable.
+        require(decision != "approved" || !expectedStatus.isNullOrBlank())
+        val payload = JSONObject().put("decision", decision).put("note", note.trim())
+        if (!expectedStatus.isNullOrBlank()) payload.put("expected_status", expectedStatus)
+        jsonSerializer.decodeFromString<AttendanceAppealResult>(attendanceAppealResult("/api/attendance/appeals/$appealId", "PATCH", payload).toString())
+    }
+
     // Feedback implementations
     override suspend fun uploadFeedbackAttachment(file: java.io.File): GenericResult<String> = withContext(Dispatchers.IO) {
         try {

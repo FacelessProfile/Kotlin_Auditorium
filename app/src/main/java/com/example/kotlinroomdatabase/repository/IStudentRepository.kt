@@ -176,6 +176,14 @@ interface IStudentRepository {
     suspend fun getDevSprintReport(sprintId: Int): GenericResult<com.example.kotlinroomdatabase.model.DevSprintReport>
     suspend fun getDevTeam(): GenericResult<List<com.example.kotlinroomdatabase.model.DevTeamMember>>
 
+    // Attendance corrections use the active session role; legacy transports do not support them.
+    suspend fun getAttendanceAppeals(page: Int = 1, status: String = ""): GenericResult<com.example.kotlinroomdatabase.model.AttendanceAppealsPage> =
+        GenericResult.Error("Обращения доступны при подключении через HTTPS")
+    suspend fun createAttendanceAppeal(entryId: String, requestedStatus: String, reason: String): GenericResult<com.example.kotlinroomdatabase.model.AttendanceAppealResult> =
+        GenericResult.Error("Обращения доступны при подключении через HTTPS")
+    suspend fun decideAttendanceAppeal(appealId: Long, decision: String, note: String, expectedStatus: String?): GenericResult<com.example.kotlinroomdatabase.model.AttendanceAppealResult> =
+        GenericResult.Error("Обращения доступны при подключении через HTTPS")
+
     // Feedback methods (for all users except developers)
     suspend fun uploadFeedbackAttachment(file: java.io.File): GenericResult<String>
     suspend fun createFeedbackTicket(

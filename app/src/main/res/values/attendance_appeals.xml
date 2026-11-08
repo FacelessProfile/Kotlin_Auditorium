@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="attendance_appeals">Обращения по посещаемости</string>
+    <string name="appeals_student_subtitle">Запросы на исправление отметок и ответы преподавателей.</string>
+    <string name="appeals_staff_subtitle">Рассмотрите запросы студентов по занятиям и поясните решение.</string>
+    <string name="appeals_empty">Обращений пока нет. Чтобы запросить исправление, выберите занятие в истории посещаемости и нажмите «Уточнить отметку».</string>
+    <string name="appeals_staff_empty">Обращений пока нет. Новые запросы студентов появятся здесь.</string>
+    <string name="appeals_filter_empty">Обращений с таким статусом пока нет. Выберите другой фильтр.</string>
+    <string name="appeal_role_unavailable">Обращения доступны студентам, преподавателям, заведующим кафедрами и администраторам. Выберите подходящую активную роль.</string>
+    <string name="appeal_new">Новое обращение</string>
+    <string name="appeals_refresh">Обновить</string>
+    <string name="appeals_all">Все</string>
+    <string name="appeals_pending">Ожидают решения</string>
+    <string name="appeals_approved">Одобрены</string>
+    <string name="appeals_rejected">Отклонены</string>
+    <string name="appeals_previous">Назад</string>
+    <string name="appeals_next">Далее</string>
+    <string name="appeals_page">Страница %1$d</string>
+    <string name="appeal_details">Причина и история</string>
+    <string name="appeal_review">Рассмотреть обращение</string>
+    <string name="appeal_create">Уточнить отметку</string>
+    <string name="appeal_approve">Одобрить</string>
+    <string name="appeal_reject">Отклонить</string>
+    <string name="appeal_send">Отправить преподавателю</string>
+    <string name="appeal_cancel">Отмена</string>
+    <string name="appeal_close">Закрыть</string>
+    <string name="appeal_requested_mark">Какую отметку вы запрашиваете?</string>
+    <string name="appeal_decision_note">Пояснение к решению</string>
+    <string name="appeal_reason">Причина обращения</string>
+    <string name="appeal_reason_help">От 10 до 4000 символов. Объясните, почему нужно изменить отметку.</string>
+    <string name="appeal_note_help">От 3 до 4000 символов. Студент увидит ваше пояснение.</string>
+    <string name="appeal_sent">Обращение сохранено. Его статус доступен в разделе «Обращения».</string>
+</resources>

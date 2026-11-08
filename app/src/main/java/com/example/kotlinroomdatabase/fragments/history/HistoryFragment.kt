@@ -6,6 +6,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import com.example.kotlinroomdatabase.R
+import com.example.kotlinroomdatabase.fragments.appeals.AttendanceAppealFormDialog
+import com.example.kotlinroomdatabase.util.AttendanceAppealRules
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kotlinroomdatabase.data.StudentDatabase
@@ -40,7 +45,19 @@ class HistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = HistoryAdapter()
+        val role = requireContext().getSharedPreferences("student_prefs", Context.MODE_PRIVATE).getString("user_role", "student")
+        val ownHistory = com.example.kotlinroomdatabase.util.RoleUtils.normalizeRole(role) == "student" && (arguments?.getInt("studentId") ?: 0) == 0
+        adapter = HistoryAdapter(if (ownHistory) { item ->
+            if (parentFragmentManager.findFragmentByTag(AttendanceAppealFormDialog.TAG) == null) {
+                AttendanceAppealFormDialog.create(item).show(parentFragmentManager, AttendanceAppealFormDialog.TAG)
+            }
+        } else null)
+        binding.historyAppeals.visibility = if (AttendanceAppealRules.canView(role)) View.VISIBLE else View.GONE
+        binding.historyAppeals.setOnClickListener { findNavController().navigate(R.id.attendanceAppealsFragment) }
+        parentFragmentManager.setFragmentResultListener(AttendanceAppealFormDialog.RESULT_KEY, viewLifecycleOwner) { _, _ ->
+            Toast.makeText(requireContext(), R.string.appeal_sent, Toast.LENGTH_LONG).show()
+            loadHistory()
+        }
         binding.rvHistory.adapter = adapter
         binding.rvHistory.layoutManager = LinearLayoutManager(requireContext())
 
@@ -65,7 +82,7 @@ class HistoryFragment : Fragment() {
 
         binding.swipeRefreshHistory.isRefreshing = true
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 if (role == "teacher" && studentId == 0) {
                     repository.getAllLessons().collect { lessons ->
@@ -90,6 +107,8 @@ class HistoryFragment : Fragment() {
                     val response = repository.getStudentHistory(currentYear)
                     displayHistory(response.items)
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 displayHistory(emptyList())
             } finally {
@@ -127,12 +146,13 @@ class HistoryFragment : Fragment() {
                     item.is_late || s == "late" -> late++
                     s == "excused" || s == "valid" || s == "уважительная" -> excused++
                     s == "absent" || s == "fraud" || s == "н" || s == "пропуск" -> absent++
-                    else -> onTime++
+                    s == "present" -> onTime++
                 }
             }
 
             val total = items.size
-            val rate = if (total > 0) ((onTime + late) * 100) / total else 0
+            val considered = onTime + late + absent
+            val rate = if (considered > 0) ((onTime + late) * 100) / considered else 0
 
             binding.tvOverallAttendanceRate.text = "$rate%"
             binding.tvCountOnTime.text = onTime.toString()

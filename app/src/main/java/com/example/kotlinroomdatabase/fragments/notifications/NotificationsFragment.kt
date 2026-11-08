@@ -70,6 +70,9 @@ class NotificationsFragment : Fragment() {
                 if (!notification.is_read) {
                     markAsRead(notification.realId)
                 }
+                if (notification.event_type == "attendance_appeal") {
+                    androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.attendanceAppealsFragment)
+                }
             },
             onDeleteClick = { notification ->
                 confirmDeleteNotification(notification)
@@ -109,7 +112,7 @@ class NotificationsFragment : Fragment() {
 
     private fun loadNotifications(showToast: Boolean = false) {
         progressBar.visibility = View.VISIBLE
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = repo.getUserNotifications()
             progressBar.visibility = View.GONE
             when (result) {
@@ -195,14 +198,14 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun markAsRead(id: Long) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             repo.markNotificationRead(id)
             loadNotifications()
         }
     }
 
     private fun deleteNotification(id: Long) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = repo.deleteNotification(id)
             if (result is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
                 Toast.makeText(requireContext(), "Уведомление удалено", Toast.LENGTH_SHORT).show()
@@ -214,7 +217,7 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun markAllAsRead() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val res = repo.markAllNotificationsRead()
             if (res is com.example.kotlinroomdatabase.repository.GenericResult.Success) {
                 Toast.makeText(requireContext(), "Все уведомления перемещены в историю", Toast.LENGTH_SHORT).show()

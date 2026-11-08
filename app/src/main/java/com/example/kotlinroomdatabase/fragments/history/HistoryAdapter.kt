@@ -12,7 +12,7 @@ import com.example.kotlinroomdatabase.model.HistoryItem
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+class HistoryAdapter(private val onAppeal: ((HistoryItem) -> Unit)? = null) : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
 
     private var items = listOf<HistoryItem>()
 
@@ -29,6 +29,9 @@ class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         val context = holder.itemView.context
+
+        holder.appealButton.visibility = if (onAppeal != null && com.example.kotlinroomdatabase.util.AttendanceAppealRules.canCreate(item)) View.VISIBLE else View.GONE
+        holder.appealButton.setOnClickListener { onAppeal?.invoke(item) }
 
         // 1. Day Header logic: show header if first item or if date changed from previous item
         val currentDate = item.date
@@ -65,8 +68,16 @@ class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
         holder.tvTimeSlot.text = item.time ?: "09:00 - 10:35"
 
         // 4. Status Indicator (On-Time, Late, Excused, Absent, Fraud)
-        val rawStatus = item.status?.lowercase() ?: if (item.is_late) "late" else "present"
+        val rawStatus = item.status?.lowercase() ?: if (item.is_late) "late" else "unknown"
         when {
+            rawStatus == "pending" || rawStatus == "unknown" -> {
+                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.badge_time_text))
+                holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_time)
+                holder.ivStatusIcon.setImageResource(R.drawable.ic_schedule_clock)
+                holder.ivStatusIcon.setColorFilter(ContextCompat.getColor(context, R.color.badge_time_text))
+                holder.tvStatusText.text = com.example.kotlinroomdatabase.util.AttendanceAppealRules.markLabel(rawStatus)
+                holder.tvStatusText.setTextColor(ContextCompat.getColor(context, R.color.badge_time_text))
+            }
             rawStatus == "fraud" -> {
                 holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.sib_error_vibrant))
                 holder.layoutStatusBadge.setBackgroundResource(R.drawable.bg_badge_absent)
@@ -124,6 +135,7 @@ class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val appealButton: View = view.findViewById(R.id.historyAppealButton)
         val layoutDateHeader: View = view.findViewById(R.id.layoutDateHeader)
         val tvDateGroup: TextView = view.findViewById(R.id.tvDateGroup)
         val viewStatusStrip: View = view.findViewById(R.id.viewStatusStrip)

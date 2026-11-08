@@ -178,7 +178,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.devTasksFragment,
                 R.id.devBugsFragment,
                 R.id.devSprintFragment,
-                R.id.feedbackFragment
+                R.id.feedbackFragment,
+                R.id.attendanceAppealsFragment
                 // nfcManagerFragment НЕ top-level: NavController покажет ← автоматически
             ),
             binding.drawerLayout
@@ -351,6 +352,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleFcmIntentExtras(intent: Intent?) {
+        val eventType = intent?.getStringExtra("fcm_extra_event_type") ?: intent?.getStringExtra("event_type")
+        if (eventType == "attendance_appeal") {
+            val role = getSharedPreferences("student_prefs", Context.MODE_PRIVATE).getString("user_role", "student")
+            if (com.example.kotlinroomdatabase.util.AttendanceAppealRules.canView(role)) {
+                val controller = findNavController(R.id.fragment)
+                if (controller.currentDestination?.id != R.id.attendanceAppealsFragment) controller.navigate(R.id.attendanceAppealsFragment)
+                intent?.removeExtra("fcm_extra_event_type")
+                intent?.removeExtra("event_type")
+            }
+            return
+        }
+
         val taskIdStr = intent?.getStringExtra("fcm_extra_task_id")
         val taskId = taskIdStr?.toIntOrNull()
         if (taskId != null && taskId > 0) {
@@ -440,6 +453,7 @@ class MainActivity : AppCompatActivity() {
         menu.findItem(R.id.scheduleFragment)?.isVisible = true
         menu.findItem(R.id.listFragment)?.isVisible = isTeacher
         menu.findItem(R.id.feedbackFragment)?.isVisible = !isDev
+        menu.findItem(R.id.attendanceAppealsFragment)?.isVisible = com.example.kotlinroomdatabase.util.AttendanceAppealRules.canView(userRole)
         val canManageNfc = isTeacher || isDev || userRole == "admin" || 
                            com.example.kotlinroomdatabase.util.RoleUtils.isHead(userRole) || 
                            com.example.kotlinroomdatabase.util.RoleUtils.isDean(userRole)

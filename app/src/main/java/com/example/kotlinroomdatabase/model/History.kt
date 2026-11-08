@@ -17,5 +17,6 @@ data class HistoryItem(
     val lesson_type: String? = null,
     val time: String? = null,
     val status: String? = null,
-    val is_late: Boolean = false
+    val is_late: Boolean = false,
+    val entry_id: String = ""
 )

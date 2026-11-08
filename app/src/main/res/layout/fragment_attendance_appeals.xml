@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="?attr/sib_bg_page">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_margin="16dp" android:text="@string/attendance_appeals"
+        android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/sib_text_primary" />
+    <TextView android:id="@+id/appealsSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp" android:textColor="?attr/sib_text_secondary" android:textSize="14sp" />
+    <TextView android:id="@+id/appealsMessage" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="16dp" android:textColor="?attr/sib_text_primary" android:accessibilityLiveRegion="polite" android:visibility="gone" />
+    <LinearLayout android:id="@+id/appealsContent" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="12dp" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/appealsNew" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/appeal_new" android:minHeight="48dp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/appealsRefresh" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_refresh" android:minHeight="48dp" />
+        </LinearLayout>
+        <com.google.android.material.tabs.TabLayout android:id="@+id/appealsFilters" android:layout_width="match_parent" android:layout_height="wrap_content" app:tabMode="scrollable" android:background="?attr/sib_bg_page">
+            <com.google.android.material.tabs.TabItem android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_all" />
+            <com.google.android.material.tabs.TabItem android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_pending" />
+            <com.google.android.material.tabs.TabItem android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_approved" />
+            <com.google.android.material.tabs.TabItem android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_rejected" />
+        </com.google.android.material.tabs.TabLayout>
+        <ProgressBar android:id="@+id/appealsProgress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="4dp" android:indeterminate="true" android:visibility="gone" />
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/appealsList" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:padding="12dp" />
+        <LinearLayout android:id="@+id/appealsPagination" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="12dp" android:gravity="center" android:orientation="horizontal" android:visibility="gone">
+            <com.google.android.material.button.MaterialButton android:id="@+id/appealsPrevious" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_previous" />
+            <TextView android:id="@+id/appealsPage" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:textColor="?attr/sib_text_primary" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/appealsNext" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/appeals_next" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
